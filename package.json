@@ -14,9 +14,11 @@
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
     "post-cta-init": "npx -y create-db@latest --user-agent tanstack/tsrouter",
+    "db:dev": "dotenv -e .env.local -- prisma dev",
     "db:generate": "dotenv -e .env.local -- prisma generate",
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
+    "db:reset": "dotenv -e .env.local -- prisma dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- prisma db seed"
   },
