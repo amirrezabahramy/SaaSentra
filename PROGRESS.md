@@ -25,7 +25,7 @@
 | 05a — Admin UI core           | `phases/05a-admin-ui-core.md` | [x]    | 2026-09-15 |
 | 05b — Admin UI ops            | `phases/05b-admin-ui-ops.md`  | [x]    | 2026-09-15 |
 | 06 — Stripe                   | `phases/06-stripe.md`         | [x]    | 2026-09-15 |
-| 07 — Ops glue (dunning)       | `phases/07-ops-glue.md`       | [ ]    |      |
+| 07 — Ops glue (dunning)       | `phases/07-ops-glue.md`       | [x]    | 2026-09-15 |
 | 08 — E2E & Definition of Done | `phases/08-e2e-dod.md`        | [ ]    |      |
 
 ## Locked decisions (do NOT revisit)
@@ -60,6 +60,7 @@
 | 2026-09-15 | 05b | Completed after user verification: subscription disable/re-enable works with styled confirmation and exact-text confirmation, flag toggles persist, audit entries show actor/reason, endpoint entitlement state updates, repeated actions are idempotent, and each operator disable produces one audit entry. Phase 06 entry point: `phases/06-stripe.md`, starting with its first unchecked step. |
 | 2026-09-15 | 06 | Started Stripe test-mode integration. Added Checkout Session creation through Stripe REST, raw-body webhook signature verification, processed-event idempotency, lifecycle event mapping, and invoice/payment mirroring. |
 | 2026-09-15 | 06 | Completed after user verification with Stripe CLI: test-mode configuration and webhook forwarding work; checkout/webhook flow, signature rejection, subscription lifecycle mapping, invoice/payment mirroring, and replay idempotency verified. Phase 07 entry point: `phases/07-ops-glue.md`, starting with its first unchecked step. |
+| 2026-09-15 | 07 | Completed after user verification: four-hour dunning scheduler, manual dunning runner, Overview trigger, dunning queue count, health endpoint, grace-period transitions, disabledAt handling, notices, and idempotent reruns all pass. Phase 08 entry point: `phases/08-e2e-dod.md`, starting with its first unchecked step. |
 
 ## File change log (feeds the final report)
 
@@ -128,6 +129,15 @@
 | modified | `prisma/seed.ts` | 06 |
 | modified | `README.md` | 06 |
 | modified | `PROGRESS.md` | 06 |
+| modified | `src/lib/dunning.ts` | 07 |
+| added | `src/lib/dunning.functions.ts` | 07 |
+| added | `src/server/dunning.ts` | 07 |
+| added | `src/routes/api/health.ts` | 07 |
+| modified | `src/routes/_protected/index.tsx` | 07 |
+| added | `scripts/run-dunning.ts` | 07 |
+| modified | `README.md` | 07 |
+| modified | `src/routeTree.gen.ts` | 07 |
+| modified | `PROGRESS.md` | 07 |
 
 ## Final report checklist
 

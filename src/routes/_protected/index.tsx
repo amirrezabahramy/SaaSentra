@@ -1,7 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useServerFn } from '@tanstack/react-start'
 import { getOverview } from '#/lib/admin.functions'
 import { EmptyState } from '#/components/admin/empty-state'
 import { formatCurrency, formatDate } from '#/lib/format'
+import { runDunningNow } from '#/lib/dunning.functions'
 
 export const Route = createFileRoute('/_protected/')({
   loader: () => getOverview(),
@@ -12,9 +14,12 @@ export const Route = createFileRoute('/_protected/')({
 
 function Overview() {
   const data = Route.useLoaderData()
+  const router = useRouter()
+  const runNow = useServerFn(runDunningNow)
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8"><p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--kicker)]">Console overview</p><h1 className="mt-2 font-serif text-4xl font-bold">Good morning</h1><p className="mt-2 text-[var(--sea-ink-soft)]">A live view of revenue, customers, and account health.</p></header>
+      <div className="mb-5 flex items-center justify-between gap-4"><p className="text-sm text-[var(--sea-ink-soft)]">Dunning queue: {data.dunningQueue} tenant(s)</p><button type="button" onClick={() => { void runNow().then(() => router.invalidate()) }} className="rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white">Run dunning now</button></div>
       <section className="grid gap-4 md:grid-cols-3">
         <Metric label="Monthly recurring revenue" value={formatCurrency(data.mrrCents)} />
         <Metric label="Active subscriptions" value={String(data.activeSubscriptions)} />

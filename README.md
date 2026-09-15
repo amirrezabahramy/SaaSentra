@@ -110,6 +110,31 @@ transitioning the subscription again. A Checkout Session is created through
 the `createCheckoutSession` server function in
 `src/lib/stripe.functions.ts`.
 
+### 8. Dunning and health checks
+
+Dunning runs in the server process every four hours at minute zero. The same
+job can be run manually from the Overview page or with the exported
+`runDunning()` function. It moves subscriptions through the lifecycle, records
+transitions in `AuditLog`, and logs the T-7 / T-3 / T-1 notice placeholders.
+
+Run it directly against `.env.local` with:
+
+```bash
+npx dotenv -e .env.local -- tsx scripts/run-dunning.ts
+```
+
+Check server health with:
+
+```bash
+curl -sS http://localhost:3000/api/health
+```
+
+Expected response:
+
+```json
+{"ok":true}
+```
+
 ## Architecture notes
 
 ### The entitlement endpoint must be a server ROUTE, not a server function

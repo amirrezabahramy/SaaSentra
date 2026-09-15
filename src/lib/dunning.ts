@@ -95,9 +95,9 @@ export async function runDunning(now = new Date()): Promise<void> {
 /** Backward-compatible name for callers from the scaffold. */
 export const runDunningScan = runDunning
 
-/** Daily at 09:00 UTC; phase 07 can wire this into its operational runner. */
+/** Run every four hours in the server process. */
 export function startDunningJob(): ScheduledTask {
-  return cron.schedule('0 9 * * *', async () => {
+  return cron.schedule('0 */4 * * *', async () => {
     try {
       await runDunning()
     } catch (error) {

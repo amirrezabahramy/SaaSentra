@@ -17,6 +17,7 @@ import { Route as ProtectedFlagsRouteImport } from './routes/_protected/flags'
 import { Route as ProtectedServicesRouteImport } from './routes/_protected/services'
 import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
 import { Route as ProtectedSubscriptionsRouteImport } from './routes/_protected/subscriptions'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ProtectedTenantsIndexRouteImport } from './routes/_protected/tenants/index'
 import { Route as ProtectedTenantsIdRouteImport } from './routes/_protected/tenants/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -62,6 +63,11 @@ const ProtectedSubscriptionsRoute = ProtectedSubscriptionsRouteImport.update({
   path: '/subscriptions',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProtectedTenantsIndexRoute = ProtectedTenantsIndexRouteImport.update({
   id: '/tenants/',
   path: '/tenants/',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof ProtectedServicesRoute
   '/settings': typeof ProtectedSettingsRoute
   '/subscriptions': typeof ProtectedSubscriptionsRoute
+  '/api/health': typeof ApiHealthRoute
   '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/services': typeof ProtectedServicesRoute
   '/settings': typeof ProtectedSettingsRoute
   '/subscriptions': typeof ProtectedSubscriptionsRoute
+  '/api/health': typeof ApiHealthRoute
   '/': typeof ProtectedIndexRoute
   '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/_protected/services': typeof ProtectedServicesRoute
   '/_protected/settings': typeof ProtectedSettingsRoute
   '/_protected/subscriptions': typeof ProtectedSubscriptionsRoute
+  '/api/health': typeof ApiHealthRoute
   '/_protected/': typeof ProtectedIndexRoute
   '/_protected/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/settings'
     | '/subscriptions'
+    | '/api/health'
     | '/tenants/$id'
     | '/api/auth/$'
     | '/api/stripe/webhook'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/settings'
     | '/subscriptions'
+    | '/api/health'
     | '/'
     | '/tenants/$id'
     | '/api/auth/$'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/_protected/services'
     | '/_protected/settings'
     | '/_protected/subscriptions'
+    | '/api/health'
     | '/_protected/'
     | '/_protected/tenants/$id'
     | '/api/auth/$'
@@ -182,6 +194,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   ProtectedRoute: typeof ProtectedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiV1EntitlementsTenantIdRoute: typeof ApiV1EntitlementsTenantIdRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/subscriptions'
       preLoaderRoute: typeof ProtectedSubscriptionsRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_protected/tenants/': {
       id: '/_protected/tenants/'
@@ -312,6 +332,7 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   ProtectedRoute: ProtectedRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiV1EntitlementsTenantIdRoute: ApiV1EntitlementsTenantIdRoute,
