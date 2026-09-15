@@ -78,6 +78,38 @@ curl -sS \
   "http://localhost:3000/api/v1/entitlements/$TENANT_ID"
 ```
 
+### 7. Stripe test-mode webhook testing
+
+Set real Stripe test-mode values in `.env.local`, including the `price_...` IDs
+for `STRIPE_PRICE_STARTER` and `STRIPE_PRICE_PRO`, then reseed so the plan
+records use those IDs:
+
+```bash
+npm run db:seed
+```
+
+Install and authenticate the Stripe CLI, then forward events to the raw-body
+webhook route:
+
+```bash
+stripe login
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+Copy the `whsec_...` value printed by `stripe listen` into
+`STRIPE_WEBHOOK_SECRET` in `.env.local`, restart the dev server, and trigger a
+test failure:
+
+```bash
+stripe trigger invoice.payment_failed
+```
+
+The webhook rejects invalid signatures with HTTP 400. Replaying the same event
+ID returns HTTP 200 without adding another processed-event audit entry or
+transitioning the subscription again. A Checkout Session is created through
+the `createCheckoutSession` server function in
+`src/lib/stripe.functions.ts`.
+
 ## Architecture notes
 
 ### The entitlement endpoint must be a server ROUTE, not a server function

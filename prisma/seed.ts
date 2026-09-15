@@ -21,7 +21,7 @@ async function main() {
   // --- Plans -------------------------------------------------------------
   const starter = await db.plan.upsert({
     where: { slug: 'starter' },
-    update: {},
+    update: { stripePriceId: starterStripePriceId },
     create: {
       name: 'Starter',
       slug: 'starter',
@@ -34,7 +34,7 @@ async function main() {
   })
   const pro = await db.plan.upsert({
     where: { slug: 'pro' },
-    update: {},
+    update: { stripePriceId: proStripePriceId },
     create: {
       name: 'Pro',
       slug: 'pro',

@@ -20,6 +20,7 @@ import { Route as ProtectedSubscriptionsRouteImport } from './routes/_protected/
 import { Route as ProtectedTenantsIndexRouteImport } from './routes/_protected/tenants/index'
 import { Route as ProtectedTenantsIdRouteImport } from './routes/_protected/tenants/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiV1EntitlementsTenantIdRouteImport } from './routes/api/v1/entitlements/$tenantId'
 
 const ProtectedRoute = ProtectedRouteImport.update({
@@ -76,6 +77,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1EntitlementsTenantIdRoute =
   ApiV1EntitlementsTenantIdRouteImport.update({
     id: '/api/v1/entitlements/$tenantId',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/subscriptions': typeof ProtectedSubscriptionsRoute
   '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/tenants/': typeof ProtectedTenantsIndexRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/': typeof ProtectedIndexRoute
   '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/tenants': typeof ProtectedTenantsIndexRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/_protected/': typeof ProtectedIndexRoute
   '/_protected/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/_protected/tenants/': typeof ProtectedTenantsIndexRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/subscriptions'
     | '/tenants/$id'
     | '/api/auth/$'
+    | '/api/stripe/webhook'
     | '/tenants/'
     | '/api/v1/entitlements/$tenantId'
   fileRoutesByTo: FileRoutesByTo
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/'
     | '/tenants/$id'
     | '/api/auth/$'
+    | '/api/stripe/webhook'
     | '/tenants'
     | '/api/v1/entitlements/$tenantId'
   id:
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/_protected/'
     | '/_protected/tenants/$id'
     | '/api/auth/$'
+    | '/api/stripe/webhook'
     | '/_protected/tenants/'
     | '/api/v1/entitlements/$tenantId'
   fileRoutesById: FileRoutesById
@@ -171,6 +183,7 @@ export interface RootRouteChildren {
   ProtectedRoute: typeof ProtectedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiV1EntitlementsTenantIdRoute: typeof ApiV1EntitlementsTenantIdRoute
 }
 
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/entitlements/$tenantId': {
       id: '/api/v1/entitlements/$tenantId'
       path: '/api/v1/entitlements/$tenantId'
@@ -293,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProtectedRoute: ProtectedRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiV1EntitlementsTenantIdRoute: ApiV1EntitlementsTenantIdRoute,
 }
 export const routeTree = rootRouteImport
