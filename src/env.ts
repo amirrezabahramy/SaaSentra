@@ -6,6 +6,7 @@ export const env = createEnv({
     SERVER_URL: z.string().url().optional(),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.string().url(),
+    ENTITLEMENT_SHARED_SECRET: z.string().min(1),
     DATABASE_URL: z.string().url(),
     SHADOW_DATABASE_URL: z.string().url(),
     SERVICE_SECRET: z.string(),

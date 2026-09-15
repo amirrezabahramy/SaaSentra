@@ -70,6 +70,14 @@ npx tsx prisma/seed.ts
 npm run dev
 ```
 
+### 6. Check a tenant entitlement
+
+```bash
+curl -sS \
+  -H "x-entitlement-secret: $ENTITLEMENT_SHARED_SECRET" \
+  "http://localhost:3000/api/v1/entitlements/$TENANT_ID"
+```
+
 ## Architecture notes
 
 ### The entitlement endpoint must be a server ROUTE, not a server function

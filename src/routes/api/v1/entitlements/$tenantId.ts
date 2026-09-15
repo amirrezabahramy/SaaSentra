@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { db } from '#/db'
+import { env } from '#/env'
+import { getEntitlement } from '#/lib/lifecycle'
 
 /**
  * Cross-origin entitlement endpoint.
@@ -18,37 +19,16 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
         request: Request
         params: { tenantId: string }
       }) => {
-        const secret = request.headers.get('x-service-secret')
-        if (
-          !process.env.SERVICE_SECRET ||
-          secret !== process.env.SERVICE_SECRET
-        ) {
+        const secret = request.headers.get('x-entitlement-secret')
+        if (secret !== env.ENTITLEMENT_SHARED_SECRET) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const tenant = await db.tenant.findUnique({
-          where: { id: params.tenantId, deletedAt: null },
-          include: {
-            subscription: { include: { plan: true } },
-            flags: { include: { flag: true } },
-          },
-        })
-
-        if (!tenant) {
+        try {
+          return Response.json(await getEntitlement(params.tenantId))
+        } catch {
           return Response.json({ error: 'Tenant not found' }, { status: 404 })
         }
-
-        const status = tenant.subscription?.status
-        const active = status === 'ACTIVE' || status === 'TRIALING'
-
-        return Response.json({
-          active,
-          plan: tenant.subscription?.plan?.slug ?? null,
-          flags: tenant.flags
-            .filter((tf) => tf.enabled)
-            .map((tf) => tf.flag.key),
-          periodEnd: tenant.subscription?.currentPeriodEnd ?? null,
-        })
       },
     },
   },

@@ -21,7 +21,7 @@
 | 01 — Data layer               | `phases/01-data-layer.md`     | [x]    | 2026-09-15 |
 | 02 — Domain logic             | `phases/02-domain-logic.md`   | [x]    | 2026-09-15 |
 | 03 — Auth                     | `phases/03-auth.md`           | [x]    | 2026-09-15 |
-| 04 — Entitlements API         | `phases/04-entitlements.md`   | [ ]    |      |
+| 04 — Entitlements API         | `phases/04-entitlements.md`   | [x]    | 2026-09-15 |
 | 05a — Admin UI core           | `phases/05a-admin-ui-core.md` | [ ]    |      |
 | 05b — Admin UI ops            | `phases/05b-admin-ui-ops.md`  | [ ]    |      |
 | 06 — Stripe                   | `phases/06-stripe.md`         | [ ]    |      |
@@ -52,6 +52,8 @@
 | 2026-09-15 | 02 | Replaced the incomplete lifecycle implementation with `ALLOWED_TRANSITIONS`, idempotent `transitionSubscription`, audit logging, entitlement calculation, and re-enable targeting. Reworked dunning to export `runDunning`, move PAST_DUE subscriptions after three days, disable expired grace periods through the state machine, and emit T-7/T-3/T-1 notice stubs. Added `Subscription.disabledAt` plus migration `20260915170000_add_subscription_disabled_at`. `prisma validate`, `prisma generate`, `npx tsc --noEmit`, and diff checks pass. Database behavior verification is pending deployment of the new additive migration. |
 | 2026-09-15 | 02 | User confirmed deployment. Using `.env.local`, migration status is up to date, both seed runs pass, and the database smoke test passes: illegal ACTIVE→DISABLED throws; PAST_DUE→GRACE_PERIOD writes one audit row; DISABLED entitlement is inactive; running dunning twice does not duplicate transitions. |
 | 2026-09-15 | 03 | Added Better Auth Prisma persistence, bcryptjs email/password hashing, server-function session/login/logout wrappers, root auth context, protected pathless layout, and `/login`. Added and applied `20260915161237_add_better_auth`. Runtime checks passed: `/login` returned 200; logged-out `/` redirected to `/login`; seeded admin login created a session and authenticated `/` returned 200; logout cleared cookies and redirected back to `/login`. |
+
+| 2026-09-15 | 04 | Updated the service-control route to use `x-entitlement-secret`, delegate to `getEntitlement()`, return object-shaped per-tenant flags, and avoid session requirements. Added `ENTITLEMENT_SHARED_SECRET` configuration and README curl example. Validation passed. Runtime checks passed: valid request 200 with `active:true`, `plan:"pro"`, flags object, and ISO period end; missing/wrong secret 401; unknown tenant 404; state-machine disable returned `active:false`; restoring ACTIVE returned `active:true`. |
 
 ## File change log (feeds the final report)
 
@@ -86,6 +88,11 @@
 | modified | `package.json` | 03 |
 | modified | `package-lock.json` | 03 |
 | modified | `src/routeTree.gen.ts` | 03 |
+| modified | `src/lib/lifecycle.ts` | 04 |
+| modified | `src/env.ts` | 04 |
+| modified | `src/routes/api/v1/entitlements/$tenantId.ts` | 04 |
+| modified | `README.md` | 04 |
+| modified | `.env.example` | 04 |
 
 ## Final report checklist
 

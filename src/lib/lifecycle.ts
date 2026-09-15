@@ -101,6 +101,9 @@ export async function getEntitlement(tenantId: string) {
 
   const subscription = tenant.subscription
   const now = new Date()
+  const flags = Object.fromEntries(
+    tenant.flags.map((tenantFlag) => [tenantFlag.flag.key, tenantFlag.enabled]),
+  )
   const active = Boolean(
     subscription &&
       now < subscription.currentPeriodEnd &&
@@ -111,7 +114,7 @@ export async function getEntitlement(tenantId: string) {
   return {
     active,
     plan: subscription?.plan.slug ?? null,
-    flags: tenant.flags.filter((flag) => flag.enabled).map((flag) => flag.flag.key),
+    flags,
     periodEnd: subscription?.currentPeriodEnd ?? null,
   }
 }
