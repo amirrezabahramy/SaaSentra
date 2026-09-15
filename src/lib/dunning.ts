@@ -1,21 +1,26 @@
-import cron from "node-cron";
-import { db } from "./db";
-import { GRACE_NOTICE_DAYS, disable } from "./lifecycle";
+import cron from 'node-cron'
+import type { ScheduledTask } from 'node-cron'
+import { db } from '../db'
+import { GRACE_NOTICE_DAYS, disable } from './lifecycle'
 
 /**
  * Dunning / grace-period emails.
  * Replace with your real mailer (Resend, Postmark, SES, ...).
  */
-async function sendEmail(to: string, subject: string, body: string): Promise<void> {
+async function sendEmail(
+  to: string,
+  subject: string,
+  body: string,
+): Promise<void> {
   // TODO: integrate a real email provider.
-  console.log(`[dunning] email to=${to} subject="${subject}" body="${body}"`);
+  console.log(`[dunning] email to=${to} subject="${subject}" body="${body}"`)
 }
 
 /**
  * Number of whole days remaining until graceEndsAt (rounded down).
  */
 function daysUntil(date: Date): number {
-  return Math.floor((date.getTime() - Date.now()) / 86_400_000);
+  return Math.floor((date.getTime() - Date.now()) / 86_400_000)
 }
 
 /**
@@ -26,29 +31,33 @@ function daysUntil(date: Date): number {
 export async function runDunningScan(): Promise<void> {
   const subs = await db.subscription.findMany({
     where: {
-      status: { in: ["PAST_DUE", "GRACE_PERIOD"] },
+      status: { in: ['PAST_DUE', 'GRACE_PERIOD'] },
       deletedAt: null,
     },
     include: { tenant: true },
-  });
+  })
 
   for (const sub of subs) {
     const ownerMembership = await db.membership.findFirst({
-      where: { tenantId: sub.tenantId, role: "OWNER", deletedAt: null },
+      where: { tenantId: sub.tenantId, role: 'OWNER', deletedAt: null },
       include: { user: true },
-    });
-    const email = ownerMembership?.user.email;
+    })
+    const email = ownerMembership?.user.email
 
-    if (sub.status === "GRACE_PERIOD" && sub.graceEndsAt) {
-      const remaining = daysUntil(sub.graceEndsAt);
+    if (sub.status === 'GRACE_PERIOD' && sub.graceEndsAt) {
+      const remaining = daysUntil(sub.graceEndsAt)
 
       if (remaining < 0) {
         // Grace period exhausted -> auto-disable.
-        await disable(sub.id, "grace_period_expired");
+        await disable(sub.id, 'grace_period_expired')
         if (email) {
-          await sendEmail(email, "Your account has been disabled", "Your grace period has ended.");
+          await sendEmail(
+            email,
+            'Your account has been disabled',
+            'Your grace period has ended.',
+          )
         }
-        continue;
+        continue
       }
 
       if (GRACE_NOTICE_DAYS.includes(remaining)) {
@@ -56,14 +65,18 @@ export async function runDunningScan(): Promise<void> {
           await sendEmail(
             email,
             `Action required: ${remaining} day(s) until suspension`,
-            `Your account will be disabled in ${remaining} day(s). Please update your payment method.`
-          );
+            `Your account will be disabled in ${remaining} day(s). Please update your payment method.`,
+          )
         }
       }
-    } else if (sub.status === "PAST_DUE") {
+    } else if (sub.status === 'PAST_DUE') {
       // Move into a grace period so the countdown starts.
       if (email) {
-        await sendEmail(email, "Payment failed", "We could not charge your card. Please update it.");
+        await sendEmail(
+          email,
+          'Payment failed',
+          'We could not charge your card. Please update it.',
+        )
       }
     }
   }
@@ -72,13 +85,13 @@ export async function runDunningScan(): Promise<void> {
 /**
  * Daily at 09:00 UTC.
  */
-export function startDunningJob(): cron.ScheduledTask {
-  const task = cron.schedule("0 9 * * *", async () => {
+export function startDunningJob(): ScheduledTask {
+  const task = cron.schedule('0 9 * * *', async () => {
     try {
-      await runDunningScan();
+      await runDunningScan()
     } catch (err) {
-      console.error("[dunning] scan failed", err);
+      console.error('[dunning] scan failed', err)
     }
-  });
-  return task;
+  })
+  return task
 }

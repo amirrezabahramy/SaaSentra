@@ -17,7 +17,7 @@ final report.
 2. Log in as admin at `/login`.
 3. Stripe test checkout for the demo tenant → subscription ACTIVE.
 4. `curl -H "x-entitlement-secret: $ENTITLEMENT_SHARED_SECRET" \
-     http://localhost:3000/api/v1/entitlements/<tenantId>` →
+  http://localhost:3000/api/v1/entitlements/<tenantId>` →
    200 with `{"active":true,"plan":"pro","flags":{...},"periodEnd":"..."}`.
 5. `stripe trigger invoice.payment_failed` → PAST_DUE; entitlement still active
    until grace rules kick in.

@@ -11,7 +11,7 @@ admin, plans, flags, and a demo tenant.
    `DATABASE_URL` in `.env` (e.g. `postgresql://postgres:postgres@localhost:5432/saas`).
 2. Ensure `prisma/schema.prisma` is the **12 models** exactly:
    `User, Tenant, Membership, Plan, Subscription, Invoice, Payment, Service,
-   ServiceAction, FeatureFlag, TenantFlag, AuditLog` (with the role enum
+ServiceAction, FeatureFlag, TenantFlag, AuditLog` (with the role enum
    `OWNER|ADMIN`). Do NOT add `UsageEvent`, `WebhookSubscription`,
    `WebhookDelivery`, `ApiKey`, `Ticket`, `RolePermission` — schema-reserved.
 3. `npx prisma migrate dev --name init` → then `npx prisma generate`.

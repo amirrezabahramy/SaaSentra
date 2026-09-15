@@ -6,6 +6,7 @@
 This document outlines the core technology stack and standard implementation patterns for the SaaS management dashboard.
 
 ## Core Stack
+
 - **Framework:** TanStack Start (Full-stack)
 - **Database:** Prisma (Postgres/SQLite)
 - **UI Components:** shadcn/ui
@@ -16,12 +17,15 @@ This document outlines the core technology stack and standard implementation pat
 ---
 
 ## 1. Data Fetching & State (TanStack Query)
+
 We avoid `useLoaderData` in favor of a query-first approach using `ensureQueryData` (newly named `query`) and `useSuspenseQuery`.
 
 ### Pattern:
+
 1.  **Define Query Options:** Keep query keys and fetcher functions in a dedicated `queries.ts` file.
 2.  **Server-Side:** Use `query(queryOptions)` in the loader to ensure data is pre-fetched on the server.
 3.  **Client-Side:** Use `useSuspenseQuery(queryOptions)` to consume the data.
+
 ```typescript
 // features/users/queries.ts
 export const userQueryOptions = (id: string) => queryOptions({
@@ -39,3 +43,4 @@ function UserComponent() {
   const { data } = useSuspenseQuery(userQueryOptions(Route.useParams().id))
   return <div>{data.name}</div>
 }
+```

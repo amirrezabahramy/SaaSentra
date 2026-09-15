@@ -4,6 +4,11 @@ import { z } from 'zod'
 export const env = createEnv({
   server: {
     SERVER_URL: z.string().url().optional(),
+    DATABASE_URL: z.string().url(),
+    SHADOW_DATABASE_URL: z.string().url(),
+    SERVICE_SECRET: z.string(),
+    STRIPE_SECRET_KEY: z.string(),
+    STRIPE_WEBHOOK_SECRET: z.string(),
   },
 
   /**

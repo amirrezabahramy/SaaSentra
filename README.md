@@ -34,7 +34,7 @@ services:
       POSTGRES_PASSWORD: saas
       POSTGRES_DB: saas
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 volumes:

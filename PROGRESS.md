@@ -15,18 +15,18 @@
 
 ## Status board
 
-| Phase | File | Status | Date |
-| --- | --- | --- | --- |
-| 00 — Scaffold & deps | `phases/00-scaffold.md` | [ ] | |
-| 01 — Data layer | `phases/01-data-layer.md` | [ ] | |
-| 02 — Domain logic | `phases/02-domain-logic.md` | [ ] | |
-| 03 — Auth | `phases/03-auth.md` | [ ] | |
-| 04 — Entitlements API | `phases/04-entitlements.md` | [ ] | |
-| 05a — Admin UI core | `phases/05a-admin-ui-core.md` | [ ] | |
-| 05b — Admin UI ops | `phases/05b-admin-ui-ops.md` | [ ] | |
-| 06 — Stripe | `phases/06-stripe.md` | [ ] | |
-| 07 — Ops glue (dunning) | `phases/07-ops-glue.md` | [ ] | |
-| 08 — E2E & Definition of Done | `phases/08-e2e-dod.md` | [ ] | |
+| Phase                         | File                          | Status | Date |
+| ----------------------------- | ----------------------------- | ------ | ---- |
+| 00 — Scaffold & deps          | `phases/00-scaffold.md`       | [ ]    |      |
+| 01 — Data layer               | `phases/01-data-layer.md`     | [ ]    |      |
+| 02 — Domain logic             | `phases/02-domain-logic.md`   | [ ]    |      |
+| 03 — Auth                     | `phases/03-auth.md`           | [ ]    |      |
+| 04 — Entitlements API         | `phases/04-entitlements.md`   | [ ]    |      |
+| 05a — Admin UI core           | `phases/05a-admin-ui-core.md` | [ ]    |      |
+| 05b — Admin UI ops            | `phases/05b-admin-ui-ops.md`  | [ ]    |      |
+| 06 — Stripe                   | `phases/06-stripe.md`         | [ ]    |      |
+| 07 — Ops glue (dunning)       | `phases/07-ops-glue.md`       | [ ]    |      |
+| 08 — E2E & Definition of Done | `phases/08-e2e-dod.md`        | [ ]    |      |
 
 ## Locked decisions (do NOT revisit)
 
@@ -44,14 +44,14 @@
 ## Notes / decisions log
 
 | Date | Phase | Note |
-| --- | --- | --- |
-| | | |
+| ---- | ----- | ---- |
+|      |       |      |
 
 ## File change log (feeds the final report)
 
 | Action | Path | Phase |
-| --- | --- | --- |
-| | | |
+| ------ | ---- | ----- |
+|        |      |       |
 
 ## Final report checklist
 

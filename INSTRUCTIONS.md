@@ -22,27 +22,27 @@
 
 ## 1. Source-of-truth files (this folder)
 
-| File | What it defines |
-| --- | --- |
-| `prisma/schema.prisma` | 12 models + enums. **Never modify without asking.** |
-| `prisma/seed.ts` | Admin, 2 plans, feature flags, demo tenant + subscription + service, audit entry. |
-| `src/db.ts` | PrismaClient singleton (dev-safe). |
-| `src/lib/lifecycle.ts` | State machine: `ALLOWED_TRANSITIONS`, `transitionSubscription()`, `getEntitlement()`. |
-| `src/lib/dunning.ts` | Dunning cron PAST_DUE→GRACE_PERIOD→DISABLED + email placeholders. |
-| `src/routes/_protected.tsx` | Protected layout: auth check + sidebar + `<Outlet />`. |
-| `src/routes/api/v1/entitlements/$tenantId.ts` | The single service-control endpoint. |
-| `.env.example` | Every env var the app needs. |
-| `README.md` | Human-oriented setup notes (Stripe, dunning). |
-| `BLUEPRINT.md` | Architecture + scope lock + Definition of Done. |
+| File                                          | What it defines                                                                       |
+| --------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `prisma/schema.prisma`                        | 12 models + enums. **Never modify without asking.**                                   |
+| `prisma/seed.ts`                              | Admin, 2 plans, feature flags, demo tenant + subscription + service, audit entry.     |
+| `src/db.ts`                                   | PrismaClient singleton (dev-safe).                                                    |
+| `src/lib/lifecycle.ts`                        | State machine: `ALLOWED_TRANSITIONS`, `transitionSubscription()`, `getEntitlement()`. |
+| `src/lib/dunning.ts`                          | Dunning cron PAST_DUE→GRACE_PERIOD→DISABLED + email placeholders.                     |
+| `src/routes/_protected.tsx`                   | Protected layout: auth check + sidebar + `<Outlet />`.                                |
+| `src/routes/api/v1/entitlements/$tenantId.ts` | The single service-control endpoint.                                                  |
+| `.env.example`                                | Every env var the app needs.                                                          |
+| `README.md`                                   | Human-oriented setup notes (Stripe, dunning).                                         |
+| `BLUEPRINT.md`                                | Architecture + scope lock + Definition of Done.                                       |
 
 ## 2. Resolved decisions (locked — do NOT revisit, do NOT re-ask)
 
-| Decision | Choice |
-| --- | --- |
-| Auth | **Better Auth** (email/password). Sessions via server functions. |
-| Payments | **Stripe test mode.** Checkout session → webhook → subscription state. Idempotent webhook handler at `/api/stripe/webhook`. |
-| Deployment | **Local dev first** (Postgres via Docker). VPS + Docker later. NO serverless, NO Prisma Accelerate in v1. |
-| Versions | Prisma 6.x, TypeScript strict (no `any`). |
+| Decision   | Choice                                                                                                                      |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Auth       | **Better Auth** (email/password). Sessions via server functions.                                                            |
+| Payments   | **Stripe test mode.** Checkout session → webhook → subscription state. Idempotent webhook handler at `/api/stripe/webhook`. |
+| Deployment | **Local dev first** (Postgres via Docker). VPS + Docker later. NO serverless, NO Prisma Accelerate in v1.                   |
+| Versions   | Prisma 6.x, TypeScript strict (no `any`).                                                                                   |
 
 ## 3. Hard rules
 
