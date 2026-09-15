@@ -1,97 +1,107 @@
 import cron from 'node-cron'
 import type { ScheduledTask } from 'node-cron'
 import { db } from '../db'
-import { GRACE_NOTICE_DAYS, disable } from './lifecycle'
+import {
+  GRACE_NOTICE_DAYS,
+  disable,
+  enterGracePeriod,
+} from './lifecycle'
 
-/**
- * Dunning / grace-period emails.
- * Replace with your real mailer (Resend, Postmark, SES, ...).
- */
-async function sendEmail(
-  to: string,
+const PAST_DUE_GRACE_THRESHOLD_DAYS = 3
+const GRACE_PERIOD_DAYS = 7
+const DAY_MS = 86_400_000
+
+async function sendNotice(
+  email: string,
   subject: string,
   body: string,
 ): Promise<void> {
-  // TODO: integrate a real email provider.
-  console.log(`[dunning] email to=${to} subject="${subject}" body="${body}"`)
+  // Placeholder for Resend/Postmark/SES integration in a later phase.
+  console.log(`[dunning] email to=${email} subject="${subject}" body="${body}"`)
 }
 
-/**
- * Number of whole days remaining until graceEndsAt (rounded down).
- */
-function daysUntil(date: Date): number {
-  return Math.floor((date.getTime() - Date.now()) / 86_400_000)
+function wholeDaysUntil(date: Date, now: Date): number {
+  return Math.floor((date.getTime() - now.getTime()) / DAY_MS)
 }
 
-/**
- * Scan PAST_DUE and GRACE_PERIOD subscriptions:
- *  - send grace notices at T-7, T-3, T-1 (GRACE_NOTICE_DAYS)
- *  - auto-disable subscriptions whose graceEndsAt has passed
- */
-export async function runDunningScan(): Promise<void> {
-  const subs = await db.subscription.findMany({
+/** Process overdue subscriptions and grace-period notices. */
+export async function runDunning(now = new Date()): Promise<void> {
+  const subscriptions = await db.subscription.findMany({
     where: {
       status: { in: ['PAST_DUE', 'GRACE_PERIOD'] },
       deletedAt: null,
     },
-    include: { tenant: true },
+    include: {
+      tenant: {
+        include: {
+          memberships: {
+            where: { role: 'OWNER', deletedAt: null },
+            include: { user: true },
+            take: 1,
+          },
+        },
+      },
+    },
   })
 
-  for (const sub of subs) {
-    const ownerMembership = await db.membership.findFirst({
-      where: { tenantId: sub.tenantId, role: 'OWNER', deletedAt: null },
-      include: { user: true },
-    })
-    const email = ownerMembership?.user.email
+  for (const subscription of subscriptions) {
+    const email = subscription.tenant.memberships[0]?.user.email
 
-    if (sub.status === 'GRACE_PERIOD' && sub.graceEndsAt) {
-      const remaining = daysUntil(sub.graceEndsAt)
-
-      if (remaining < 0) {
-        // Grace period exhausted -> auto-disable.
-        await disable(sub.id, 'grace_period_expired')
-        if (email) {
-          await sendEmail(
-            email,
-            'Your account has been disabled',
-            'Your grace period has ended.',
-          )
-        }
-        continue
+    if (subscription.status === 'PAST_DUE') {
+      const pastDueDays = wholeDaysUntil(subscription.updatedAt, now) * -1
+      if (pastDueDays > PAST_DUE_GRACE_THRESHOLD_DAYS) {
+        await enterGracePeriod(subscription.id, GRACE_PERIOD_DAYS, {
+          reason: 'past_due_grace_threshold_reached',
+        })
       }
 
-      if (GRACE_NOTICE_DAYS.includes(remaining)) {
-        if (email) {
-          await sendEmail(
-            email,
-            `Action required: ${remaining} day(s) until suspension`,
-            `Your account will be disabled in ${remaining} day(s). Please update your payment method.`,
-          )
-        }
-      }
-    } else if (sub.status === 'PAST_DUE') {
-      // Move into a grace period so the countdown starts.
       if (email) {
-        await sendEmail(
+        await sendNotice(
           email,
           'Payment failed',
-          'We could not charge your card. Please update it.',
+          'We could not charge your card. Please update your payment method.',
         )
       }
+      continue
+    }
+
+    if (!subscription.graceEndsAt) {
+      continue
+    }
+
+    const remainingDays = wholeDaysUntil(subscription.graceEndsAt, now)
+    if (remainingDays < 0) {
+      await disable(subscription.id, 'grace_period_expired')
+      if (email) {
+        await sendNotice(
+          email,
+          'Your account has been disabled',
+          'Your grace period has ended.',
+        )
+      }
+      continue
+    }
+
+    if (email && GRACE_NOTICE_DAYS.includes(remainingDays as 7 | 3 | 1)) {
+      await sendNotice(
+        email,
+        `Action required: ${remainingDays} day(s) until suspension`,
+        `Your account will be disabled in ${remainingDays} day(s). Please update your payment method.`,
+      )
     }
   }
 }
 
-/**
- * Daily at 09:00 UTC.
- */
+/** Backward-compatible name for callers from the scaffold. */
+export const runDunningScan = runDunning
+
+/** Daily at 09:00 UTC; phase 07 can wire this into its operational runner. */
 export function startDunningJob(): ScheduledTask {
-  const task = cron.schedule('0 9 * * *', async () => {
+  return cron.schedule('0 9 * * *', async () => {
     try {
-      await runDunningScan()
-    } catch (err) {
-      console.error('[dunning] scan failed', err)
+      await runDunning()
+    } catch (error) {
+      console.error('[dunning] scan failed', error)
     }
   })
-  return task
 }

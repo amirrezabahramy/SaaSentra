@@ -10,6 +10,11 @@ import { PrismaPg } from '@prisma/adapter-pg'
 const adapter = new PrismaPg({ connectionString: env.DATABASE_URL })
 const db = new PrismaClient({ adapter })
 
+const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@example.com'
+const starterStripePriceId =
+  process.env.STRIPE_PRICE_STARTER ?? 'price_starter_test'
+const proStripePriceId = process.env.STRIPE_PRICE_PRO ?? 'price_pro_test'
+
 async function main() {
   // --- Plans -------------------------------------------------------------
   const starter = await db.plan.upsert({
@@ -22,6 +27,7 @@ async function main() {
       currency: 'USD',
       interval: 'month',
       trialDays: 14,
+      stripePriceId: starterStripePriceId,
     },
   })
   const pro = await db.plan.upsert({
@@ -34,6 +40,7 @@ async function main() {
       currency: 'USD',
       interval: 'month',
       trialDays: 14,
+      stripePriceId: proStripePriceId,
     },
   })
 
@@ -42,7 +49,7 @@ async function main() {
     'flag.advanced-analytics',
     'flag.sso',
     'flag.webhooks',
-    'flag.api-access',
+    'allow_api_access',
     'flag.priority-support',
   ]
   const flags = []
@@ -57,9 +64,9 @@ async function main() {
 
   // --- Demo owner user ---------------------------------------------------
   const owner = await db.user.upsert({
-    where: { email: 'owner@acme.test' },
-    update: {},
-    create: { email: 'owner@acme.test', name: 'Demo Owner' },
+    where: { email: adminEmail },
+    update: { name: 'Admin' },
+    create: { email: adminEmail, name: 'Admin' },
   })
 
   // --- Tenants + subscriptions + flags ----------------------------------
@@ -68,7 +75,7 @@ async function main() {
       name: 'Acme Inc',
       slug: 'acme',
       plan: pro,
-      enabled: ['flag.sso', 'flag.webhooks', 'flag.api-access'],
+      enabled: ['flag.sso', 'flag.webhooks', 'allow_api_access'],
     },
     {
       name: 'Globex Corp',
@@ -133,14 +140,28 @@ async function main() {
     create: {
       id: '00000000-0000-4000-8000-000000000001',
       tenantId: acme.id,
-      name: 'Billing API',
+      name: 'demo-web-app',
       controlType: ServiceControlType.ENTITLEMENT,
       endpointUrl: null,
       deployStatus: ServiceDeployStatus.HEALTHY,
     },
   })
 
-  console.log('Seed complete: 2 plans, 5 flags, 3 tenants, 1 demo service.')
+  await db.auditLog.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000002' },
+    update: {},
+    create: {
+      id: '00000000-0000-4000-8000-000000000002',
+      tenantId: acme.id,
+      actorId: owner.id,
+      action: 'seed.completed',
+      entityType: 'Tenant',
+      entityId: acme.id,
+      metadata: { source: 'prisma/seed.ts' },
+    },
+  })
+
+  console.log('Seed complete: 2 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log.')
 }
 
 main()

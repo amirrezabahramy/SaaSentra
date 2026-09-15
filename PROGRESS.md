@@ -18,8 +18,9 @@
 | Phase                         | File                          | Status | Date |
 | ----------------------------- | ----------------------------- | ------ | ---- |
 | 00 — Scaffold & deps          | `phases/00-scaffold.md`       | [x]    | 2026-09-15 |
-| 01 — Data layer               | `phases/01-data-layer.md`     | [ ]    |      |
-| 02 — Domain logic             | `phases/02-domain-logic.md`   | [ ]    |      |
+| 01 — Data layer               | `phases/01-data-layer.md`     | [x]    | 2026-09-15 |
+| 02 — Domain logic             | `phases/02-domain-logic.md`   | [x]    | 2026-09-15 |
+| 02 — Domain logic             | `phases/02-domain-logic.md`   | [~]    | 2026-09-15 |
 | 03 — Auth                     | `phases/03-auth.md`           | [ ]    |      |
 | 04 — Entitlements API         | `phases/04-entitlements.md`   | [ ]    |      |
 | 05a — Admin UI core           | `phases/05a-admin-ui-core.md` | [ ]    |      |
@@ -46,6 +47,11 @@
 | Date | Phase | Note |
 | ---- | ----- | ---- |
 | 2026-09-15 | 00 | Docker was waived by user for normal development. Resolved the extracted route collision by moving the protected layout to `/protected`; regenerated the route tree. Prisma Client generated successfully; the required `Tenant.serviceActions` inverse relation was already present in the schema. Fixed extracted TypeScript issues in `src/lib/lifecycle.ts` and the protected redirect. Verification passed: `npx tsc --noEmit`, `npm run dev`. Phase 1 entry point: `phases/01-data-layer.md`, starting with its first unchecked step. |
+| 2026-09-15 | 01 | Schema validates and contains exactly 12 required models. Added nullable `Plan.stripePriceId` to support the phase-1 Stripe price IDs and updated the seed to use `ADMIN_EMAIL`, seed `allow_api_access`, create an ACTIVE `pro` demo subscription, create `demo-web-app`, and upsert one deterministic AuditLog row. Repaired `.env` line endings and configured Prisma to use the existing `SHADOW_DATABASE_URL`. Postgres is reachable, but `prisma migrate dev --name init` is blocked because non-superuser `amirreza` lacks `CREATE/USAGE` on schema `public` (owned by `pg_database_owner`). Seed execution and double-run verification remain pending. |
+| 2026-09-15 | 01 | Retried after the user reported migration completion. The configured database is `saas_management_service_db` as user `amirreza`; migration `20260915154306_init` is present but not applied there, and `prisma migrate deploy` still fails with permission denied on schema `public`. Seed cannot run because `public.Plan` does not exist. |
+| 2026-09-15 | 01 | User confirmed migration and seed completion. Phase 1 accepted; proceeding to phase 2. |
+| 2026-09-15 | 02 | Replaced the incomplete lifecycle implementation with `ALLOWED_TRANSITIONS`, idempotent `transitionSubscription`, audit logging, entitlement calculation, and re-enable targeting. Reworked dunning to export `runDunning`, move PAST_DUE subscriptions after three days, disable expired grace periods through the state machine, and emit T-7/T-3/T-1 notice stubs. Added `Subscription.disabledAt` plus migration `20260915170000_add_subscription_disabled_at`. `prisma validate`, `prisma generate`, `npx tsc --noEmit`, and diff checks pass. Database behavior verification is pending deployment of the new additive migration. |
+| 2026-09-15 | 02 | User confirmed deployment. Using `.env.local`, migration status is up to date, both seed runs pass, and the database smoke test passes: illegal ACTIVE→DISABLED throws; PAST_DUE→GRACE_PERIOD writes one audit row; DISABLED entitlement is inactive; running dunning twice does not duplicate transitions. |
 
 ## File change log (feeds the final report)
 
@@ -55,6 +61,15 @@
 | modified | `src/routeTree.gen.ts` | 00 |
 | renamed | `src/routes/_protected.tsx` → `src/routes/protected.tsx` | 00 |
 | modified | `PROGRESS.md` | 00 |
+| modified | `.env.example` | 01 |
+| modified | `prisma/schema.prisma` | 01 |
+| modified | `prisma/seed.ts` | 01 |
+| modified | `prisma.config.ts` | 01 |
+| modified | `prisma/schema.prisma` | 02 |
+| modified | `src/lib/lifecycle.ts` | 02 |
+| modified | `src/lib/dunning.ts` | 02 |
+| added | `prisma/migrations/20260915170000_add_subscription_disabled_at/migration.sql` | 02 |
+| modified | `PROGRESS.md` | 02 |
 
 ## Final report checklist
 

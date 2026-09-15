@@ -1,166 +1,156 @@
 import { db } from '../db'
 import type { Prisma, SubscriptionStatus } from '#/generated/prisma/client'
-import type { TransactionClient } from '#/generated/prisma/internal/prismaNamespace'
 
-/** Days before graceEndsAt at which grace notice emails are sent. */
-export const GRACE_NOTICE_DAYS = [7, 3, 1]
+export const GRACE_NOTICE_DAYS = [7, 3, 1] as const
 
-/**
- * Legal transitions between subscription statuses.
- */
-export const TRANSITIONS: Record<SubscriptionStatus, SubscriptionStatus[]> = {
-  TRIALING: ['ACTIVE', 'PAST_DUE', 'CANCELED', 'DISABLED_AT_PERIOD_END'],
-  ACTIVE: [
-    'PAST_DUE',
-    'GRACE_PERIOD',
-    'DISABLED',
-    'CANCELED',
-    'DISABLED_AT_PERIOD_END',
-  ],
-  PAST_DUE: ['GRACE_PERIOD', 'ACTIVE', 'DISABLED', 'CANCELED'],
-  GRACE_PERIOD: ['ACTIVE', 'DISABLED', 'CANCELED'],
-  DISABLED: ['ACTIVE', 'ARCHIVED', 'CANCELED'],
-  CANCELED: ['ACTIVE', 'ARCHIVED', 'DISABLED'],
-  DISABLED_AT_PERIOD_END: ['CANCELED', 'ACTIVE', 'DISABLED'],
+export const ALLOWED_TRANSITIONS: Record<
+  SubscriptionStatus,
+  readonly SubscriptionStatus[]
+> = {
+  TRIALING: ['ACTIVE', 'PAST_DUE', 'CANCELED'],
+  ACTIVE: ['PAST_DUE', 'CANCELED'],
+  PAST_DUE: ['GRACE_PERIOD', 'ACTIVE'],
+  GRACE_PERIOD: ['DISABLED', 'ACTIVE'],
+  DISABLED: ['ACTIVE', 'ARCHIVED'],
+  CANCELED: ['DISABLED_AT_PERIOD_END'],
+  DISABLED_AT_PERIOD_END: ['DISABLED'],
   ARCHIVED: [],
+}
+
+export type LifecycleOptions = {
+  actorId?: string
+  reason?: string
+  metadata?: Record<string, unknown>
+  graceEndsAt?: Date | null
+}
+
+function asJsonObject(value: Record<string, unknown>): Prisma.InputJsonObject {
+  return value as Prisma.InputJsonObject
 }
 
 function canTransition(
   from: SubscriptionStatus,
   to: SubscriptionStatus,
 ): boolean {
-  return TRANSITIONS[from].includes(to)
+  return ALLOWED_TRANSITIONS[from].includes(to)
 }
 
-export type LifecycleOptions = {
-  actorId?: string
-  metadata?: Record<string, unknown>
+/** Apply one legal subscription transition and record exactly one audit row. */
+export async function transitionSubscription(
+  subscriptionId: string,
+  to: SubscriptionStatus,
+  options: LifecycleOptions = {},
+) {
+  return db.$transaction(async (tx) => {
+    const subscription = await tx.subscription.findUniqueOrThrow({
+      where: { id: subscriptionId },
+    })
+
+    if (subscription.status === to) {
+      return subscription
+    }
+
+    if (!canTransition(subscription.status, to)) {
+      throw new Error(
+        `Illegal subscription transition: ${subscription.status} -> ${to}`,
+      )
+    }
+
+    const now = new Date()
+    const updated = await tx.subscription.update({
+      where: { id: subscriptionId },
+      data: {
+        status: to,
+        ...(to === 'DISABLED' ? { disabledAt: now } : {}),
+        ...(to === 'ACTIVE' ? { disabledAt: null, graceEndsAt: null } : {}),
+        ...(options.graceEndsAt !== undefined
+          ? { graceEndsAt: options.graceEndsAt }
+          : {}),
+      },
+    })
+
+    await tx.auditLog.create({
+      data: {
+        tenantId: subscription.tenantId,
+        actorId: options.actorId,
+        action: 'subscription.transitioned',
+        entityType: 'Subscription',
+        entityId: subscriptionId,
+        metadata: asJsonObject({
+          from: subscription.status,
+          to,
+          reason: options.reason ?? 'unspecified',
+          ...options.metadata,
+        }),
+      },
+    })
+
+    return updated
+  })
 }
 
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date)
-  d.setDate(d.getDate() + days)
-  return d
+/** Return the current entitlement snapshot for a tenant. */
+export async function getEntitlement(tenantId: string) {
+  const tenant = await db.tenant.findUniqueOrThrow({
+    where: { id: tenantId },
+    include: {
+      subscription: { include: { plan: true } },
+      flags: { include: { flag: true } },
+    },
+  })
+
+  const subscription = tenant.subscription
+  const now = new Date()
+  const active = Boolean(
+    subscription &&
+      now < subscription.currentPeriodEnd &&
+      (subscription.status === 'ACTIVE' ||
+        subscription.status === 'DISABLED_AT_PERIOD_END'),
+  )
+
+  return {
+    active,
+    plan: subscription?.plan.slug ?? null,
+    flags: tenant.flags.filter((flag) => flag.enabled).map((flag) => flag.flag.key),
+    periodEnd: subscription?.currentPeriodEnd ?? null,
+  }
 }
 
-/** Disable a subscription (terminal for billing purposes). */
 export async function disable(
   subscriptionId: string,
   reason: string,
-  opts: LifecycleOptions = {},
+  options: Omit<LifecycleOptions, 'reason'> = {},
 ) {
-  return db.$transaction(async (tx: TransactionClient) => {
-    const sub = await tx.subscription.findUniqueOrThrow({
-      where: { id: subscriptionId },
-    })
-    if (!canTransition(sub.status, 'DISABLED')) {
-      throw new Error(`Illegal transition: ${sub.status} -> DISABLED`)
-    }
-    const updated = await tx.subscription.update({
-      where: { id: subscriptionId },
-      data: { status: 'DISABLED', graceEndsAt: null },
-    })
-    await tx.auditLog.create({
-      data: {
-        tenantId: sub.tenantId,
-        actorId: opts.actorId,
-        action: 'subscription.disabled',
-        entityType: 'Subscription',
-        entityId: subscriptionId,
-        metadata: { reason, ...opts.metadata } as Prisma.InputJsonObject,
-      },
-    })
-    return updated
+  return transitionSubscription(subscriptionId, 'DISABLED', {
+    ...options,
+    reason,
   })
 }
 
-/** (Re-)enable a subscription, starting a fresh billing period. */
 export async function enable(
   subscriptionId: string,
-  opts: LifecycleOptions = {},
+  options: LifecycleOptions = {},
 ) {
-  return db.$transaction(async (tx: TransactionClient) => {
-    const sub = await tx.subscription.findUniqueOrThrow({
-      where: { id: subscriptionId },
-    })
-    if (!canTransition(sub.status, 'ACTIVE')) {
-      throw new Error(`Illegal transition: ${sub.status} -> ACTIVE`)
-    }
-    const updated = await tx.subscription.update({
-      where: { id: subscriptionId },
-      data: {
-        status: 'ACTIVE',
-        graceEndsAt: null,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: addDays(new Date(), 30),
-      },
-    })
-    await tx.auditLog.create({
-      data: {
-        tenantId: sub.tenantId,
-        actorId: opts.actorId,
-        action: 'subscription.enabled',
-        entityType: 'Subscription',
-        entityId: subscriptionId,
-        metadata: opts.metadata as Prisma.InputJsonObject | undefined,
-      },
-    })
-    return updated
+  const subscription = await db.subscription.findUniqueOrThrow({
+    where: { id: subscriptionId },
+    select: { status: true },
   })
+  const target =
+    subscription.status === 'CANCELED' ? 'DISABLED_AT_PERIOD_END' : 'ACTIVE'
+  return transitionSubscription(subscriptionId, target, options)
 }
 
-/** Mark a subscription as PAST_DUE/** Mark a subscription as PAST_DUE after a failed paymentscriptionId: string, opts: LifecycleOptions = {}) {
-  return db.$transaction(async (tx) => {
-    const sub = await tx.subscription.findUniqueOrThrow({ where: { id: subscriptionId } });
-    if (!canTransition(sub.status, "PAST_DUE")) {
-      throw new Error(`Illegal transition: ${sub.status} -> PAST_DUE`);
-    }
-    const updated = await tx.subscription.update({
-      where: { id: subscriptionId },
-      data: { status: "PAST_DUE" },
-    });
-    await tx.auditLog.create({
-      data: {
-        tenantId: sub.tenantId,
-        actorId: opts.actorId,
-        action: "subscription.marked_past_due",
-        entityType: "Subscription",
-        entityId: subscriptionId,
-        metadata: opts.metadata,
-      },
-    });
-    return updated;
-  });
-}
-
-/** Enter a grace period of `days` days before auto-disable. */
 export async function enterGracePeriod(
   subscriptionId: string,
   days: number,
-  opts: LifecycleOptions = {},
+  options: LifecycleOptions = {},
 ) {
-  return db.$transaction(async (tx: TransactionClient) => {
-    const sub = await tx.subscription.findUniqueOrThrow({
-      where: { id: subscriptionId },
-    })
-    if (!canTransition(sub.status, 'GRACE_PERIOD')) {
-      throw new Error(`Illegal transition: ${sub.status} -> GRACE_PERIOD`)
-    }
-    const graceEndsAt = addDays(new Date(), days)
-    const updated = await tx.subscription.update({
-      where: { id: subscriptionId },
-      data: { status: 'GRACE_PERIOD', graceEndsAt },
-    })
-    await tx.auditLog.create({
-      data: {
-        tenantId: sub.tenantId,
-        actorId: opts.actorId,
-        action: 'subscription.grace_period_entered',
-        entityType: 'Subscription',
-        entityId: subscriptionId,
-        metadata: { graceEndsAt: graceEndsAt.toISOString(), ...opts.metadata },
-      },
-    })
-    return updated
+  const graceEndsAt = new Date(Date.now() + days * 86_400_000)
+  const updated = await transitionSubscription(subscriptionId, 'GRACE_PERIOD', {
+    ...options,
+    graceEndsAt,
+    metadata: { ...options.metadata, graceEndsAt: graceEndsAt.toISOString() },
   })
+
+  return updated
 }
