@@ -1,11 +1,11 @@
 // SaaS Dashboard starter schema
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -66,19 +66,20 @@ model User {
 }
 
 model Tenant {
-  id           String         @id @default(uuid())
-  name         String
-  slug         String         @unique
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  deletedAt    DateTime?
-  memberships  Membership[]
-  subscription Subscription?
-  invoices     Invoice[]
-  payments     Payment[]
-  services     Service[]
-  flags        TenantFlag[]
-  auditLogs    AuditLog[]
+  id             String          @id @default(uuid())
+  name           String
+  slug           String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+  memberships    Membership[]
+  subscription   Subscription?
+  invoices       Invoice[]
+  payments       Payment[]
+  services       Service[]
+  flags          TenantFlag[]
+  auditLogs      AuditLog[]
+  serviceActions ServiceAction[]
 
   @@index([slug])
 }
@@ -115,22 +116,22 @@ model Plan {
 }
 
 model Subscription {
-  id                 String             @id @default(uuid())
-  tenantId           String             @unique
-  planId             String
-  status             SubscriptionStatus @default(TRIALING)
-  currentPeriodStart DateTime           @default(now())
-  currentPeriodEnd   DateTime
-  cancelAt           DateTime?
-  graceEndsAt        DateTime?
-  stripeCustomerId   String?
+  id                   String             @id @default(uuid())
+  tenantId             String             @unique
+  planId               String
+  status               SubscriptionStatus @default(TRIALING)
+  currentPeriodStart   DateTime           @default(now())
+  currentPeriodEnd     DateTime
+  cancelAt             DateTime?
+  graceEndsAt          DateTime?
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  deletedAt          DateTime?
-  tenant             Tenant             @relation(fields: [tenantId], references: [id])
-  plan               Plan               @relation(fields: [planId], references: [id])
-  invoices           Invoice[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  deletedAt            DateTime?
+  tenant               Tenant             @relation(fields: [tenantId], references: [id])
+  plan                 Plan               @relation(fields: [planId], references: [id])
+  invoices             Invoice[]
 
   @@index([tenantId, createdAt])
   @@index([status])
@@ -157,18 +158,18 @@ model Invoice {
 }
 
 model Payment {
-  id                   String        @id @default(uuid())
-  tenantId             String
-  invoiceId            String?
-  amountCents          Int
-  currency             String        @default("USD")
-  status               PaymentStatus @default(PENDING)
+  id                    String        @id @default(uuid())
+  tenantId              String
+  invoiceId             String?
+  amountCents           Int
+  currency              String        @default("USD")
+  status                PaymentStatus @default(PENDING)
   stripePaymentIntentId String?
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-  deletedAt            DateTime?
-  tenant               Tenant        @relation(fields: [tenantId], references: [id])
-  invoice              Invoice?      @relation(fields: [invoiceId], references: [id])
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  deletedAt             DateTime?
+  tenant                Tenant        @relation(fields: [tenantId], references: [id])
+  invoice               Invoice?      @relation(fields: [invoiceId], references: [id])
 
   @@index([tenantId, createdAt])
 }
