@@ -11,12 +11,15 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
+import { getAuthSession } from '#/lib/auth.functions'
 
 interface MyRouterContext {
   queryClient: QueryClient
+  auth: Awaited<ReturnType<typeof getAuthSession>>
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
+  beforeLoad: async () => ({ auth: await getAuthSession() }),
   head: () => ({
     meta: [
       {

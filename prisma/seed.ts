@@ -1,4 +1,5 @@
 import { env } from '#/env'
+import bcrypt from 'bcryptjs'
 import {
   PrismaClient,
   ServiceControlType,
@@ -11,6 +12,7 @@ const adapter = new PrismaPg({ connectionString: env.DATABASE_URL })
 const db = new PrismaClient({ adapter })
 
 const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@example.com'
+const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin123!'
 const starterStripePriceId =
   process.env.STRIPE_PRICE_STARTER ?? 'price_starter_test'
 const proStripePriceId = process.env.STRIPE_PRICE_PRO ?? 'price_pro_test'
@@ -65,8 +67,20 @@ async function main() {
   // --- Demo owner user ---------------------------------------------------
   const owner = await db.user.upsert({
     where: { email: adminEmail },
-    update: { name: 'Admin' },
-    create: { email: adminEmail, name: 'Admin' },
+    update: { name: 'Admin', emailVerified: true },
+    create: { email: adminEmail, name: 'Admin', emailVerified: true },
+  })
+
+  await db.account.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000003' },
+    update: { password: await bcrypt.hash(adminPassword, 12) },
+    create: {
+      id: '00000000-0000-4000-8000-000000000003',
+      accountId: owner.id,
+      providerId: 'credential',
+      userId: owner.id,
+      password: await bcrypt.hash(adminPassword, 12),
+    },
   })
 
   // --- Tenants + subscriptions + flags ----------------------------------
