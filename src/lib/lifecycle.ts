@@ -1,5 +1,5 @@
 import { db } from '../db'
-import type { SubscriptionStatus } from '#/generated/prisma/client'
+import type { Prisma, SubscriptionStatus } from '#/generated/prisma/client'
 import type { TransactionClient } from '#/generated/prisma/internal/prismaNamespace'
 
 /** Days before graceEndsAt at which grace notice emails are sent. */
@@ -67,7 +67,7 @@ export async function disable(
         action: 'subscription.disabled',
         entityType: 'Subscription',
         entityId: subscriptionId,
-        metadata: { reason, ...opts.metadata },
+        metadata: { reason, ...opts.metadata } as Prisma.InputJsonObject,
       },
     })
     return updated
@@ -102,7 +102,7 @@ export async function enable(
         action: 'subscription.enabled',
         entityType: 'Subscription',
         entityId: subscriptionId,
-        metadata: opts.metadata,
+        metadata: opts.metadata as Prisma.InputJsonObject | undefined,
       },
     })
     return updated

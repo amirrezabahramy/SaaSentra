@@ -10,11 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedRouteImport } from './routes/protected'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiV1EntitlementsTenantIdRouteImport } from './routes/api/v1/entitlements/$tenantId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedRoute = ProtectedRouteImport.update({
+  id: '/protected',
+  path: '/protected',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -22,31 +29,51 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1EntitlementsTenantIdRoute =
+  ApiV1EntitlementsTenantIdRouteImport.update({
+    id: '/api/v1/entitlements/$tenantId',
+    path: '/api/v1/entitlements/$tenantId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/protected': typeof ProtectedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/protected': typeof ProtectedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/protected': typeof ProtectedRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/auth/$'
+  fullPaths:
+    '/' | '/protected' | '/api/auth/$' | '/api/v1/entitlements/$tenantId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/auth/$'
-  id: '__root__' | '/' | '/api/auth/$'
+  to: '/' | '/protected' | '/api/auth/$' | '/api/v1/entitlements/$tenantId'
+  id:
+    | '__root__'
+    | '/'
+    | '/protected'
+    | '/api/auth/$'
+    | '/api/v1/entitlements/$tenantId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProtectedRoute: typeof ProtectedRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiV1EntitlementsTenantIdRoute: typeof ApiV1EntitlementsTenantIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/protected': {
+      id: '/protected'
+      path: '/protected'
+      fullPath: '/protected'
+      preLoaderRoute: typeof ProtectedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -65,13 +99,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/entitlements/$tenantId': {
+      id: '/api/v1/entitlements/$tenantId'
+      path: '/api/v1/entitlements/$tenantId'
+      fullPath: '/api/v1/entitlements/$tenantId'
+      preLoaderRoute: typeof ApiV1EntitlementsTenantIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProtectedRoute: ProtectedRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiV1EntitlementsTenantIdRoute: ApiV1EntitlementsTenantIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

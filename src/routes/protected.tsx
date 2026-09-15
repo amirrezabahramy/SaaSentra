@@ -11,13 +11,13 @@ async function getSession(): Promise<{ userId: string } | null> {
 }
 
 /**
- * Pathless layout route: everything nested under it requires a session.
+ * Protected layout route: everything nested under it requires a session.
  */
-export const Route = createFileRoute('/_protected')({
+export const Route = createFileRoute('/protected')({
   beforeLoad: async () => {
     const session = await getSession()
     if (!session) {
-      throw redirect({ to: '/login' })
+      throw redirect({ to: '/' })
     }
     return { session }
   },

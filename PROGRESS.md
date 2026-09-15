@@ -17,7 +17,7 @@
 
 | Phase                         | File                          | Status | Date |
 | ----------------------------- | ----------------------------- | ------ | ---- |
-| 00 — Scaffold & deps          | `phases/00-scaffold.md`       | [ ]    |      |
+| 00 — Scaffold & deps          | `phases/00-scaffold.md`       | [x]    | 2026-09-15 |
 | 01 — Data layer               | `phases/01-data-layer.md`     | [ ]    |      |
 | 02 — Domain logic             | `phases/02-domain-logic.md`   | [ ]    |      |
 | 03 — Auth                     | `phases/03-auth.md`           | [ ]    |      |
@@ -38,20 +38,23 @@
 ## Environment setup log
 
 - Postgres via Docker: `docker run --name saas-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=saas -p 5432:5432 -d postgres:16`
-- `.env` created from `.env.example`: [ ]
-- Secrets generated (`openssl rand -base64 32`): [ ]
+- `.env` created from `.env.example`: [x]
+- Secrets generated (`openssl rand -base64 32`): [x]
 
 ## Notes / decisions log
 
 | Date | Phase | Note |
 | ---- | ----- | ---- |
-|      |       |      |
+| 2026-09-15 | 00 | Docker was waived by user for normal development. Resolved the extracted route collision by moving the protected layout to `/protected`; regenerated the route tree. Prisma Client generated successfully; the required `Tenant.serviceActions` inverse relation was already present in the schema. Fixed extracted TypeScript issues in `src/lib/lifecycle.ts` and the protected redirect. Verification passed: `npx tsc --noEmit`, `npm run dev`. Phase 1 entry point: `phases/01-data-layer.md`, starting with its first unchecked step. |
 
 ## File change log (feeds the final report)
 
 | Action | Path | Phase |
 | ------ | ---- | ----- |
-|        |      |       |
+| modified | `src/lib/lifecycle.ts` | 00 |
+| modified | `src/routeTree.gen.ts` | 00 |
+| renamed | `src/routes/_protected.tsx` → `src/routes/protected.tsx` | 00 |
+| modified | `PROGRESS.md` | 00 |
 
 ## Final report checklist
 
