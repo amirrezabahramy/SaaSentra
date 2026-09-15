@@ -129,6 +129,7 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
       slug: tenant.slug,
       subscription: tenant.subscription
         ? {
+            id: tenant.subscription.id,
             status: tenant.subscription.status,
             plan: tenant.subscription.plan.slug,
             currentPeriodEnd: tenant.subscription.currentPeriodEnd.toISOString(),

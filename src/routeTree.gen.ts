@@ -12,6 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
+import { Route as ProtectedAuditRouteImport } from './routes/_protected/audit'
+import { Route as ProtectedFlagsRouteImport } from './routes/_protected/flags'
+import { Route as ProtectedServicesRouteImport } from './routes/_protected/services'
+import { Route as ProtectedSettingsRouteImport } from './routes/_protected/settings'
+import { Route as ProtectedSubscriptionsRouteImport } from './routes/_protected/subscriptions'
 import { Route as ProtectedTenantsIndexRouteImport } from './routes/_protected/tenants/index'
 import { Route as ProtectedTenantsIdRouteImport } from './routes/_protected/tenants/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -29,6 +34,31 @@ const LoginRoute = LoginRouteImport.update({
 const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedAuditRoute = ProtectedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedFlagsRoute = ProtectedFlagsRouteImport.update({
+  id: '/flags',
+  path: '/flags',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedServicesRoute = ProtectedServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedSettingsRoute = ProtectedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedSubscriptionsRoute = ProtectedSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedTenantsIndexRoute = ProtectedTenantsIndexRouteImport.update({
@@ -56,6 +86,11 @@ const ApiV1EntitlementsTenantIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
   '/login': typeof LoginRoute
+  '/audit': typeof ProtectedAuditRoute
+  '/flags': typeof ProtectedFlagsRoute
+  '/services': typeof ProtectedServicesRoute
+  '/settings': typeof ProtectedSettingsRoute
+  '/subscriptions': typeof ProtectedSubscriptionsRoute
   '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/tenants/': typeof ProtectedTenantsIndexRoute
@@ -63,6 +98,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/audit': typeof ProtectedAuditRoute
+  '/flags': typeof ProtectedFlagsRoute
+  '/services': typeof ProtectedServicesRoute
+  '/settings': typeof ProtectedSettingsRoute
+  '/subscriptions': typeof ProtectedSubscriptionsRoute
   '/': typeof ProtectedIndexRoute
   '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -73,6 +113,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_protected': typeof ProtectedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_protected/audit': typeof ProtectedAuditRoute
+  '/_protected/flags': typeof ProtectedFlagsRoute
+  '/_protected/services': typeof ProtectedServicesRoute
+  '/_protected/settings': typeof ProtectedSettingsRoute
+  '/_protected/subscriptions': typeof ProtectedSubscriptionsRoute
   '/_protected/': typeof ProtectedIndexRoute
   '/_protected/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -84,6 +129,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/audit'
+    | '/flags'
+    | '/services'
+    | '/settings'
+    | '/subscriptions'
     | '/tenants/$id'
     | '/api/auth/$'
     | '/tenants/'
@@ -91,6 +141,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/audit'
+    | '/flags'
+    | '/services'
+    | '/settings'
+    | '/subscriptions'
     | '/'
     | '/tenants/$id'
     | '/api/auth/$'
@@ -100,6 +155,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_protected'
     | '/login'
+    | '/_protected/audit'
+    | '/_protected/flags'
+    | '/_protected/services'
+    | '/_protected/settings'
+    | '/_protected/subscriptions'
     | '/_protected/'
     | '/_protected/tenants/$id'
     | '/api/auth/$'
@@ -137,6 +197,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedIndexRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/audit': {
+      id: '/_protected/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof ProtectedAuditRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/flags': {
+      id: '/_protected/flags'
+      path: '/flags'
+      fullPath: '/flags'
+      preLoaderRoute: typeof ProtectedFlagsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/services': {
+      id: '/_protected/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof ProtectedServicesRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/settings': {
+      id: '/_protected/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof ProtectedSettingsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/subscriptions': {
+      id: '/_protected/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/subscriptions'
+      preLoaderRoute: typeof ProtectedSubscriptionsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/tenants/': {
       id: '/_protected/tenants/'
       path: '/tenants'
@@ -169,12 +264,22 @@ declare module '@tanstack/react-router' {
 }
 
 interface ProtectedRouteChildren {
+  ProtectedAuditRoute: typeof ProtectedAuditRoute
+  ProtectedFlagsRoute: typeof ProtectedFlagsRoute
+  ProtectedServicesRoute: typeof ProtectedServicesRoute
+  ProtectedSettingsRoute: typeof ProtectedSettingsRoute
+  ProtectedSubscriptionsRoute: typeof ProtectedSubscriptionsRoute
   ProtectedIndexRoute: typeof ProtectedIndexRoute
   ProtectedTenantsIdRoute: typeof ProtectedTenantsIdRoute
   ProtectedTenantsIndexRoute: typeof ProtectedTenantsIndexRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedAuditRoute: ProtectedAuditRoute,
+  ProtectedFlagsRoute: ProtectedFlagsRoute,
+  ProtectedServicesRoute: ProtectedServicesRoute,
+  ProtectedSettingsRoute: ProtectedSettingsRoute,
+  ProtectedSubscriptionsRoute: ProtectedSubscriptionsRoute,
   ProtectedIndexRoute: ProtectedIndexRoute,
   ProtectedTenantsIdRoute: ProtectedTenantsIdRoute,
   ProtectedTenantsIndexRoute: ProtectedTenantsIndexRoute,

@@ -23,7 +23,7 @@
 | 03 — Auth                     | `phases/03-auth.md`           | [x]    | 2026-09-15 |
 | 04 — Entitlements API         | `phases/04-entitlements.md`   | [x]    | 2026-09-15 |
 | 05a — Admin UI core           | `phases/05a-admin-ui-core.md` | [x]    | 2026-09-15 |
-| 05b — Admin UI ops            | `phases/05b-admin-ui-ops.md`  | [ ]    |      |
+| 05b — Admin UI ops            | `phases/05b-admin-ui-ops.md`  | [x]    | 2026-09-15 |
 | 06 — Stripe                   | `phases/06-stripe.md`         | [ ]    |      |
 | 07 — Ops glue (dunning)       | `phases/07-ops-glue.md`       | [ ]    |      |
 | 08 — E2E & Definition of Done | `phases/08-e2e-dod.md`        | [ ]    |      |
@@ -56,6 +56,8 @@
 | 2026-09-15 | 04 | Updated the service-control route to use `x-entitlement-secret`, delegate to `getEntitlement()`, return object-shaped per-tenant flags, and avoid session requirements. Added `ENTITLEMENT_SHARED_SECRET` configuration and README curl example. Validation passed. Runtime checks passed: valid request 200 with `active:true`, `plan:"pro"`, flags object, and ISO period end; missing/wrong secret 401; unknown tenant 404; state-machine disable returned `active:false`; restoring ACTIVE returned `active:true`. |
 | 2026-09-15 | 05a | Started admin UI core. Added server-side overview/tenant loaders, centralized MRR/date/currency helpers, and shared admin status/empty-state components. |
 | 2026-09-15 | 05a | Completed after user verification: Overview, Tenants, and Tenant Detail render with seeded data; MRR, tenant search/status badges, audit actor/reason timeline, empty/error/loading states, protected redirects, route generation, strict TypeScript, and dev boot all verified. Phase 1 entry point: `phases/05b-admin-ui-ops.md`, starting with its first unchecked step. |
+| 2026-09-15 | 05b | Started admin UI operations. Added server-side loaders for subscriptions, services, flags, audit, and settings; lifecycle-backed subscription actions; audited tenant flag overrides; and the corresponding protected pages. `npm run generate-routes`, `npx tsc --noEmit`, and `npm run build` pass. |
+| 2026-09-15 | 05b | Completed after user verification: subscription disable/re-enable works with styled confirmation and exact-text confirmation, flag toggles persist, audit entries show actor/reason, endpoint entitlement state updates, repeated actions are idempotent, and each operator disable produces one audit entry. Phase 06 entry point: `phases/06-stripe.md`, starting with its first unchecked step. |
 
 ## File change log (feeds the final report)
 
@@ -106,6 +108,17 @@
 | added | `src/routes/_protected/tenants/$id.tsx` | 05a |
 | modified | `src/routeTree.gen.ts` | 05a |
 | modified | `PROGRESS.md` | 05a |
+| added | `src/lib/ops.functions.ts` | 05b |
+| added | `src/routes/_protected/subscriptions.tsx` | 05b |
+| added | `src/routes/_protected/services.tsx` | 05b |
+| added | `src/routes/_protected/flags.tsx` | 05b |
+| added | `src/routes/_protected/audit.tsx` | 05b |
+| added | `src/routes/_protected/settings.tsx` | 05b |
+| modified | `src/routes/_protected/tenants/$id.tsx` | 05b |
+| modified | `src/lib/admin.functions.ts` | 05b |
+| modified | `src/routeTree.gen.ts` | 05b |
+| modified | `PROGRESS.md` | 05b |
+| modified | `src/lib/lifecycle.ts` | 05b |
 
 ## Final report checklist
 

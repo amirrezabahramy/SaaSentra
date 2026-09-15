@@ -22,6 +22,7 @@ export type LifecycleOptions = {
   reason?: string
   metadata?: Record<string, unknown>
   graceEndsAt?: Date | null
+  allowImmediateDisable?: boolean
 }
 
 function asJsonObject(value: Record<string, unknown>): Prisma.InputJsonObject {
@@ -50,7 +51,12 @@ export async function transitionSubscription(
       return subscription
     }
 
-    if (!canTransition(subscription.status, to)) {
+    const isAuthorizedImmediateDisable =
+      to === 'DISABLED' &&
+      options.allowImmediateDisable === true &&
+      Boolean(options.actorId)
+
+    if (!canTransition(subscription.status, to) && !isAuthorizedImmediateDisable) {
       throw new Error(
         `Illegal subscription transition: ${subscription.status} -> ${to}`,
       )
@@ -127,6 +133,8 @@ export async function disable(
   return transitionSubscription(subscriptionId, 'DISABLED', {
     ...options,
     reason,
+    allowImmediateDisable: true,
+    metadata: { ...options.metadata, operatorDisable: true },
   })
 }
 
