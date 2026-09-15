@@ -26,7 +26,7 @@
 | 05b — Admin UI ops            | `phases/05b-admin-ui-ops.md`  | [x]    | 2026-09-15 |
 | 06 — Stripe                   | `phases/06-stripe.md`         | [x]    | 2026-09-15 |
 | 07 — Ops glue (dunning)       | `phases/07-ops-glue.md`       | [x]    | 2026-09-15 |
-| 08 — E2E & Definition of Done | `phases/08-e2e-dod.md`        | [ ]    |      |
+| 08 — E2E & Definition of Done | `phases/08-e2e-dod.md`        | [x]    | 2026-09-15 |
 
 ## Locked decisions (do NOT revisit)
 
@@ -61,6 +61,9 @@
 | 2026-09-15 | 06 | Started Stripe test-mode integration. Added Checkout Session creation through Stripe REST, raw-body webhook signature verification, processed-event idempotency, lifecycle event mapping, and invoice/payment mirroring. |
 | 2026-09-15 | 06 | Completed after user verification with Stripe CLI: test-mode configuration and webhook forwarding work; checkout/webhook flow, signature rejection, subscription lifecycle mapping, invoice/payment mirroring, and replay idempotency verified. Phase 07 entry point: `phases/07-ops-glue.md`, starting with its first unchecked step. |
 | 2026-09-15 | 07 | Completed after user verification: four-hour dunning scheduler, manual dunning runner, Overview trigger, dunning queue count, health endpoint, grace-period transitions, disabledAt handling, notices, and idempotent reruns all pass. Phase 08 entry point: `phases/08-e2e-dod.md`, starting with its first unchecked step. |
+| 2026-09-15 | 08 | Started final E2E and Definition of Done verification using `.env.local`. Non-destructive checks are being run first; shared database reset is intentionally not performed without explicit confirmation. |
+| 2026-09-15 | 08 | Preliminary DoD results: `npm install` exited 0 (`up to date, audited 794 packages`); `prisma migrate dev` reported `Already in sync, no schema change or pending migration was found`; `npm run db:seed` reported `Seed complete: 2 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log`; route generation, `npx tsc --noEmit`, `npm run build`, and `git diff --check` passed. Read-only DB smoke query reported 2 plans, 3 tenants, 1 service, 3 ACTIVE subscriptions, and 43 audit rows. Final browser/Stripe founding-loop confirmation remains pending. |
+| 2026-09-15 | 08 | Completed after user verification of the full founding loop: sign-in and protected redirects, Stripe checkout/webhook activation and replay idempotency, entitlement active/inactive responses, PAST_DUE → GRACE_PERIOD → DISABLED dunning with notices and audit rows, admin re-enable, and `/api/health` returning `{"ok":true}`. DoD 1–8 passed; no ship blockers found. |
 
 ## File change log (feeds the final report)
 
@@ -139,9 +142,20 @@
 | modified | `src/routeTree.gen.ts` | 07 |
 | modified | `PROGRESS.md` | 07 |
 
+## Definition of Done results
+
+- DoD 1: PASS — `npm install`: `up to date, audited 794 packages`; `prisma migrate dev`: `Already in sync, no schema change or pending migration was found.`
+- DoD 2: PASS — `npm run db:seed`: `Seed complete: 2 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log.`
+- DoD 3: PASS — `npm run dev` booted; `/login` rendered; logged-out protected routes redirected to `/login`.
+- DoD 4: PASS — entitlement endpoint returned HTTP 200 with `{ active, plan, flags, periodEnd }`.
+- DoD 5: PASS — `PAST_DUE → GRACE_PERIOD` produced an `AuditLog` row with actor, reason, and transition metadata.
+- DoD 6: PASS — `DISABLED` entitlement returned `active:false`.
+- DoD 7: PASS — Stripe test checkout/webhook activated the subscription; replay produced no state or audit changes.
+- DoD 8: PASS — dunning moved `PAST_DUE → GRACE_PERIOD → DISABLED`, populated `disabledAt`, logged notices, and reran idempotently.
+
 ## Final report checklist
 
-- [ ] All phases marked `[x]` with dates.
-- [ ] DoD results (pass/fail per item) from `phases/08-e2e-dod.md`.
-- [ ] Files created / modified / deleted listed path by path.
-- [ ] Assumptions + scaffold conflicts and how they were resolved.
+- [x] All phases marked `[x]` with dates.
+- [x] DoD results (pass/fail per item) from `phases/08-e2e-dod.md`.
+- [x] Files created / modified / deleted listed path by path.
+- [x] Assumptions + scaffold conflicts and how they were resolved.
