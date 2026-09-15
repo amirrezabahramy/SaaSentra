@@ -1,14 +1,248 @@
+// SaaS Dashboard starter schema
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Todo {
-  id        Int      @id @default(autoincrement())
-  title     String
-  createdAt DateTime @default(now())
+enum Role {
+  OWNER
+  ADMIN
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  GRACE_PERIOD
+  DISABLED
+  CANCELED
+  DISABLED_AT_PERIOD_END
+  ARCHIVED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum ServiceControlType {
+  ENTITLEMENT
+  TOKEN
+  WEBHOOK
+  INFRA
+}
+
+enum ServiceDeployStatus {
+  HEALTHY
+  DEGRADED
+  OFFLINE
+}
+
+model User {
+  id          String       @id @default(uuid())
+  email       String       @unique
+  name        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  memberships Membership[]
+  auditLogs   AuditLog[]
+
+  @@index([email])
+}
+
+model Tenant {
+  id           String         @id @default(uuid())
+  name         String
+  slug         String         @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+  memberships  Membership[]
+  subscription Subscription?
+  invoices     Invoice[]
+  payments     Payment[]
+  services     Service[]
+  flags        TenantFlag[]
+  auditLogs    AuditLog[]
+
+  @@index([slug])
+}
+
+model Membership {
+  id        String    @id @default(uuid())
+  userId    String
+  tenantId  String
+  role      Role
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id])
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, createdAt])
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  priceCents    Int            @default(0)
+  currency      String         @default("USD")
+  interval      String         @default("month")
+  trialDays     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  subscriptions Subscription[]
+
+  @@index([slug])
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  tenantId           String             @unique
+  planId             String
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  cancelAt           DateTime?
+  graceEndsAt        DateTime?
+  stripeCustomerId   String?
+  stripeSubscriptionId String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+  tenant             Tenant             @relation(fields: [tenantId], references: [id])
+  plan               Plan               @relation(fields: [planId], references: [id])
+  invoices           Invoice[]
+
+  @@index([tenantId, createdAt])
+  @@index([status])
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  tenantId       String
+  subscriptionId String?
+  number         String        @unique
+  amountCents    Int
+  currency       String        @default("USD")
+  status         InvoiceStatus @default(DRAFT)
+  dueDate        DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  payments       Payment[]
+
+  @@index([tenantId, createdAt])
+}
+
+model Payment {
+  id                   String        @id @default(uuid())
+  tenantId             String
+  invoiceId            String?
+  amountCents          Int
+  currency             String        @default("USD")
+  status               PaymentStatus @default(PENDING)
+  stripePaymentIntentId String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  deletedAt            DateTime?
+  tenant               Tenant        @relation(fields: [tenantId], references: [id])
+  invoice              Invoice?      @relation(fields: [invoiceId], references: [id])
+
+  @@index([tenantId, createdAt])
+}
+
+model Service {
+  id           String              @id @default(uuid())
+  tenantId     String
+  name         String
+  controlType  ServiceControlType  @default(ENTITLEMENT)
+  endpointUrl  String?
+  deployStatus ServiceDeployStatus @default(HEALTHY)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  deletedAt    DateTime?
+  tenant       Tenant              @relation(fields: [tenantId], references: [id])
+  actions      ServiceAction[]
+
+  @@index([tenantId, createdAt])
+}
+
+model ServiceAction {
+  id        String    @id @default(uuid())
+  tenantId  String
+  serviceId String
+  actorId   String?
+  action    String
+  payload   Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  service   Service   @relation(fields: [serviceId], references: [id])
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt])
+}
+
+model FeatureFlag {
+  id          String       @id @default(uuid())
+  key         String       @unique
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  tenantFlags TenantFlag[]
+
+  @@index([key])
+}
+
+model TenantFlag {
+  id        String      @id @default(uuid())
+  tenantId  String
+  flagId    String
+  enabled   Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  flag      FeatureFlag @relation(fields: [flagId], references: [id])
+
+  @@unique([tenantId, flagId])
+  @@index([tenantId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  actorId    String?
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  actor      User?    @relation(fields: [actorId], references: [id])
+
+  @@index([tenantId, createdAt])
 }

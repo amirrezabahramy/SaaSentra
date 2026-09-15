@@ -1,19 +1,15 @@
-import { PrismaClient } from './generated/prisma/client.js'
+import { PrismaClient } from "@prisma/client";
 
-import { getDatabaseUrl } from './database-url.js'
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-import { PrismaPg } from '@prisma/adapter-pg'
+export const db =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+  });
 
-const adapter = new PrismaPg({
-  connectionString: getDatabaseUrl(),
-})
-
-declare global {
-  var __prisma: PrismaClient | undefined
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = db;
 }
 
-export const prisma = globalThis.__prisma || new PrismaClient({ adapter })
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.__prisma = prisma
-}
+export default db;
