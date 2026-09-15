@@ -1,12 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { db } from '#/db'
 import { ALLOWED_TRANSITIONS, transitionSubscription } from '#/lib/lifecycle'
-import { record, numberValue, stringValue, verifyStripeSignature } from '#/lib/stripe'
-import type { InvoiceStatus, PaymentStatus, SubscriptionStatus } from '#/generated/prisma/client'
+import {
+  record,
+  numberValue,
+  stringValue,
+  verifyStripeSignature,
+} from '#/lib/stripe'
+import type {
+  InvoiceStatus,
+  PaymentStatus,
+  SubscriptionStatus,
+} from '#/generated/prisma/client'
 
 function metadata(value: unknown): Record<string, string> {
   const source = record(value)
-  return Object.fromEntries(Object.entries(source).flatMap(([key, item]) => typeof item === 'string' ? [[key, item]] : []))
+  return Object.fromEntries(
+    Object.entries(source).flatMap(([key, item]) =>
+      typeof item === 'string' ? [[key, item]] : [],
+    ),
+  )
 }
 
 function eventObject(event: Record<string, unknown>): Record<string, unknown> {
@@ -39,60 +52,151 @@ async function findSubscription(object: Record<string, unknown>) {
       OR: [
         ...(id ? [{ id }] : []),
         ...(stripeId ? [{ stripeSubscriptionId: stripeId }] : []),
-        ...(relatedSubscription ? [{ stripeSubscriptionId: relatedSubscription }] : []),
+        ...(relatedSubscription
+          ? [{ stripeSubscriptionId: relatedSubscription }]
+          : []),
         ...(customer ? [{ stripeCustomerId: customer }] : []),
       ],
     },
   })
 }
 
-async function transitionIfAllowed(subscriptionId: string, target: SubscriptionStatus, reason: string) {
-  const subscription = await db.subscription.findUniqueOrThrow({ where: { id: subscriptionId }, select: { status: true } })
+async function transitionIfAllowed(
+  subscriptionId: string,
+  target: SubscriptionStatus,
+  reason: string,
+) {
+  const subscription = await db.subscription.findUniqueOrThrow({
+    where: { id: subscriptionId },
+    select: { status: true },
+  })
   if (subscription.status === target) return
   if (!ALLOWED_TRANSITIONS[subscription.status].includes(target)) return
-  await transitionSubscription(subscriptionId, target, { reason, metadata: { source: 'stripe' } })
+  await transitionSubscription(subscriptionId, target, {
+    reason,
+    metadata: { source: 'stripe' },
+  })
 }
 
-async function mirrorInvoice(object: Record<string, unknown>, subscriptionId: string | null, paymentOverride?: PaymentStatus) {
+async function mirrorInvoice(
+  object: Record<string, unknown>,
+  subscriptionId: string | null,
+  paymentOverride?: PaymentStatus,
+) {
   const stripeInvoiceId = stringValue(object.id)
   if (!stripeInvoiceId) return
-  const subscription = subscriptionId ? await db.subscription.findUnique({ where: { id: subscriptionId } }) : null
+  const subscription = subscriptionId
+    ? await db.subscription.findUnique({ where: { id: subscriptionId } })
+    : null
   if (!subscription) return
-  const amount = numberValue(object.amount_due) ?? numberValue(object.amount_paid) ?? 0
+  const amount =
+    numberValue(object.amount_due) ?? numberValue(object.amount_paid) ?? 0
   const currency = stringValue(object.currency)?.toUpperCase() ?? 'USD'
   const status = invoiceStatus(stringValue(object.status))
   const invoice = await db.invoice.upsert({
     where: { number: `stripe:${stripeInvoiceId}` },
-    create: { tenantId: subscription.tenantId, subscriptionId: subscription.id, number: `stripe:${stripeInvoiceId}`, amountCents: amount, currency, status, paidAt: status === 'PAID' ? new Date() : null },
-    update: { amountCents: amount, currency, status, paidAt: status === 'PAID' ? new Date() : null },
+    create: {
+      tenantId: subscription.tenantId,
+      subscriptionId: subscription.id,
+      number: `stripe:${stripeInvoiceId}`,
+      amountCents: amount,
+      currency,
+      status,
+      paidAt: status === 'PAID' ? new Date() : null,
+    },
+    update: {
+      amountCents: amount,
+      currency,
+      status,
+      paidAt: status === 'PAID' ? new Date() : null,
+    },
   })
   const paymentIntent = stringValue(object.payment_intent)
   if (paymentIntent) {
-    const mirroredPaymentStatus = paymentOverride ?? paymentStatus(status === 'PAID' ? 'succeeded' : status === 'UNCOLLECTIBLE' ? 'failed' : 'pending')
-    await db.payment.upsert({ where: { id: `stripe:${paymentIntent}` }, create: { id: `stripe:${paymentIntent}`, tenantId: subscription.tenantId, invoiceId: invoice.id, amountCents: amount, currency, status: mirroredPaymentStatus, stripePaymentIntentId: paymentIntent }, update: { invoiceId: invoice.id, amountCents: amount, currency, status: mirroredPaymentStatus } })
+    const mirroredPaymentStatus =
+      paymentOverride ??
+      paymentStatus(
+        status === 'PAID'
+          ? 'succeeded'
+          : status === 'UNCOLLECTIBLE'
+            ? 'failed'
+            : 'pending',
+      )
+    await db.payment.upsert({
+      where: { id: `stripe:${paymentIntent}` },
+      create: {
+        id: `stripe:${paymentIntent}`,
+        tenantId: subscription.tenantId,
+        invoiceId: invoice.id,
+        amountCents: amount,
+        currency,
+        status: mirroredPaymentStatus,
+        stripePaymentIntentId: paymentIntent,
+      },
+      update: {
+        invoiceId: invoice.id,
+        amountCents: amount,
+        currency,
+        status: mirroredPaymentStatus,
+      },
+    })
   }
 }
 
-async function handleEvent(event: Record<string, unknown>, subscription: Awaited<ReturnType<typeof findSubscription>>) {
+async function handleEvent(
+  event: Record<string, unknown>,
+  subscription: Awaited<ReturnType<typeof findSubscription>>,
+) {
   const type = stringValue(event.type)
   const object = eventObject(event)
   const meta = metadata(object.metadata)
   if (type === 'checkout.session.completed') {
     const subscriptionId = stringValue(meta.subscriptionId) ?? subscription?.id
-    if (subscriptionId) await transitionIfAllowed(subscriptionId, 'ACTIVE', 'Stripe checkout completed')
-  } else if (type === 'customer.subscription.created' || type === 'customer.subscription.updated') {
+    if (subscriptionId)
+      await transitionIfAllowed(
+        subscriptionId,
+        'ACTIVE',
+        'Stripe checkout completed',
+      )
+  } else if (
+    type === 'customer.subscription.created' ||
+    type === 'customer.subscription.updated'
+  ) {
     if (subscription) {
       const stripeSubscriptionId = stringValue(object.id)
       const customerId = stringValue(object.customer)
       const periodEnd = numberValue(object.current_period_end)
-      await db.subscription.update({ where: { id: subscription.id }, data: { ...(stripeSubscriptionId ? { stripeSubscriptionId } : {}), ...(customerId ? { stripeCustomerId: customerId } : {}), ...(periodEnd ? { currentPeriodEnd: new Date(periodEnd * 1000) } : {}) } })
-      await transitionIfAllowed(subscription.id, 'ACTIVE', `Stripe subscription ${type}`)
+      await db.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          ...(stripeSubscriptionId ? { stripeSubscriptionId } : {}),
+          ...(customerId ? { stripeCustomerId: customerId } : {}),
+          ...(periodEnd
+            ? { currentPeriodEnd: new Date(periodEnd * 1000) }
+            : {}),
+        },
+      })
+      await transitionIfAllowed(
+        subscription.id,
+        'ACTIVE',
+        `Stripe subscription ${type}`,
+      )
     }
   } else if (type === 'invoice.payment_failed') {
-    if (subscription) await transitionIfAllowed(subscription.id, 'PAST_DUE', 'Stripe invoice payment failed')
+    if (subscription)
+      await transitionIfAllowed(
+        subscription.id,
+        'PAST_DUE',
+        'Stripe invoice payment failed',
+      )
     if (subscription) await mirrorInvoice(object, subscription.id, 'FAILED')
   } else if (type === 'customer.subscription.deleted') {
-    if (subscription) await transitionIfAllowed(subscription.id, 'CANCELED', 'Stripe subscription deleted')
+    if (subscription)
+      await transitionIfAllowed(
+        subscription.id,
+        'CANCELED',
+        'Stripe subscription deleted',
+      )
   } else if (type === 'invoice.paid' || type === 'invoice.finalized') {
     if (subscription) await mirrorInvoice(object, subscription.id)
   }
@@ -104,23 +208,44 @@ export const Route = createFileRoute('/api/stripe/webhook')({
       POST: async ({ request }) => {
         const payload = await request.text()
         const signature = request.headers.get('stripe-signature')
-        if (!signature || !verifyStripeSignature(payload, signature)) return Response.json({ error: 'Invalid signature' }, { status: 400 })
+        if (!signature || !verifyStripeSignature(payload, signature))
+          return Response.json({ error: 'Invalid signature' }, { status: 400 })
         let event: Record<string, unknown>
-        try { event = record(JSON.parse(payload)) } catch { return Response.json({ error: 'Invalid payload' }, { status: 400 }) }
+        try {
+          event = record(JSON.parse(payload))
+        } catch {
+          return Response.json({ error: 'Invalid payload' }, { status: 400 })
+        }
         const eventId = stringValue(event.id)
-        if (!eventId) return Response.json({ error: 'Missing event ID' }, { status: 400 })
-        const existing = await db.auditLog.findFirst({ where: { action: 'stripe.event.processed', entityId: eventId } })
+        if (!eventId)
+          return Response.json({ error: 'Missing event ID' }, { status: 400 })
+        const existing = await db.auditLog.findFirst({
+          where: { action: 'stripe.event.processed', entityId: eventId },
+        })
         if (existing) return Response.json({ received: true, duplicate: true })
         const object = eventObject(event)
         const relatedSubscription = await findSubscription(object)
-        const candidateTenantId = relatedSubscription?.tenantId ?? metadata(object.metadata).tenantId
+        const candidateTenantId =
+          relatedSubscription?.tenantId ?? metadata(object.metadata).tenantId
         const relatedTenant = candidateTenantId
-          ? await db.tenant.findUnique({ where: { id: candidateTenantId }, select: { id: true } })
+          ? await db.tenant.findUnique({
+              where: { id: candidateTenantId },
+              select: { id: true },
+            })
           : null
-        if (!relatedTenant) return Response.json({ received: true, ignored: true })
+        if (!relatedTenant)
+          return Response.json({ received: true, ignored: true })
         await handleEvent(event, relatedSubscription)
         const type = stringValue(event.type) ?? 'unknown'
-        await db.auditLog.create({ data: { tenantId: relatedTenant.id, action: 'stripe.event.processed', entityType: 'StripeEvent', entityId: eventId, metadata: { type } } })
+        await db.auditLog.create({
+          data: {
+            tenantId: relatedTenant.id,
+            action: 'stripe.event.processed',
+            entityType: 'StripeEvent',
+            entityId: eventId,
+            metadata: { type },
+          },
+        })
         return Response.json({ received: true })
       },
     },

@@ -27,7 +27,10 @@ function ProtectedLayout() {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="border-b border-[var(--line)] bg-[var(--surface)] p-5 backdrop-blur lg:min-h-screen lg:border-b-0 lg:border-r">
-        <a href="/" className="font-serif text-2xl font-bold text-[var(--sea-ink)]">
+        <a
+          href="/"
+          className="font-serif text-2xl font-bold text-[var(--sea-ink)]"
+        >
           Harbor Admin
         </a>
         <nav className="mt-8 flex gap-2 overflow-x-auto lg:block">
@@ -46,7 +49,9 @@ function ProtectedLayout() {
         </div>
       </aside>
       <main className="min-w-0 p-5 sm:p-8">
-        <div className="mb-5 flex justify-end lg:hidden"><BetterAuthHeader /></div>
+        <div className="mb-5 flex justify-end lg:hidden">
+          <BetterAuthHeader />
+        </div>
         <Outlet />
       </main>
     </div>

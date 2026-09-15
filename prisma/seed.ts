@@ -175,7 +175,9 @@ async function main() {
     },
   })
 
-  console.log('Seed complete: 2 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log.')
+  console.log(
+    'Seed complete: 2 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log.',
+  )
 }
 
 main()

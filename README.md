@@ -132,7 +132,7 @@ curl -sS http://localhost:3000/api/health
 Expected response:
 
 ```json
-{"ok":true}
+{ "ok": true }
 ```
 
 ## Architecture notes

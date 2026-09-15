@@ -1,11 +1,7 @@
 import cron from 'node-cron'
 import type { ScheduledTask } from 'node-cron'
 import { db } from '../db'
-import {
-  GRACE_NOTICE_DAYS,
-  disable,
-  enterGracePeriod,
-} from './lifecycle'
+import { GRACE_NOTICE_DAYS, disable, enterGracePeriod } from './lifecycle'
 
 const PAST_DUE_GRACE_THRESHOLD_DAYS = 3
 const GRACE_PERIOD_DAYS = 7

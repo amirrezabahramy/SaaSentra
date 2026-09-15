@@ -13,10 +13,16 @@ const styles: Record<SubscriptionStatus, string> = {
 
 export function StatusBadge({ status }: { status: SubscriptionStatus | null }) {
   if (!status) {
-    return <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-500">No subscription</span>
+    return (
+      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-500">
+        No subscription
+      </span>
+    )
   }
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
+    <span
+      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}
+    >
       {status.replaceAll('_', ' ')}
     </span>
   )

@@ -5,7 +5,10 @@ import { db } from '#/db'
 import { auth } from './auth'
 import { stripeRequest, stringValue } from './stripe'
 
-const checkoutSchema = z.object({ tenantId: z.string().uuid(), planId: z.string().uuid() })
+const checkoutSchema = z.object({
+  tenantId: z.string().uuid(),
+  planId: z.string().uuid(),
+})
 
 export const createCheckoutSession = createServerFn({ method: 'POST' })
   .validator((data: unknown) => checkoutSchema.parse(data))
@@ -14,7 +17,10 @@ export const createCheckoutSession = createServerFn({ method: 'POST' })
     if (!session?.user?.id) throw new Error('Authentication required')
 
     const [tenant, plan] = await Promise.all([
-      db.tenant.findUniqueOrThrow({ where: { id: data.tenantId }, include: { subscription: true } }),
+      db.tenant.findUniqueOrThrow({
+        where: { id: data.tenantId },
+        include: { subscription: true },
+      }),
       db.plan.findUniqueOrThrow({ where: { id: data.planId } }),
     ])
     if (!plan.stripePriceId) throw new Error('Plan has no Stripe price ID')
@@ -30,14 +36,26 @@ export const createCheckoutSession = createServerFn({ method: 'POST' })
       'subscription_data[metadata][tenantId]': tenant.id,
       'subscription_data[metadata][planId]': plan.id,
     })
-    if (tenant.subscription) params.set('metadata[subscriptionId]', tenant.subscription.id)
-    if (tenant.subscription) params.set('subscription_data[metadata][subscriptionId]', tenant.subscription.id)
+    if (tenant.subscription)
+      params.set('metadata[subscriptionId]', tenant.subscription.id)
+    if (tenant.subscription)
+      params.set(
+        'subscription_data[metadata][subscriptionId]',
+        tenant.subscription.id,
+      )
 
-    const checkout = await stripeRequest<{ id?: unknown; url?: unknown }>('/checkout/sessions', params)
+    const checkout = await stripeRequest<{ id?: unknown; url?: unknown }>(
+      '/checkout/sessions',
+      params,
+    )
     const sessionId = stringValue(checkout.id)
-    if (!sessionId) throw new Error('Stripe did not return a checkout session ID')
+    if (!sessionId)
+      throw new Error('Stripe did not return a checkout session ID')
     if (tenant.subscription) {
-      await db.subscription.update({ where: { id: tenant.subscription.id }, data: { stripeSubscriptionId: `checkout_session:${sessionId}` } })
+      await db.subscription.update({
+        where: { id: tenant.subscription.id },
+        data: { stripeSubscriptionId: `checkout_session:${sessionId}` },
+      })
     }
     return { id: sessionId, url: stringValue(checkout.url) }
   })

@@ -1,6 +1,8 @@
 import { startDunningJob } from '#/lib/dunning'
 
-const globalForDunning = globalThis as unknown as { dunningJobStarted?: boolean }
+const globalForDunning = globalThis as unknown as {
+  dunningJobStarted?: boolean
+}
 
 if (!globalForDunning.dunningJobStarted) {
   startDunningJob()

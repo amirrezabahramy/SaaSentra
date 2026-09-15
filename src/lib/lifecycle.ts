@@ -56,7 +56,10 @@ export async function transitionSubscription(
       options.allowImmediateDisable === true &&
       Boolean(options.actorId)
 
-    if (!canTransition(subscription.status, to) && !isAuthorizedImmediateDisable) {
+    if (
+      !canTransition(subscription.status, to) &&
+      !isAuthorizedImmediateDisable
+    ) {
       throw new Error(
         `Illegal subscription transition: ${subscription.status} -> ${to}`,
       )
@@ -112,9 +115,9 @@ export async function getEntitlement(tenantId: string) {
   )
   const active = Boolean(
     subscription &&
-      now < subscription.currentPeriodEnd &&
-      (subscription.status === 'ACTIVE' ||
-        subscription.status === 'DISABLED_AT_PERIOD_END'),
+    now < subscription.currentPeriodEnd &&
+    (subscription.status === 'ACTIVE' ||
+      subscription.status === 'DISABLED_AT_PERIOD_END'),
   )
 
   return {

@@ -6,7 +6,9 @@ const stripeApi = 'https://api.stripe.com/v1'
 type StripeRecord = Record<string, unknown>
 
 export function record(value: unknown): StripeRecord {
-  return typeof value === 'object' && value !== null ? value as StripeRecord : {}
+  return typeof value === 'object' && value !== null
+    ? (value as StripeRecord)
+    : {}
 }
 
 export function stringValue(value: unknown): string | null {
@@ -37,7 +39,10 @@ export async function stripeRequest<T extends StripeRecord>(
   return record(body) as T
 }
 
-export function verifyStripeSignature(payload: string, signature: string): boolean {
+export function verifyStripeSignature(
+  payload: string,
+  signature: string,
+): boolean {
   const values = new Map(
     signature.split(',').map((part) => {
       const [key, value] = part.split('=', 2)
@@ -54,5 +59,8 @@ export function verifyStripeSignature(payload: string, signature: string): boole
     .digest('hex')
   const expectedBuffer = Buffer.from(expected, 'utf8')
   const providedBuffer = Buffer.from(provided, 'utf8')
-  return expectedBuffer.length === providedBuffer.length && timingSafeEqual(expectedBuffer, providedBuffer)
+  return (
+    expectedBuffer.length === providedBuffer.length &&
+    timingSafeEqual(expectedBuffer, providedBuffer)
+  )
 }
