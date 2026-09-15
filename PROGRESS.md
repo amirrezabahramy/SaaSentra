@@ -64,83 +64,87 @@
 | 2026-09-15 | 08 | Started final E2E and Definition of Done verification using `.env.local`. Non-destructive checks are being run first; shared database reset is intentionally not performed without explicit confirmation. |
 | 2026-09-15 | 08 | Preliminary DoD results: `npm install` exited 0 (`up to date, audited 794 packages`); `prisma migrate dev` reported `Already in sync, no schema change or pending migration was found`; `npm run db:seed` reported `Seed complete: 2 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log`; route generation, `npx tsc --noEmit`, `npm run build`, and `git diff --check` passed. Read-only DB smoke query reported 2 plans, 3 tenants, 1 service, 3 ACTIVE subscriptions, and 43 audit rows. Final browser/Stripe founding-loop confirmation remains pending. |
 | 2026-09-15 | 08 | Completed after user verification of the full founding loop: sign-in and protected redirects, Stripe checkout/webhook activation and replay idempotency, entitlement active/inactive responses, PAST_DUE → GRACE_PERIOD → DISABLED dunning with notices and audit rows, admin re-enable, and `/api/health` returning `{"ok":true}`. DoD 1–8 passed; no ship blockers found. |
+| 2026-09-15 | post-build | Expanded `prisma/seed.ts` with deterministic OWNER and ADMIN credential accounts, configurable via `OWNER_EMAIL` / `OWNER_PASSWORD` and `ADMIN_EMAIL` / `ADMIN_PASSWORD`, and assigned both roles across all seeded tenants. Seed and read-only membership verification passed. |
 
 ## File change log (feeds the final report)
 
-| Action   | Path                                                                          | Phase |
-| -------- | ----------------------------------------------------------------------------- | ----- |
-| modified | `src/lib/lifecycle.ts`                                                        | 00    |
-| modified | `src/routeTree.gen.ts`                                                        | 00    |
-| renamed  | `src/routes/_protected.tsx` → `src/routes/protected.tsx`                      | 00    |
-| modified | `PROGRESS.md`                                                                 | 00    |
-| modified | `.env.example`                                                                | 01    |
-| modified | `prisma/schema.prisma`                                                        | 01    |
-| modified | `prisma/seed.ts`                                                              | 01    |
-| modified | `prisma.config.ts`                                                            | 01    |
-| modified | `prisma/schema.prisma`                                                        | 02    |
-| modified | `src/lib/lifecycle.ts`                                                        | 02    |
-| modified | `src/lib/dunning.ts`                                                          | 02    |
-| added    | `prisma/migrations/20260915170000_add_subscription_disabled_at/migration.sql` | 02    |
-| modified | `PROGRESS.md`                                                                 | 02    |
-| modified | `prisma/schema.prisma`                                                        | 03    |
-| added    | `prisma/migrations/20260915161237_add_better_auth/migration.sql`              | 03    |
-| modified | `src/lib/auth.ts`                                                             | 03    |
-| added    | `src/lib/auth.functions.ts`                                                   | 03    |
-| modified | `src/env.ts`                                                                  | 03    |
-| modified | `src/routes/__root.tsx`                                                       | 03    |
-| modified | `src/router.tsx`                                                              | 03    |
-| renamed  | `src/routes/protected.tsx` → `src/routes/_protected.tsx`                      | 03    |
-| renamed  | `src/routes/index.tsx` → `src/routes/_protected/index.tsx`                    | 03    |
-| added    | `src/routes/login.tsx`                                                        | 03    |
-| modified | `src/integrations/better-auth/header-user.tsx`                                | 03    |
-| modified | `prisma/seed.ts`                                                              | 03    |
-| modified | `.env.example`                                                                | 03    |
-| modified | `package.json`                                                                | 03    |
-| modified | `package-lock.json`                                                           | 03    |
-| modified | `src/routeTree.gen.ts`                                                        | 03    |
-| modified | `src/lib/lifecycle.ts`                                                        | 04    |
-| modified | `src/env.ts`                                                                  | 04    |
-| modified | `src/routes/api/v1/entitlements/$tenantId.ts`                                 | 04    |
-| modified | `README.md`                                                                   | 04    |
-| modified | `.env.example`                                                                | 04    |
-| added    | `src/lib/admin.functions.ts`                                                  | 05a   |
-| added    | `src/lib/metrics.ts`                                                          | 05a   |
-| added    | `src/lib/format.ts`                                                           | 05a   |
-| added    | `src/components/admin/status-badge.tsx`                                       | 05a   |
-| added    | `src/components/admin/empty-state.tsx`                                        | 05a   |
-| modified | `src/routes/_protected.tsx`                                                   | 05a   |
-| modified | `src/routes/_protected/index.tsx`                                             | 05a   |
-| added    | `src/routes/_protected/tenants/index.tsx`                                     | 05a   |
-| added    | `src/routes/_protected/tenants/$id.tsx`                                       | 05a   |
-| modified | `src/routeTree.gen.ts`                                                        | 05a   |
-| modified | `PROGRESS.md`                                                                 | 05a   |
-| added    | `src/lib/ops.functions.ts`                                                    | 05b   |
-| added    | `src/routes/_protected/subscriptions.tsx`                                     | 05b   |
-| added    | `src/routes/_protected/services.tsx`                                          | 05b   |
-| added    | `src/routes/_protected/flags.tsx`                                             | 05b   |
-| added    | `src/routes/_protected/audit.tsx`                                             | 05b   |
-| added    | `src/routes/_protected/settings.tsx`                                          | 05b   |
-| modified | `src/routes/_protected/tenants/$id.tsx`                                       | 05b   |
-| modified | `src/lib/admin.functions.ts`                                                  | 05b   |
-| modified | `src/routeTree.gen.ts`                                                        | 05b   |
-| modified | `PROGRESS.md`                                                                 | 05b   |
-| modified | `src/lib/lifecycle.ts`                                                        | 05b   |
-| added    | `src/lib/stripe.ts`                                                           | 06    |
-| added    | `src/lib/stripe.functions.ts`                                                 | 06    |
-| added    | `src/routes/api/stripe/webhook.ts`                                            | 06    |
-| modified | `src/routeTree.gen.ts`                                                        | 06    |
-| modified | `prisma/seed.ts`                                                              | 06    |
-| modified | `README.md`                                                                   | 06    |
-| modified | `PROGRESS.md`                                                                 | 06    |
-| modified | `src/lib/dunning.ts`                                                          | 07    |
-| added    | `src/lib/dunning.functions.ts`                                                | 07    |
-| added    | `src/server/dunning.ts`                                                       | 07    |
-| added    | `src/routes/api/health.ts`                                                    | 07    |
-| modified | `src/routes/_protected/index.tsx`                                             | 07    |
-| added    | `scripts/run-dunning.ts`                                                      | 07    |
-| modified | `README.md`                                                                   | 07    |
-| modified | `src/routeTree.gen.ts`                                                        | 07    |
-| modified | `PROGRESS.md`                                                                 | 07    |
+| Action   | Path                                                                          | Phase      |
+| -------- | ----------------------------------------------------------------------------- | ---------- |
+| modified | `src/lib/lifecycle.ts`                                                        | 00         |
+| modified | `src/routeTree.gen.ts`                                                        | 00         |
+| renamed  | `src/routes/_protected.tsx` → `src/routes/protected.tsx`                      | 00         |
+| modified | `PROGRESS.md`                                                                 | 00         |
+| modified | `.env.example`                                                                | 01         |
+| modified | `prisma/schema.prisma`                                                        | 01         |
+| modified | `prisma/seed.ts`                                                              | 01         |
+| modified | `prisma.config.ts`                                                            | 01         |
+| modified | `prisma/schema.prisma`                                                        | 02         |
+| modified | `src/lib/lifecycle.ts`                                                        | 02         |
+| modified | `src/lib/dunning.ts`                                                          | 02         |
+| added    | `prisma/migrations/20260915170000_add_subscription_disabled_at/migration.sql` | 02         |
+| modified | `PROGRESS.md`                                                                 | 02         |
+| modified | `prisma/schema.prisma`                                                        | 03         |
+| added    | `prisma/migrations/20260915161237_add_better_auth/migration.sql`              | 03         |
+| modified | `src/lib/auth.ts`                                                             | 03         |
+| added    | `src/lib/auth.functions.ts`                                                   | 03         |
+| modified | `src/env.ts`                                                                  | 03         |
+| modified | `src/routes/__root.tsx`                                                       | 03         |
+| modified | `src/router.tsx`                                                              | 03         |
+| renamed  | `src/routes/protected.tsx` → `src/routes/_protected.tsx`                      | 03         |
+| renamed  | `src/routes/index.tsx` → `src/routes/_protected/index.tsx`                    | 03         |
+| added    | `src/routes/login.tsx`                                                        | 03         |
+| modified | `src/integrations/better-auth/header-user.tsx`                                | 03         |
+| modified | `prisma/seed.ts`                                                              | 03         |
+| modified | `.env.example`                                                                | 03         |
+| modified | `package.json`                                                                | 03         |
+| modified | `package-lock.json`                                                           | 03         |
+| modified | `src/routeTree.gen.ts`                                                        | 03         |
+| modified | `src/lib/lifecycle.ts`                                                        | 04         |
+| modified | `src/env.ts`                                                                  | 04         |
+| modified | `src/routes/api/v1/entitlements/$tenantId.ts`                                 | 04         |
+| modified | `README.md`                                                                   | 04         |
+| modified | `.env.example`                                                                | 04         |
+| added    | `src/lib/admin.functions.ts`                                                  | 05a        |
+| added    | `src/lib/metrics.ts`                                                          | 05a        |
+| added    | `src/lib/format.ts`                                                           | 05a        |
+| added    | `src/components/admin/status-badge.tsx`                                       | 05a        |
+| added    | `src/components/admin/empty-state.tsx`                                        | 05a        |
+| modified | `src/routes/_protected.tsx`                                                   | 05a        |
+| modified | `src/routes/_protected/index.tsx`                                             | 05a        |
+| added    | `src/routes/_protected/tenants/index.tsx`                                     | 05a        |
+| added    | `src/routes/_protected/tenants/$id.tsx`                                       | 05a        |
+| modified | `src/routeTree.gen.ts`                                                        | 05a        |
+| modified | `PROGRESS.md`                                                                 | 05a        |
+| added    | `src/lib/ops.functions.ts`                                                    | 05b        |
+| added    | `src/routes/_protected/subscriptions.tsx`                                     | 05b        |
+| added    | `src/routes/_protected/services.tsx`                                          | 05b        |
+| added    | `src/routes/_protected/flags.tsx`                                             | 05b        |
+| added    | `src/routes/_protected/audit.tsx`                                             | 05b        |
+| added    | `src/routes/_protected/settings.tsx`                                          | 05b        |
+| modified | `src/routes/_protected/tenants/$id.tsx`                                       | 05b        |
+| modified | `src/lib/admin.functions.ts`                                                  | 05b        |
+| modified | `src/routeTree.gen.ts`                                                        | 05b        |
+| modified | `PROGRESS.md`                                                                 | 05b        |
+| modified | `src/lib/lifecycle.ts`                                                        | 05b        |
+| added    | `src/lib/stripe.ts`                                                           | 06         |
+| added    | `src/lib/stripe.functions.ts`                                                 | 06         |
+| added    | `src/routes/api/stripe/webhook.ts`                                            | 06         |
+| modified | `src/routeTree.gen.ts`                                                        | 06         |
+| modified | `prisma/seed.ts`                                                              | 06         |
+| modified | `README.md`                                                                   | 06         |
+| modified | `PROGRESS.md`                                                                 | 06         |
+| modified | `src/lib/dunning.ts`                                                          | 07         |
+| added    | `src/lib/dunning.functions.ts`                                                | 07         |
+| added    | `src/server/dunning.ts`                                                       | 07         |
+| added    | `src/routes/api/health.ts`                                                    | 07         |
+| modified | `src/routes/_protected/index.tsx`                                             | 07         |
+| added    | `scripts/run-dunning.ts`                                                      | 07         |
+| modified | `README.md`                                                                   | 07         |
+| modified | `src/routeTree.gen.ts`                                                        | 07         |
+| modified | `PROGRESS.md`                                                                 | 07         |
+| modified | `prisma/seed.ts`                                                              | post-build |
+| modified | `.env.example`                                                                | post-build |
+| modified | `PROGRESS.md`                                                                 | post-build |
 
 ## Definition of Done results
 
