@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProtectedIndexRouteImport } from './routes/_protected/index'
+import { Route as ProtectedTenantsIndexRouteImport } from './routes/_protected/tenants/index'
+import { Route as ProtectedTenantsIdRouteImport } from './routes/_protected/tenants/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiV1EntitlementsTenantIdRouteImport } from './routes/api/v1/entitlements/$tenantId'
 
@@ -29,6 +31,16 @@ const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedTenantsIndexRoute = ProtectedTenantsIndexRouteImport.update({
+  id: '/tenants/',
+  path: '/tenants/',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedTenantsIdRoute = ProtectedTenantsIdRouteImport.update({
+  id: '/tenants/$id',
+  path: '/tenants/$id',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -44,13 +56,17 @@ const ApiV1EntitlementsTenantIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
   '/login': typeof LoginRoute
+  '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/tenants/': typeof ProtectedTenantsIndexRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof ProtectedIndexRoute
+  '/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/tenants': typeof ProtectedTenantsIndexRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRoutesById {
@@ -58,20 +74,36 @@ export interface FileRoutesById {
   '/_protected': typeof ProtectedRouteWithChildren
   '/login': typeof LoginRoute
   '/_protected/': typeof ProtectedIndexRoute
+  '/_protected/tenants/$id': typeof ProtectedTenantsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_protected/tenants/': typeof ProtectedTenantsIndexRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/api/auth/$' | '/api/v1/entitlements/$tenantId'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/tenants/$id'
+    | '/api/auth/$'
+    | '/tenants/'
+    | '/api/v1/entitlements/$tenantId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/' | '/api/auth/$' | '/api/v1/entitlements/$tenantId'
+  to:
+    | '/login'
+    | '/'
+    | '/tenants/$id'
+    | '/api/auth/$'
+    | '/tenants'
+    | '/api/v1/entitlements/$tenantId'
   id:
     | '__root__'
     | '/_protected'
     | '/login'
     | '/_protected/'
+    | '/_protected/tenants/$id'
     | '/api/auth/$'
+    | '/_protected/tenants/'
     | '/api/v1/entitlements/$tenantId'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +137,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedIndexRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/tenants/': {
+      id: '/_protected/tenants/'
+      path: '/tenants'
+      fullPath: '/tenants/'
+      preLoaderRoute: typeof ProtectedTenantsIndexRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/tenants/$id': {
+      id: '/_protected/tenants/$id'
+      path: '/tenants/$id'
+      fullPath: '/tenants/$id'
+      preLoaderRoute: typeof ProtectedTenantsIdRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -124,10 +170,14 @@ declare module '@tanstack/react-router' {
 
 interface ProtectedRouteChildren {
   ProtectedIndexRoute: typeof ProtectedIndexRoute
+  ProtectedTenantsIdRoute: typeof ProtectedTenantsIdRoute
+  ProtectedTenantsIndexRoute: typeof ProtectedTenantsIndexRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedIndexRoute: ProtectedIndexRoute,
+  ProtectedTenantsIdRoute: ProtectedTenantsIdRoute,
+  ProtectedTenantsIndexRoute: ProtectedTenantsIndexRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(

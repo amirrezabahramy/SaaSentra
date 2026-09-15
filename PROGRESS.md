@@ -22,7 +22,7 @@
 | 02 — Domain logic             | `phases/02-domain-logic.md`   | [x]    | 2026-09-15 |
 | 03 — Auth                     | `phases/03-auth.md`           | [x]    | 2026-09-15 |
 | 04 — Entitlements API         | `phases/04-entitlements.md`   | [x]    | 2026-09-15 |
-| 05a — Admin UI core           | `phases/05a-admin-ui-core.md` | [ ]    |      |
+| 05a — Admin UI core           | `phases/05a-admin-ui-core.md` | [x]    | 2026-09-15 |
 | 05b — Admin UI ops            | `phases/05b-admin-ui-ops.md`  | [ ]    |      |
 | 06 — Stripe                   | `phases/06-stripe.md`         | [ ]    |      |
 | 07 — Ops glue (dunning)       | `phases/07-ops-glue.md`       | [ ]    |      |
@@ -54,6 +54,8 @@
 | 2026-09-15 | 03 | Added Better Auth Prisma persistence, bcryptjs email/password hashing, server-function session/login/logout wrappers, root auth context, protected pathless layout, and `/login`. Added and applied `20260915161237_add_better_auth`. Runtime checks passed: `/login` returned 200; logged-out `/` redirected to `/login`; seeded admin login created a session and authenticated `/` returned 200; logout cleared cookies and redirected back to `/login`. |
 
 | 2026-09-15 | 04 | Updated the service-control route to use `x-entitlement-secret`, delegate to `getEntitlement()`, return object-shaped per-tenant flags, and avoid session requirements. Added `ENTITLEMENT_SHARED_SECRET` configuration and README curl example. Validation passed. Runtime checks passed: valid request 200 with `active:true`, `plan:"pro"`, flags object, and ISO period end; missing/wrong secret 401; unknown tenant 404; state-machine disable returned `active:false`; restoring ACTIVE returned `active:true`. |
+| 2026-09-15 | 05a | Started admin UI core. Added server-side overview/tenant loaders, centralized MRR/date/currency helpers, and shared admin status/empty-state components. |
+| 2026-09-15 | 05a | Completed after user verification: Overview, Tenants, and Tenant Detail render with seeded data; MRR, tenant search/status badges, audit actor/reason timeline, empty/error/loading states, protected redirects, route generation, strict TypeScript, and dev boot all verified. Phase 1 entry point: `phases/05b-admin-ui-ops.md`, starting with its first unchecked step. |
 
 ## File change log (feeds the final report)
 
@@ -93,6 +95,17 @@
 | modified | `src/routes/api/v1/entitlements/$tenantId.ts` | 04 |
 | modified | `README.md` | 04 |
 | modified | `.env.example` | 04 |
+| added | `src/lib/admin.functions.ts` | 05a |
+| added | `src/lib/metrics.ts` | 05a |
+| added | `src/lib/format.ts` | 05a |
+| added | `src/components/admin/status-badge.tsx` | 05a |
+| added | `src/components/admin/empty-state.tsx` | 05a |
+| modified | `src/routes/_protected.tsx` | 05a |
+| modified | `src/routes/_protected/index.tsx` | 05a |
+| added | `src/routes/_protected/tenants/index.tsx` | 05a |
+| added | `src/routes/_protected/tenants/$id.tsx` | 05a |
+| modified | `src/routeTree.gen.ts` | 05a |
+| modified | `PROGRESS.md` | 05a |
 
 ## Final report checklist
 
