@@ -26,11 +26,8 @@ function ProtectedLayout() {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
-      <aside className="border-b border-[var(--line)] bg-[var(--surface)] p-5 backdrop-blur lg:min-h-screen lg:border-b-0 lg:border-r">
-        <Link
-          to="/"
-          className="font-serif text-2xl font-bold text-[var(--sea-ink)]"
-        >
+      <aside className="border-b border-(--line) bg-(--surface) p-5 backdrop-blur lg:min-h-screen lg:border-b-0 lg:border-r">
+        <Link to="/" className="font-serif text-2xl font-bold text-(--sea-ink)">
           Harbor Admin
         </Link>
         <nav className="mt-8 flex gap-2 overflow-x-auto lg:block">
@@ -38,7 +35,7 @@ function ProtectedLayout() {
             <Link
               key={href}
               to={href}
-              className="block whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold text-[var(--sea-ink-soft)] hover:bg-white/70 hover:text-[var(--sea-ink)]"
+              className="block whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold text-(--sea-ink-soft) hover:bg-white/70 hover:text-(--sea-ink)"
             >
               {label}
             </Link>

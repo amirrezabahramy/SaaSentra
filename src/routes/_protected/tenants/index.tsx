@@ -33,7 +33,7 @@ function Tenants() {
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--kicker)]">
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
           Accounts
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">Tenants</h1>
@@ -52,7 +52,7 @@ function Tenants() {
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
               placeholder="Search name or owner email"
-              className="w-full max-w-md rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--lagoon)]"
+              className="w-full max-w-md rounded-xl border border-(--line) bg-white/70 px-4 py-3 outline-none focus:ring-2 focus:ring-(--lagoon)"
             />
           )}
         </form.Field>
@@ -61,7 +61,7 @@ function Tenants() {
         >
           {([canSubmit, isSubmitting]) => (
             <button
-              className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
+              className="rounded-xl bg-(--sea-ink) px-5 font-semibold text-white"
               type="submit"
               disabled={!canSubmit || isSubmitting}
             >
@@ -76,8 +76,8 @@ function Tenants() {
           description="Try another search or add a tenant in a later operations phase."
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-          <div className="divide-y divide-[var(--line)]">
+        <div className="overflow-hidden rounded-2xl border border-(--line) bg-(--surface)">
+          <div className="divide-y divide-(--line)">
             {data.map((tenant) => (
               <Link
                 to="/tenants/$id"
@@ -87,12 +87,12 @@ function Tenants() {
               >
                 <div>
                   <p className="font-semibold">{tenant.name}</p>
-                  <p className="text-sm text-[var(--sea-ink-soft)]">
+                  <p className="text-sm text-(--sea-ink-soft)">
                     {tenant.ownerEmail || tenant.slug}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-[var(--sea-ink-soft)]">
+                  <span className="text-sm text-(--sea-ink-soft)">
                     {tenant.plan ?? 'No plan'}
                   </span>
                   <StatusBadge status={tenant.status} />
@@ -107,8 +107,6 @@ function Tenants() {
 }
 function Loading() {
   return (
-    <div className="animate-pulse text-[var(--sea-ink-soft)]">
-      Loading tenants…
-    </div>
+    <div className="animate-pulse text-(--sea-ink-soft)">Loading tenants…</div>
   )
 }

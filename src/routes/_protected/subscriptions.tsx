@@ -51,7 +51,7 @@ function Subscriptions() {
               name={field.name}
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
-              className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+              className="rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             >
               <option value="">All statuses</option>
               {statuses.map((status) => (
@@ -68,7 +68,7 @@ function Subscriptions() {
           {([canSubmit, isSubmitting]) => (
             <button
               disabled={!canSubmit || isSubmitting}
-              className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
+              className="rounded-xl bg-(--sea-ink) px-5 font-semibold text-white"
             >
               Filter
             </button>
@@ -81,7 +81,7 @@ function Subscriptions() {
           description="No subscriptions match this filter."
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] divide-y divide-[var(--line)]">
+        <div className="overflow-hidden rounded-2xl border border-(--line) bg-(--surface) divide-y divide-(--line)">
           {rows.map((row) => (
             <Link
               to="/tenants/$id"
@@ -91,7 +91,7 @@ function Subscriptions() {
             >
               <div>
                 <p className="font-semibold">{row.tenant.name}</p>
-                <p className="text-sm text-[var(--sea-ink-soft)]">
+                <p className="text-sm text-(--sea-ink-soft)">
                   {row.plan.name} · ends {formatDate(row.currentPeriodEnd)}
                 </p>
               </div>
@@ -118,7 +118,7 @@ function Page({
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--kicker)]">
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
           {kicker}
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">{title}</h1>

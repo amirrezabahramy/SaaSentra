@@ -29,7 +29,7 @@ function Audit() {
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--kicker)]">
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
           Operations
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">Audit log</h1>
@@ -48,7 +48,7 @@ function Audit() {
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
               placeholder="Tenant ID"
-              className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+              className="rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             />
           )}
         </form.Field>
@@ -59,7 +59,7 @@ function Audit() {
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
               placeholder="Action contains…"
-              className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+              className="rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             />
           )}
         </form.Field>
@@ -69,7 +69,7 @@ function Audit() {
           {([canSubmit, isSubmitting]) => (
             <button
               disabled={!canSubmit || isSubmitting}
-              className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
+              className="rounded-xl bg-(--sea-ink) px-5 font-semibold text-white"
             >
               Filter
             </button>
@@ -82,16 +82,16 @@ function Audit() {
           description="Operator actions will appear here."
         />
       ) : (
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] divide-y divide-[var(--line)]">
+        <div className="rounded-2xl border border-(--line) bg-(--surface) divide-y divide-(--line)">
           {rows.map((row) => (
             <div key={row.id} className="p-5">
               <div className="flex flex-wrap justify-between gap-2">
                 <strong>{row.action}</strong>
-                <time className="text-sm text-[var(--sea-ink-soft)]">
+                <time className="text-sm text-(--sea-ink-soft)">
                   {formatDate(row.createdAt)}
                 </time>
               </div>
-              <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">
+              <p className="mt-1 text-sm text-(--sea-ink-soft)">
                 {row.tenant.name} ·{' '}
                 {row.actor?.name ?? row.actor?.email ?? 'System'}
               </p>

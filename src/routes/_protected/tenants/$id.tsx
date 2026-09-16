@@ -101,19 +101,19 @@ function TenantDetail() {
       <Link
         to="/tenants"
         search={{ search: '' }}
-        className="text-sm font-semibold text-[var(--palm)]"
+        className="text-sm font-semibold text-(--palm)"
       >
         ← Back to tenants
       </Link>
       <header className="mb-8 mt-5">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--kicker)]">
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
           Tenant
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">{tenant.name}</h1>
-        <p className="mt-2 text-[var(--sea-ink-soft)]">{tenant.slug}</p>
+        <p className="mt-2 text-(--sea-ink-soft)">{tenant.slug}</p>
       </header>
       <section className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
+        <div className="rounded-2xl border border-(--line) bg-(--surface) p-6">
           <h2 className="font-serif text-2xl font-bold">Subscription</h2>
           {tenant.subscription ? (
             <div className="mt-5 space-y-3">
@@ -145,7 +145,7 @@ function TenantDetail() {
                     actionForm.reset()
                     setActionError(null)
                   }}
-                  className="mt-3 rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="mt-3 rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {statusMutation.isPending
                     ? 'Updating…'
@@ -167,7 +167,7 @@ function TenantDetail() {
             </div>
           )}
         </div>
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
+        <div className="rounded-2xl border border-(--line) bg-(--surface) p-6">
           <h2 className="font-serif text-2xl font-bold">Services & flags</h2>
           <p className="mt-4 text-sm">
             {tenant.services.length} services ·{' '}
@@ -178,23 +178,23 @@ function TenantDetail() {
               tenant.flags.map((flag) => (
                 <span
                   key={flag.key}
-                  className="rounded-full bg-[var(--chip-bg)] px-3 py-1 text-sm"
+                  className="rounded-full bg-(--chip-bg) px-3 py-1 text-sm"
                 >
                   {flag.key}: {flag.enabled ? 'on' : 'off'}
                 </span>
               ))
             ) : (
-              <span className="text-sm text-[var(--sea-ink-soft)]">
+              <span className="text-sm text-(--sea-ink-soft)">
                 No flags configured
               </span>
             )}
           </div>
         </div>
       </section>
-      <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
+      <section className="mt-8 rounded-2xl border border-(--line) bg-(--surface) p-6">
         <h2 className="font-serif text-2xl font-bold">Invoices</h2>
         {tenant.invoices.length ? (
-          <div className="mt-4 divide-y divide-[var(--line)]">
+          <div className="mt-4 divide-y divide-(--line)">
             {tenant.invoices.map((invoice) => (
               <div key={invoice.id} className="flex justify-between gap-4 py-3">
                 <span>
@@ -215,22 +215,19 @@ function TenantDetail() {
           </div>
         )}
       </section>
-      <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
+      <section className="mt-8 rounded-2xl border border-(--line) bg-(--surface) p-6">
         <h2 className="font-serif text-2xl font-bold">Lifecycle timeline</h2>
         {tenant.auditLogs.length ? (
           <div className="mt-4 space-y-5">
             {tenant.auditLogs.map((entry) => (
-              <div
-                key={entry.id}
-                className="border-l-2 border-[var(--lagoon)] pl-4"
-              >
+              <div key={entry.id} className="border-l-2 border-(--lagoon) pl-4">
                 <div className="flex flex-wrap justify-between gap-2">
                   <strong>{entry.action}</strong>
-                  <time className="text-sm text-[var(--sea-ink-soft)]">
+                  <time className="text-sm text-(--sea-ink-soft)">
                     {formatDate(entry.createdAt)}
                   </time>
                 </div>
-                <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">
+                <p className="mt-1 text-sm text-(--sea-ink-soft)">
                   {entry.reason ?? 'No reason recorded'}
                   {entry.actor
                     ? ` · ${entry.actor.name ?? entry.actor.email}`
@@ -249,12 +246,12 @@ function TenantDetail() {
         )}
       </section>
       {pendingAction ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[var(--sea-ink)]/35 p-4">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-(--sea-ink)/35 p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="subscription-dialog-title"
-            className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-2xl"
+            className="w-full max-w-md rounded-2xl border border-(--line) bg-(--surface-strong) p-6 shadow-2xl"
           >
             <h2
               id="subscription-dialog-title"
@@ -264,7 +261,7 @@ function TenantDetail() {
                 ? 'Re-enable subscription'
                 : 'Disable subscription'}
             </h2>
-            <p className="mt-2 text-sm text-[var(--sea-ink-soft)]">
+            <p className="mt-2 text-sm text-(--sea-ink-soft)">
               This changes the tenant’s access immediately and records an audit
               event.
             </p>
@@ -284,7 +281,7 @@ function TenantDetail() {
                         field.handleChange(event.target.value)
                       }
                       placeholder="Required reason"
-                      className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+                      className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
                     />
                   </label>
                 )}
@@ -303,7 +300,7 @@ function TenantDetail() {
                         field.handleChange(event.target.value)
                       }
                       placeholder={actionWord}
-                      className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+                      className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
                     />
                   </label>
                 )}
@@ -313,7 +310,7 @@ function TenantDetail() {
                   type="button"
                   disabled={statusMutation.isPending}
                   onClick={() => setPendingAction(null)}
-                  className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm font-semibold"
+                  className="rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold"
                 >
                   Cancel
                 </button>
@@ -326,7 +323,7 @@ function TenantDetail() {
                       disabled={
                         !canSubmit || isSubmitting || statusMutation.isPending
                       }
-                      className="rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isSubmitting || statusMutation.isPending
                         ? 'Updating…'
@@ -344,8 +341,6 @@ function TenantDetail() {
 }
 function Loading() {
   return (
-    <div className="animate-pulse text-[var(--sea-ink-soft)]">
-      Loading tenant…
-    </div>
+    <div className="animate-pulse text-(--sea-ink-soft)">Loading tenant…</div>
   )
 }

@@ -29,7 +29,7 @@ function Flags() {
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--kicker)]">
+        <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
           Configuration
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">Feature flags</h1>
@@ -44,10 +44,10 @@ function Flags() {
           {data.flags.map((flag) => (
             <section
               key={flag.id}
-              className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6"
+              className="rounded-2xl border border-(--line) bg-(--surface) p-6"
             >
               <h2 className="font-serif text-2xl font-bold">{flag.key}</h2>
-              <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">
+              <p className="mt-1 text-sm text-(--sea-ink-soft)">
                 {flag.description ?? 'No description'}
               </p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
