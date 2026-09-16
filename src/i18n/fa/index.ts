@@ -10,6 +10,8 @@ const fa = {
     flags: 'فلگ‌ها',
     audit: 'گزارش رویدادها',
     settings: 'تنظیمات',
+    openMenu: 'باز کردن منوی ناوبری',
+    closeMenu: 'بستن منوی ناوبری',
   },
   language: {
     english: 'انگلیسی',

@@ -12,6 +12,8 @@ const en = {
     flags: 'Flags',
     audit: 'Audit log',
     settings: 'Settings',
+    openMenu: 'Open navigation menu',
+    closeMenu: 'Close navigation menu',
   },
   language: {
     english: 'English',

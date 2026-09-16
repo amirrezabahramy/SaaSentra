@@ -50,6 +50,14 @@ type RootTranslation = {
      * S​e​t​t​i​n​g​s
      */
     settings: string
+    /**
+     * O​p​e​n​ ​n​a​v​i​g​a​t​i​o​n​ ​m​e​n​u
+     */
+    openMenu: string
+    /**
+     * C​l​o​s​e​ ​n​a​v​i​g​a​t​i​o​n​ ​m​e​n​u
+     */
+    closeMenu: string
   }
   language: {
     /**
@@ -595,6 +603,14 @@ export type TranslationFunctions = {
      * Settings
      */
     settings: () => LocalizedString
+    /**
+     * Open navigation menu
+     */
+    openMenu: () => LocalizedString
+    /**
+     * Close navigation menu
+     */
+    closeMenu: () => LocalizedString
   }
   language: {
     /**
