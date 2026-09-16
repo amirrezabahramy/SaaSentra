@@ -4,6 +4,78 @@
 
 @import 'tw-animate-css';
 
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-Thin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-ExtraLight.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-Light.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-Regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-Medium.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-SemiBold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-Bold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-ExtraBold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn FD';
+  src: url('/fonts/vazirmatn/Vazirmatn-FD-Black.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -119,6 +191,7 @@
 
 @theme inline {
   --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Fraunces', ui-serif, Georgia, serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -155,6 +228,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+}
+
+html[lang='fa'] {
+  --font-sans: 'Vazirmatn FD', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Vazirmatn FD', ui-sans-serif, system-ui, sans-serif;
 }
 
 html,
@@ -264,6 +342,15 @@ pre code {
 
 .display-title {
   font-family: 'Fraunces', Georgia, serif;
+}
+
+html[lang='fa'] .display-title {
+  font-family: 'Vazirmatn FD', ui-sans-serif, system-ui, sans-serif;
+}
+
+html[lang='fa'] .font-sans,
+html[lang='fa'] .font-serif {
+  font-family: 'Vazirmatn FD', ui-sans-serif, system-ui, sans-serif;
 }
 
 .island-shell {
