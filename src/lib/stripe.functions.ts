@@ -14,7 +14,7 @@ export const createCheckoutSession = createServerFn({ method: 'POST' })
   .validator((data: unknown) => checkoutSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await auth.api.getSession({ headers: getRequest().headers })
-    if (!session?.user?.id) throw new Error('Authentication required')
+    if (!session || !session.user.id) throw new Error('Authentication required')
 
     const [tenant, plan] = await Promise.all([
       db.tenant.findUniqueOrThrow({

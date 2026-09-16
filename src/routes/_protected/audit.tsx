@@ -17,7 +17,9 @@ export const Route = createFileRoute('/_protected/audit')({
 })
 function Audit() {
   const search = Route.useSearch()
-  const { data: rows } = useSuspenseQuery(auditQuery(search.tenantId, search.action))
+  const { data: rows } = useSuspenseQuery(
+    auditQuery(search.tenantId, search.action),
+  )
   const navigate = Route.useNavigate()
   const form = useForm({
     defaultValues: { tenantId: search.tenantId, action: search.action },
@@ -32,29 +34,46 @@ function Audit() {
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">Audit log</h1>
       </header>
-      <form className="mb-5 flex flex-wrap gap-2" onSubmit={(event) => { event.preventDefault(); void form.handleSubmit() }}>
+      <form
+        className="mb-5 flex flex-wrap gap-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
         <form.Field name="tenantId">
-          {(field) => <input
-          name={field.name}
-          value={field.state.value}
-          onChange={(event) => field.handleChange(event.target.value)}
-          placeholder="Tenant ID"
-          className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
-        />}
+          {(field) => (
+            <input
+              name={field.name}
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              placeholder="Tenant ID"
+              className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+            />
+          )}
         </form.Field>
         <form.Field name="action">
-          {(field) => <input
-          name={field.name}
-          value={field.state.value}
-          onChange={(event) => field.handleChange(event.target.value)}
-          placeholder="Action contains…"
-          className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
-        />}
+          {(field) => (
+            <input
+              name={field.name}
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              placeholder="Action contains…"
+              className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+            />
+          )}
         </form.Field>
-        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-          {([canSubmit, isSubmitting]) => <button disabled={!canSubmit || isSubmitting} className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white">
-          Filter
-          </button>}
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+        >
+          {([canSubmit, isSubmitting]) => (
+            <button
+              disabled={!canSubmit || isSubmitting}
+              className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
+            >
+              Filter
+            </button>
+          )}
         </form.Subscribe>
       </form>
       {rows.length === 0 ? (

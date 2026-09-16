@@ -32,30 +32,47 @@ function Subscriptions() {
   const form = useForm({
     defaultValues: { status: search.status },
     onSubmit: ({ value }) =>
-      navigate({ search: (previous) => ({ ...previous, status: value.status }) }),
+      navigate({
+        search: (previous) => ({ ...previous, status: value.status }),
+      }),
   })
   return (
     <Page title="Subscriptions" kicker="Billing operations">
-      <form className="mb-5 flex gap-2" onSubmit={(event) => { event.preventDefault(); void form.handleSubmit() }}>
+      <form
+        className="mb-5 flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
         <form.Field name="status">
-          {(field) => <select
-          name={field.name}
-          value={field.state.value}
-          onChange={(event) => field.handleChange(event.target.value)}
-          className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
-        >
-          <option value="">All statuses</option>
-          {statuses.map((status) => (
-            <option key={status} value={status}>
-              {status.replaceAll('_', ' ')}
-            </option>
-          ))}
-        </select>}
+          {(field) => (
+            <select
+              name={field.name}
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+            >
+              <option value="">All statuses</option>
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status.replaceAll('_', ' ')}
+                </option>
+              ))}
+            </select>
+          )}
         </form.Field>
-        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-          {([canSubmit, isSubmitting]) => <button disabled={!canSubmit || isSubmitting} className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white">
-          Filter
-          </button>}
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+        >
+          {([canSubmit, isSubmitting]) => (
+            <button
+              disabled={!canSubmit || isSubmitting}
+              className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
+            >
+              Filter
+            </button>
+          )}
         </form.Subscribe>
       </form>
       {rows.length === 0 ? (

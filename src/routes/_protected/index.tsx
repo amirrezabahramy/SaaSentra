@@ -1,5 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { EmptyState } from '#/components/admin/empty-state'
 import { formatCurrency, formatDate } from '#/lib/format'

@@ -26,7 +26,9 @@ function Tenants() {
   const form = useForm({
     defaultValues: { search: search.search },
     onSubmit: ({ value }) =>
-      navigate({ search: (previous) => ({ ...previous, search: value.search }) }),
+      navigate({
+        search: (previous) => ({ ...previous, search: value.search }),
+      }),
   })
   return (
     <div className="mx-auto max-w-6xl">
@@ -36,24 +38,36 @@ function Tenants() {
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">Tenants</h1>
       </header>
-      <form className="mb-5 flex gap-2" onSubmit={(event) => { event.preventDefault(); void form.handleSubmit() }}>
+      <form
+        className="mb-5 flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
         <form.Field name="search">
-          {(field) => <input
-          name={field.name}
-          value={field.state.value}
-          onChange={(event) => field.handleChange(event.target.value)}
-          placeholder="Search name or owner email"
-          className="w-full max-w-md rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--lagoon)]"
-        />}
+          {(field) => (
+            <input
+              name={field.name}
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              placeholder="Search name or owner email"
+              className="w-full max-w-md rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--lagoon)]"
+            />
+          )}
         </form.Field>
-        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-          {([canSubmit, isSubmitting]) => <button
-          className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
-          type="submit"
-          disabled={!canSubmit || isSubmitting}
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
         >
-          Search
-          </button>}
+          {([canSubmit, isSubmitting]) => (
+            <button
+              className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
+              type="submit"
+              disabled={!canSubmit || isSubmitting}
+            >
+              Search
+            </button>
+          )}
         </form.Subscribe>
       </form>
       {data.length === 0 ? (
@@ -74,7 +88,7 @@ function Tenants() {
                 <div>
                   <p className="font-semibold">{tenant.name}</p>
                   <p className="text-sm text-[var(--sea-ink-soft)]">
-                    {tenant.ownerEmail ?? tenant.slug}
+                    {tenant.ownerEmail || tenant.slug}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

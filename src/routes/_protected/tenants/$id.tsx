@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
 import { StatusBadge } from '#/components/admin/status-badge'
@@ -37,8 +41,18 @@ function TenantDetail() {
       reason: string
     }) =>
       input.action === 'disable'
-        ? disable({ data: { subscriptionId: input.subscriptionId, reason: input.reason } })
-        : enable({ data: { subscriptionId: input.subscriptionId, reason: input.reason } }),
+        ? disable({
+            data: {
+              subscriptionId: input.subscriptionId,
+              reason: input.reason,
+            },
+          })
+        : enable({
+            data: {
+              subscriptionId: input.subscriptionId,
+              reason: input.reason,
+            },
+          }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
   const actionForm = useForm({
@@ -56,13 +70,17 @@ function TenantDetail() {
         actionForm.reset()
       } catch (error) {
         setActionError(
-          error instanceof Error ? error.message : 'Unable to update subscription',
+          error instanceof Error
+            ? error.message
+            : 'Unable to update subscription',
         )
       }
     },
     validators: {
       onSubmit: ({ value }) =>
-        !value.reason.trim() || value.confirmation !== (pendingAction === 'enable' ? 'ENABLE' : 'DISABLE')
+        !value.reason.trim() ||
+        value.confirmation !==
+          (pendingAction === 'enable' ? 'ENABLE' : 'DISABLE')
           ? 'Confirmation is required'
           : undefined,
     },
@@ -250,52 +268,73 @@ function TenantDetail() {
               This changes the tenant’s access immediately and records an audit
               event.
             </p>
-            <form onSubmit={(event) => { event.preventDefault(); void actionForm.handleSubmit() }}>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault()
+                void actionForm.handleSubmit()
+              }}
+            >
               <actionForm.Field name="reason">
-                {(field) => <label className="mt-5 block text-sm font-semibold">
-                  Reason
-                  <input
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    placeholder="Required reason"
-                    className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
-                  />
-                </label>}
+                {(field) => (
+                  <label className="mt-5 block text-sm font-semibold">
+                    Reason
+                    <input
+                      value={field.state.value}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="Required reason"
+                      className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+                    />
+                  </label>
+                )}
               </actionForm.Field>
               <actionForm.Field name="confirmation">
-                {(field) => <label className="mt-4 block text-sm font-semibold">
-                  Type{' '}
-                  <code className="rounded bg-black/5 px-1.5 py-0.5">
-                    {actionWord}
-                  </code>{' '}
-                  to confirm
-                  <input
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    placeholder={actionWord}
-                    className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
-                  />
-                </label>}
+                {(field) => (
+                  <label className="mt-4 block text-sm font-semibold">
+                    Type{' '}
+                    <code className="rounded bg-black/5 px-1.5 py-0.5">
+                      {actionWord}
+                    </code>{' '}
+                    to confirm
+                    <input
+                      value={field.state.value}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder={actionWord}
+                      className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+                    />
+                  </label>
+                )}
               </actionForm.Field>
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={statusMutation.isPending}
-                onClick={() => setPendingAction(null)}
-                className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm font-semibold"
-              >
-                Cancel
-              </button>
-              <actionForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-                {([canSubmit, isSubmitting]) => <button
-                  type="submit"
-                  disabled={!canSubmit || isSubmitting || statusMutation.isPending}
-                  className="rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={statusMutation.isPending}
+                  onClick={() => setPendingAction(null)}
+                  className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm font-semibold"
                 >
-                  {isSubmitting || statusMutation.isPending ? 'Updating…' : `Yes, ${pendingAction}`}
-                </button>}
-              </actionForm.Subscribe>
-            </div>
+                  Cancel
+                </button>
+                <actionForm.Subscribe
+                  selector={(state) => [state.canSubmit, state.isSubmitting]}
+                >
+                  {([canSubmit, isSubmitting]) => (
+                    <button
+                      type="submit"
+                      disabled={
+                        !canSubmit || isSubmitting || statusMutation.isPending
+                      }
+                      className="rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {isSubmitting || statusMutation.isPending
+                        ? 'Updating…'
+                        : `Yes, ${pendingAction}`}
+                    </button>
+                  )}
+                </actionForm.Subscribe>
+              </div>
             </form>
           </div>
         </div>

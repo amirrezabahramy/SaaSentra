@@ -1,5 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
 import { toggleTenantFlag } from '#/lib/ops.functions'
 import { EmptyState } from '#/components/admin/empty-state'
 import { useServerFn } from '@tanstack/react-start'
@@ -14,9 +18,13 @@ function Flags() {
   const queryClient = useQueryClient()
   const toggle = useServerFn(toggleTenantFlag)
   const toggleMutation = useMutation({
-    mutationFn: (data: { tenantId: string; flagKey: string; enabled: boolean }) =>
-      toggle({ data }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
+    mutationFn: (input: {
+      tenantId: string
+      flagKey: string
+      enabled: boolean
+    }) => toggle({ data: input }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
   })
   return (
     <div className="mx-auto max-w-6xl">
