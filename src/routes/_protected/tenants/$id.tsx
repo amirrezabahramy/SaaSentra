@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
@@ -80,9 +80,13 @@ function TenantDetail() {
   const actionWord = pendingAction === 'enable' ? 'ENABLE' : 'DISABLE'
   return (
     <div className="mx-auto max-w-6xl">
-      <a href="/tenants" className="text-sm font-semibold text-[var(--palm)]">
+      <Link
+        to="/tenants"
+        search={{ search: '' }}
+        className="text-sm font-semibold text-[var(--palm)]"
+      >
         ← Back to tenants
-      </a>
+      </Link>
       <header className="mb-8 mt-5">
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-[var(--kicker)]">
           Tenant

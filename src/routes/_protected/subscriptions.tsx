@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { StatusBadge } from '#/components/admin/status-badge'
@@ -66,8 +66,9 @@ function Subscriptions() {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] divide-y divide-[var(--line)]">
           {rows.map((row) => (
-            <a
-              href={`/tenants/${row.tenantId}`}
+            <Link
+              to="/tenants/$id"
+              params={{ id: row.tenantId }}
               key={row.id}
               className="flex flex-wrap justify-between gap-3 p-5 hover:bg-white/60"
             >
@@ -81,7 +82,7 @@ function Subscriptions() {
                 <span>{formatCurrency(row.plan.priceCents)}</span>
                 <StatusBadge status={row.status} />
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       )}

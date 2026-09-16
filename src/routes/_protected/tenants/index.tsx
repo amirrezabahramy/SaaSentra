@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
@@ -65,8 +65,9 @@ function Tenants() {
         <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
           <div className="divide-y divide-[var(--line)]">
             {data.map((tenant) => (
-              <a
-                href={`/tenants/${tenant.id}`}
+              <Link
+                to="/tenants/$id"
+                params={{ id: tenant.id }}
                 key={tenant.id}
                 className="flex flex-wrap items-center justify-between gap-4 p-5 hover:bg-white/60"
               >
@@ -82,7 +83,7 @@ function Tenants() {
                   </span>
                   <StatusBadge status={tenant.status} />
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </div>

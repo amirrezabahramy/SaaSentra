@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, Outlet } from '@tanstack/react-router'
+import { createFileRoute, redirect, Link, Outlet } from '@tanstack/react-router'
 import BetterAuthHeader from '#/integrations/better-auth/header-user'
 
 /**
@@ -27,21 +27,21 @@ function ProtectedLayout() {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="border-b border-[var(--line)] bg-[var(--surface)] p-5 backdrop-blur lg:min-h-screen lg:border-b-0 lg:border-r">
-        <a
-          href="/"
+        <Link
+          to="/"
           className="font-serif text-2xl font-bold text-[var(--sea-ink)]"
         >
           Harbor Admin
-        </a>
+        </Link>
         <nav className="mt-8 flex gap-2 overflow-x-auto lg:block">
           {links.map(([label, href]) => (
-            <a
+            <Link
               key={href}
-              href={href}
+              to={href}
               className="block whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold text-[var(--sea-ink-soft)] hover:bg-white/70 hover:text-[var(--sea-ink)]"
             >
               {label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="mt-8 hidden lg:block">
