@@ -265,6 +265,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.app-launch-loader {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background: var(--bg-base);
+}
+
+.app-launch-loader__indicator {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid color-mix(in oklab, var(--lagoon) 25%, transparent);
+  border-top-color: var(--lagoon-deep);
+  border-radius: 9999px;
+  animation: app-launch-spin 800ms linear infinite;
+}
+
+@keyframes app-launch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 body::before {
   content: '';
   position: fixed;

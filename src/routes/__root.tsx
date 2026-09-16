@@ -17,7 +17,7 @@ import { loadAllLocales } from '#/i18n/i18n-util.sync'
 import type { Locales } from '#/i18n/i18n-types'
 import { isLocale } from '#/i18n/i18n-util'
 import { LOCALE_STORAGE_KEY } from '#/lib/i18n'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -62,12 +62,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function LocalizedDocument({ children }: { children: React.ReactNode }) {
   const { locale, setLocale } = useI18nContext()
+  const [isLocaleReady, setIsLocaleReady] = useState(false)
 
   useEffect(() => {
     const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY)
     if (storedLocale && isLocale(storedLocale) && storedLocale !== locale) {
       setLocale(storedLocale)
     }
+    setIsLocaleReady(true)
   }, [locale, setLocale])
 
   return (
@@ -76,7 +78,7 @@ function LocalizedDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        {isLocaleReady ? children : <LocaleLoading />}
         <TanStackDevtools
           config={{
             position: 'bottom-right',
@@ -92,5 +94,13 @@ function LocalizedDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function LocaleLoading() {
+  return (
+    <main className="app-launch-loader" aria-busy="true" aria-live="polite">
+      <span className="app-launch-loader__indicator" aria-hidden="true" />
+    </main>
   )
 }
