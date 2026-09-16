@@ -35,7 +35,7 @@ function LoginPage() {
 
   return (
     <main className="min-h-screen grid place-items-center p-8">
-      <div className="absolute end-8 top-8">
+      <div className="absolute inset-e-8 top-8">
         <LanguageSwitcher />
       </div>
       <form
