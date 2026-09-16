@@ -3,6 +3,7 @@ import { getOverview, getTenantDetail, getTenants } from './admin.functions'
 import {
   getAudit,
   getFlags,
+  getPlans,
   getServices,
   getSettings,
   getSubscriptions,
@@ -14,10 +15,13 @@ export const overviewQuery = () =>
     queryFn: () => getOverview(),
   })
 
-export const tenantsQuery = (search = '') =>
+export const tenantsQuery = (search = '', includeArchived = false) =>
   queryOptions({
-    queryKey: ['admin', 'tenants', { search }],
-    queryFn: () => getTenants({ data: { search: search || undefined } }),
+    queryKey: ['admin', 'tenants', { search, includeArchived }],
+    queryFn: () =>
+      getTenants({
+        data: { search: search || undefined, includeArchived },
+      }),
   })
 
 export const tenantDetailQuery = (id: string) =>
@@ -26,25 +30,34 @@ export const tenantDetailQuery = (id: string) =>
     queryFn: () => getTenantDetail({ data: { id } }),
   })
 
-export const subscriptionsQuery = (status = '') =>
+export const subscriptionsQuery = (status = '', includeArchived = false) =>
   queryOptions({
-    queryKey: ['admin', 'subscriptions', { status }],
+    queryKey: ['admin', 'subscriptions', { status, includeArchived }],
     queryFn: () =>
       getSubscriptions({
-        data: { status: status ? (status as 'ACTIVE') : undefined },
+        data: {
+          status: status ? (status as 'ACTIVE') : undefined,
+          includeArchived,
+        },
       }),
   })
 
-export const servicesQuery = () =>
+export const servicesQuery = (includeArchived = false) =>
   queryOptions({
-    queryKey: ['admin', 'services'],
-    queryFn: () => getServices(),
+    queryKey: ['admin', 'services', { includeArchived }],
+    queryFn: () => getServices({ data: { includeArchived } }),
   })
 
-export const flagsQuery = () =>
+export const flagsQuery = (includeArchived = false) =>
   queryOptions({
-    queryKey: ['admin', 'flags'],
-    queryFn: () => getFlags(),
+    queryKey: ['admin', 'flags', { includeArchived }],
+    queryFn: () => getFlags({ data: { includeArchived } }),
+  })
+
+export const plansQuery = () =>
+  queryOptions({
+    queryKey: ['admin', 'plans'],
+    queryFn: () => getPlans(),
   })
 
 export const auditQuery = (tenantId = '', action = '') =>

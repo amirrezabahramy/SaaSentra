@@ -224,6 +224,22 @@ type RootTranslation = {
      * T​h​i​s​ ​t​e​n​a​n​t​ ​m​a​y​ ​h​a​v​e​ ​b​e​e​n​ ​r​e​m​o​v​e​d​.
      */
     notFoundDescription: string
+    /**
+     * C​r​e​a​t​e​ ​t​e​n​a​n​t
+     */
+    create: string
+    /**
+     * E​d​i​t​ ​t​e​n​a​n​t
+     */
+    edit: string
+    /**
+     * A​r​c​h​i​v​e​ ​t​e​n​a​n​t
+     */
+    archive: string
+    /**
+     * T​h​i​s​ ​t​e​n​a​n​t​ ​w​i​l​l​ ​b​e​ ​h​i​d​d​e​n​ ​f​r​o​m​ ​a​c​t​i​v​e​ ​o​p​e​r​a​t​i​o​n​s​.
+     */
+    archivedDescription: string
   }
   subscriptions: {
     /**
@@ -254,6 +270,18 @@ type RootTranslation = {
      * e​n​d​s
      */
     ends: string
+    /**
+     * C​r​e​a​t​e​ ​s​u​b​s​c​r​i​p​t​i​o​n
+     */
+    create: string
+    /**
+     * E​d​i​t​ ​s​u​b​s​c​r​i​p​t​i​o​n
+     */
+    edit: string
+    /**
+     * A​r​c​h​i​v​e​ ​s​u​b​s​c​r​i​p​t​i​o​n
+     */
+    archive: string
   }
   services: {
     /**
@@ -296,6 +324,18 @@ type RootTranslation = {
      * f​l​a​g​s
      */
     flags: string
+    /**
+     * C​r​e​a​t​e​ ​s​e​r​v​i​c​e
+     */
+    create: string
+    /**
+     * E​d​i​t​ ​s​e​r​v​i​c​e
+     */
+    edit: string
+    /**
+     * A​r​c​h​i​v​e​ ​s​e​r​v​i​c​e
+     */
+    archive: string
   }
   flags: {
     /**
@@ -318,6 +358,124 @@ type RootTranslation = {
      * N​o​ ​d​e​s​c​r​i​p​t​i​o​n
      */
     noDescription: string
+    /**
+     * C​r​e​a​t​e​ ​f​l​a​g
+     */
+    create: string
+    /**
+     * E​d​i​t​ ​f​l​a​g
+     */
+    edit: string
+    /**
+     * A​r​c​h​i​v​e​ ​f​l​a​g
+     */
+    archive: string
+    /**
+     * K​e​y
+     */
+    key: string
+    /**
+     * D​e​s​c​r​i​p​t​i​o​n
+     */
+    description: string
+  }
+  crud: {
+    /**
+     * C​r​e​a​t​e
+     */
+    create: string
+    /**
+     * U​p​d​a​t​e
+     */
+    update: string
+    /**
+     * A​r​c​h​i​v​e
+     */
+    archive: string
+    /**
+     * C​a​n​c​e​l
+     */
+    cancel: string
+    /**
+     * S​a​v​e​ ​c​h​a​n​g​e​s
+     */
+    save: string
+    /**
+     * T​y​p​e​ ​A​R​C​H​I​V​E​ ​t​o​ ​c​o​n​f​i​r​m
+     */
+    confirmArchive: string
+    /**
+     * R​e​a​s​o​n
+     */
+    reason: string
+    /**
+     * N​a​m​e
+     */
+    name: string
+    /**
+     * S​l​u​g
+     */
+    slug: string
+    /**
+     * T​e​n​a​n​t
+     */
+    tenant: string
+    /**
+     * P​l​a​n
+     */
+    plan: string
+    /**
+     * P​e​r​i​o​d​ ​e​n​d
+     */
+    periodEnd: string
+    /**
+     * S​e​r​v​i​c​e
+     */
+    service: string
+    /**
+     * C​o​n​t​r​o​l​ ​t​y​p​e
+     */
+    controlType: string
+    /**
+     * E​n​d​p​o​i​n​t​ ​U​R​L
+     */
+    endpointUrl: string
+    /**
+     * D​e​p​l​o​y​ ​s​t​a​t​u​s
+     */
+    deployStatus: string
+    /**
+     * S​t​a​t​u​s
+     */
+    status: string
+    /**
+     * N​o​ ​p​l​a​n​s​ ​a​v​a​i​l​a​b​l​e
+     */
+    noPlans: string
+    /**
+     * N​o​ ​t​e​n​a​n​t​s​ ​a​v​a​i​l​a​b​l​e
+     */
+    noTenants: string
+    /**
+     * A​r​c​h​i​v​e​d
+     */
+    archived: string
+    /**
+     * S​h​o​w​ ​a​r​c​h​i​v​e​d
+     */
+    showArchived: string
+    /**
+     * H​i​d​e​ ​a​r​c​h​i​v​e​d
+     */
+    hideArchived: string
+    /**
+     * R​e​s​t​o​r​e
+     */
+    restore: string
+    /**
+     * C​o​u​l​d​ ​n​o​t​ ​s​a​v​e​ ​c​h​a​n​g​e​s​.
+     */
+    saveError: string
   }
   audit: {
     /**
@@ -777,6 +935,22 @@ export type TranslationFunctions = {
      * This tenant may have been removed.
      */
     notFoundDescription: () => LocalizedString
+    /**
+     * Create tenant
+     */
+    create: () => LocalizedString
+    /**
+     * Edit tenant
+     */
+    edit: () => LocalizedString
+    /**
+     * Archive tenant
+     */
+    archive: () => LocalizedString
+    /**
+     * This tenant will be hidden from active operations.
+     */
+    archivedDescription: () => LocalizedString
   }
   subscriptions: {
     /**
@@ -807,6 +981,18 @@ export type TranslationFunctions = {
      * ends
      */
     ends: () => LocalizedString
+    /**
+     * Create subscription
+     */
+    create: () => LocalizedString
+    /**
+     * Edit subscription
+     */
+    edit: () => LocalizedString
+    /**
+     * Archive subscription
+     */
+    archive: () => LocalizedString
   }
   services: {
     /**
@@ -849,6 +1035,18 @@ export type TranslationFunctions = {
      * flags
      */
     flags: () => LocalizedString
+    /**
+     * Create service
+     */
+    create: () => LocalizedString
+    /**
+     * Edit service
+     */
+    edit: () => LocalizedString
+    /**
+     * Archive service
+     */
+    archive: () => LocalizedString
   }
   flags: {
     /**
@@ -871,6 +1069,124 @@ export type TranslationFunctions = {
      * No description
      */
     noDescription: () => LocalizedString
+    /**
+     * Create flag
+     */
+    create: () => LocalizedString
+    /**
+     * Edit flag
+     */
+    edit: () => LocalizedString
+    /**
+     * Archive flag
+     */
+    archive: () => LocalizedString
+    /**
+     * Key
+     */
+    key: () => LocalizedString
+    /**
+     * Description
+     */
+    description: () => LocalizedString
+  }
+  crud: {
+    /**
+     * Create
+     */
+    create: () => LocalizedString
+    /**
+     * Update
+     */
+    update: () => LocalizedString
+    /**
+     * Archive
+     */
+    archive: () => LocalizedString
+    /**
+     * Cancel
+     */
+    cancel: () => LocalizedString
+    /**
+     * Save changes
+     */
+    save: () => LocalizedString
+    /**
+     * Type ARCHIVE to confirm
+     */
+    confirmArchive: () => LocalizedString
+    /**
+     * Reason
+     */
+    reason: () => LocalizedString
+    /**
+     * Name
+     */
+    name: () => LocalizedString
+    /**
+     * Slug
+     */
+    slug: () => LocalizedString
+    /**
+     * Tenant
+     */
+    tenant: () => LocalizedString
+    /**
+     * Plan
+     */
+    plan: () => LocalizedString
+    /**
+     * Period end
+     */
+    periodEnd: () => LocalizedString
+    /**
+     * Service
+     */
+    service: () => LocalizedString
+    /**
+     * Control type
+     */
+    controlType: () => LocalizedString
+    /**
+     * Endpoint URL
+     */
+    endpointUrl: () => LocalizedString
+    /**
+     * Deploy status
+     */
+    deployStatus: () => LocalizedString
+    /**
+     * Status
+     */
+    status: () => LocalizedString
+    /**
+     * No plans available
+     */
+    noPlans: () => LocalizedString
+    /**
+     * No tenants available
+     */
+    noTenants: () => LocalizedString
+    /**
+     * Archived
+     */
+    archived: () => LocalizedString
+    /**
+     * Show archived
+     */
+    showArchived: () => LocalizedString
+    /**
+     * Hide archived
+     */
+    hideArchived: () => LocalizedString
+    /**
+     * Restore
+     */
+    restore: () => LocalizedString
+    /**
+     * Could not save changes.
+     */
+    saveError: () => LocalizedString
   }
   audit: {
     /**

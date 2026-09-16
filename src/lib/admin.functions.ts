@@ -3,7 +3,10 @@ import { z } from 'zod'
 import { db } from '#/db'
 import { calculateMrr, isRevenueActive } from './metrics'
 
-const searchSchema = z.object({ search: z.string().max(100).optional() })
+const searchSchema = z.object({
+  search: z.string().max(100).optional(),
+  includeArchived: z.boolean().optional().default(false),
+})
 const tenantIdSchema = z.object({ id: z.string().uuid() })
 
 export const getOverview = createServerFn({ method: 'GET' }).handler(
@@ -64,7 +67,7 @@ export const getTenants = createServerFn({ method: 'GET' })
     const search = data.search?.trim()
     const tenants = await db.tenant.findMany({
       where: {
-        deletedAt: null,
+        ...(data.includeArchived ? {} : { deletedAt: null }),
         ...(search
           ? {
               OR: [
@@ -100,6 +103,8 @@ export const getTenants = createServerFn({ method: 'GET' })
       slug: tenant.slug,
       ownerEmail: tenant.memberships[0]?.user.email ?? null,
       status: tenant.subscription?.status ?? null,
+      archived: Boolean(tenant.deletedAt),
+      subscriptionId: tenant.subscription?.id ?? null,
       plan: tenant.subscription?.plan.slug ?? null,
     }))
   })

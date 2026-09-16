@@ -8,11 +8,17 @@ import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { formatCurrency, formatDate } from '#/lib/format'
-import { disableSubscription, enableSubscription } from '#/lib/ops.functions'
+import {
+  disableSubscription,
+  enableSubscription,
+  archiveTenant,
+  updateTenant,
+} from '#/lib/ops.functions'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import { tenantDetailQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
+import { CrudDialog } from '#/components/admin/crud-dialog'
 
 export const Route = createFileRoute('/_protected/tenants/$id')({
   loader: ({ context, params }) =>
@@ -25,11 +31,17 @@ export const Route = createFileRoute('/_protected/tenants/$id')({
 function TenantDetail() {
   const { LL } = useI18nContext()
   const { id } = Route.useParams()
+  const navigate = Route.useNavigate()
   const { data } = useSuspenseQuery(tenantDetailQuery(id))
   const tenant = data
   const queryClient = useQueryClient()
   const disable = useServerFn(disableSubscription)
   const enable = useServerFn(enableSubscription)
+  const update = useServerFn(updateTenant)
+  const archive = useServerFn(archiveTenant)
+  const [tenantDialog, setTenantDialog] = useState<'edit' | 'archive' | null>(
+    null,
+  )
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<
     'disable' | 'enable' | null
@@ -54,6 +66,18 @@ function TenantDetail() {
             },
           }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+  const tenantMutation = useMutation({
+    mutationFn: (value: { name: string; slug: string }) =>
+      update({ data: { id, ...value } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin'] })
+      setTenantDialog(null)
+    },
+  })
+  const archiveMutation = useMutation({
+    mutationFn: () => archive({ data: { id, reason: 'Archived by operator' } }),
+    onSuccess: () => void navigate({ to: '/tenants', search: { search: '' } }),
   })
   const actionForm = useForm({
     defaultValues: { reason: '', confirmation: '' },
@@ -111,6 +135,23 @@ function TenantDetail() {
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">{tenant.name}</h1>
         <p className="mt-2 text-(--sea-ink-soft)">{tenant.slug}</p>
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setTenantDialog('edit')}
+            className="rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold"
+          >
+            {LL.tenants.edit()}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTenantDialog('archive')}
+            disabled={archiveMutation.isPending}
+            className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-40"
+          >
+            {LL.tenants.archive()}
+          </button>
+        </div>
       </header>
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-(--line) bg-(--surface) p-6">
@@ -347,7 +388,85 @@ function TenantDetail() {
           </div>
         </div>
       ) : null}
+      {tenantDialog === 'edit' ? (
+        <CrudDialog
+          title={LL.tenants.edit()}
+          onClose={() => setTenantDialog(null)}
+        >
+          <TenantEditForm
+            initial={{ name: tenant.name, slug: tenant.slug }}
+            isPending={tenantMutation.isPending}
+            onSubmit={(value) => void tenantMutation.mutateAsync(value)}
+          />
+        </CrudDialog>
+      ) : null}
+      {tenantDialog === 'archive' ? (
+        <CrudDialog
+          title={LL.tenants.archive()}
+          onClose={() => setTenantDialog(null)}
+        >
+          <p className="mt-4 text-sm text-(--sea-ink-soft)">
+            {LL.tenants.archivedDescription()}
+          </p>
+          <button
+            type="button"
+            onClick={() => void archiveMutation.mutateAsync()}
+            disabled={archiveMutation.isPending}
+            className="mt-5 rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+          >
+            {LL.crud.archive()}
+          </button>
+        </CrudDialog>
+      ) : null}
     </div>
+  )
+}
+
+function TenantEditForm({
+  initial,
+  isPending,
+  onSubmit,
+}: {
+  initial: { name: string; slug: string }
+  isPending: boolean
+  onSubmit: (value: { name: string; slug: string }) => void
+}) {
+  const { LL } = useI18nContext()
+  const form = useForm({
+    defaultValues: initial,
+    onSubmit: ({ value }) => onSubmit(value),
+  })
+  return (
+    <form
+      className="mt-5 space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void form.handleSubmit()
+      }}
+    >
+      {(['name', 'slug'] as const).map((name) => (
+        <form.Field key={name} name={name}>
+          {(field) => (
+            <label className="block text-sm font-semibold">
+              {name === 'name' ? LL.crud.name() : LL.crud.slug()}
+              <input
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                required
+              />
+            </label>
+          )}
+        </form.Field>
+      ))}
+      <button
+        type="submit"
+        disabled={isPending}
+        className="rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+      >
+        {LL.crud.save()}
+      </button>
+    </form>
   )
 }
 function Loading() {

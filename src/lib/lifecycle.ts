@@ -110,8 +110,18 @@ export async function getEntitlement(tenantId: string) {
 
   const subscription = tenant.subscription
   const now = new Date()
+  if (tenant.deletedAt || subscription?.deletedAt) {
+    return {
+      active: false,
+      plan: null,
+      flags: {},
+      periodEnd: null,
+    }
+  }
   const flags = Object.fromEntries(
-    tenant.flags.map((tenantFlag) => [tenantFlag.flag.key, tenantFlag.enabled]),
+    tenant.flags
+      .filter((tenantFlag) => !tenantFlag.flag.deletedAt)
+      .map((tenantFlag) => [tenantFlag.flag.key, tenantFlag.enabled]),
   )
   const active = Boolean(
     subscription &&
