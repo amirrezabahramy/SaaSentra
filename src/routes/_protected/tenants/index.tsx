@@ -8,11 +8,18 @@ import { useForm } from '@tanstack/react-form'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import { EmptyState } from '#/components/admin/empty-state'
-import { CrudDialog } from '#/components/admin/crud-dialog'
+import {
+  CrudDialog,
+  PermanentDeleteDialog,
+} from '#/components/admin/crud-dialog'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { tenantsQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
-import { createTenant, unarchiveTenant } from '#/lib/ops.functions'
+import {
+  createTenant,
+  permanentlyDeleteTenant,
+  unarchiveTenant,
+} from '#/lib/ops.functions'
 
 export const Route = createFileRoute('/_protected/tenants/')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -50,6 +57,15 @@ function Tenants() {
     mutationFn: (id: string) => unarchive({ data: { id } }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] }),
+  })
+  const permanentlyDelete = useServerFn(permanentlyDeleteTenant)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => permanentlyDelete({ data: { id } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] })
+      setDeleteId(null)
+    },
   })
   const form = useForm({
     defaultValues: { search: search.search },
@@ -145,16 +161,25 @@ function Tenants() {
                   </span>
                   <StatusBadge status={tenant.status} />
                   {tenant.archived ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void unarchiveMutation.mutateAsync(tenant.id)
-                      }
-                      disabled={unarchiveMutation.isPending}
-                      className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
-                    >
-                      {LL.crud.restore()}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void unarchiveMutation.mutateAsync(tenant.id)
+                        }
+                        disabled={unarchiveMutation.isPending}
+                        className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
+                      >
+                        {LL.crud.restore()}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(tenant.id)}
+                        className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
+                      >
+                        {LL.crud.deletePermanently()}
+                      </button>
+                    </>
                   ) : null}
                 </div>
               )
@@ -193,6 +218,14 @@ function Tenants() {
             onSubmit={(value) => void createMutation.mutateAsync(value)}
           />
         </CrudDialog>
+      ) : null}
+      {deleteId ? (
+        <PermanentDeleteDialog
+          title={LL.crud.deletePermanently()}
+          isPending={deleteMutation.isPending}
+          onClose={() => setDeleteId(null)}
+          onConfirm={() => void deleteMutation.mutateAsync(deleteId)}
+        />
       ) : null}
     </div>
   )

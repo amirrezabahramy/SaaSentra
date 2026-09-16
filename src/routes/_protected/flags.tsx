@@ -6,10 +6,14 @@ import {
 } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { useState } from 'react'
-import { CrudDialog } from '#/components/admin/crud-dialog'
+import {
+  CrudDialog,
+  PermanentDeleteDialog,
+} from '#/components/admin/crud-dialog'
 import {
   archiveFlag,
   createFlag,
+  permanentlyDeleteFlag,
   toggleTenantFlag,
   unarchiveFlag,
   updateFlag,
@@ -64,6 +68,15 @@ function Flags() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
   })
+  const permanentlyDelete = useServerFn(permanentlyDeleteFlag)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => permanentlyDelete({ data: { id } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] })
+      setDeleteId(null)
+    },
+  })
   const toggleMutation = useMutation({
     mutationFn: (input: {
       tenantId: string
@@ -112,14 +125,25 @@ function Flags() {
               <h2 className="font-serif text-2xl font-bold">{flag.key}</h2>
               <div className="mt-3 flex gap-2">
                 {flag.archived ? (
-                  <button
-                    type="button"
-                    onClick={() => void unarchiveMutation.mutateAsync(flag.id)}
-                    disabled={unarchiveMutation.isPending}
-                    className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
-                  >
-                    {LL.crud.restore()}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void unarchiveMutation.mutateAsync(flag.id)
+                      }
+                      disabled={unarchiveMutation.isPending}
+                      className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
+                    >
+                      {LL.crud.restore()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteId(flag.id)}
+                      className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
+                    >
+                      {LL.crud.deletePermanently()}
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button
@@ -189,6 +213,14 @@ function Flags() {
             onSubmit={(value) => void definitionMutation.mutateAsync(value)}
           />
         </CrudDialog>
+      ) : null}
+      {deleteId ? (
+        <PermanentDeleteDialog
+          title={LL.crud.deletePermanently()}
+          isPending={deleteMutation.isPending}
+          onClose={() => setDeleteId(null)}
+          onConfirm={() => void deleteMutation.mutateAsync(deleteId)}
+        />
       ) : null}
     </div>
   )

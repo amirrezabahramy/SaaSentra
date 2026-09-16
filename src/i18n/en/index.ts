@@ -133,6 +133,10 @@ const en = {
     hideArchived: 'Hide archived',
     restore: 'Restore',
     saveError: 'Could not save changes.',
+    permanentDeleteWarning:
+      'This permanently deletes the archived record and cannot be undone.',
+    typeDeleteToConfirm: 'Type DELETE to confirm',
+    deletePermanently: 'Delete permanently',
   },
   audit: {
     kicker: 'Operations',

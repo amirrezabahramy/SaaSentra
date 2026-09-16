@@ -132,6 +132,10 @@ const fa = {
     hideArchived: 'مخفی‌کردن آرشیوشده‌ها',
     restore: 'بازگردانی',
     saveError: 'ذخیره تغییرات انجام نشد.',
+    permanentDeleteWarning:
+      'این کار رکورد آرشیوشده را برای همیشه حذف می‌کند و قابل بازگشت نیست.',
+    typeDeleteToConfirm: 'برای تأیید DELETE را وارد کنید',
+    deletePermanently: 'حذف دائمی',
   },
   audit: {
     kicker: 'عملیات',

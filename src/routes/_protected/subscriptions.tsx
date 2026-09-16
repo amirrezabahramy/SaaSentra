@@ -7,7 +7,10 @@ import {
 import { useForm } from '@tanstack/react-form'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
-import { CrudDialog } from '#/components/admin/crud-dialog'
+import {
+  CrudDialog,
+  PermanentDeleteDialog,
+} from '#/components/admin/crud-dialog'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { EmptyState } from '#/components/admin/empty-state'
 import { formatCurrency, formatDate } from '#/lib/format'
@@ -15,6 +18,7 @@ import { subscriptionsQuery, plansQuery, tenantsQuery } from '#/lib/queries'
 import {
   archiveSubscription,
   createSubscription,
+  permanentlyDeleteSubscription,
   unarchiveSubscription,
   updateSubscription,
 } from '#/lib/ops.functions'
@@ -92,6 +96,17 @@ function Subscriptions() {
     mutationFn: (id: string) => unarchive({ data: { id } }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] }),
+  })
+  const permanentlyDelete = useServerFn(permanentlyDeleteSubscription)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => permanentlyDelete({ data: { id } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['admin', 'subscriptions'],
+      })
+      setDeleteId(null)
+    },
   })
   const navigate = Route.useNavigate()
   const form = useForm({
@@ -185,14 +200,23 @@ function Subscriptions() {
                   {LL.subscriptions.edit()}
                 </button>
                 {row.status === 'ARCHIVED' ? (
-                  <button
-                    type="button"
-                    onClick={() => void unarchiveMutation.mutateAsync(row.id)}
-                    disabled={unarchiveMutation.isPending}
-                    className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
-                  >
-                    {LL.crud.restore()}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void unarchiveMutation.mutateAsync(row.id)}
+                      disabled={unarchiveMutation.isPending}
+                      className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
+                    >
+                      {LL.crud.restore()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteId(row.id)}
+                      className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
+                    >
+                      {LL.crud.deletePermanently()}
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -240,6 +264,14 @@ function Subscriptions() {
             onSubmit={(value) => void mutation.mutateAsync(value)}
           />
         </CrudDialog>
+      ) : null}
+      {deleteId ? (
+        <PermanentDeleteDialog
+          title={LL.crud.deletePermanently()}
+          isPending={deleteMutation.isPending}
+          onClose={() => setDeleteId(null)}
+          onConfirm={() => void deleteMutation.mutateAsync(deleteId)}
+        />
       ) : null}
     </Page>
   )

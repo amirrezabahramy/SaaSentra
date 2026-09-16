@@ -8,10 +8,14 @@ import { useForm } from '@tanstack/react-form'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import { EmptyState } from '#/components/admin/empty-state'
-import { CrudDialog } from '#/components/admin/crud-dialog'
+import {
+  CrudDialog,
+  PermanentDeleteDialog,
+} from '#/components/admin/crud-dialog'
 import {
   archiveService,
   createService,
+  permanentlyDeleteService,
   unarchiveService,
   updateService,
 } from '#/lib/ops.functions'
@@ -58,6 +62,15 @@ function Services() {
     mutationFn: (id: string) => unarchive({ data: { id } }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['admin', 'services'] }),
+  })
+  const permanentlyDelete = useServerFn(permanentlyDeleteService)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => permanentlyDelete({ data: { id } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'services'] })
+      setDeleteId(null)
+    },
   })
   return (
     <div className="mx-auto max-w-6xl">
@@ -111,14 +124,23 @@ function Services() {
               </div>
               <div className="mt-4 flex gap-2">
                 {row.archived ? (
-                  <button
-                    type="button"
-                    disabled={unarchiveMutation.isPending}
-                    onClick={() => void unarchiveMutation.mutateAsync(row.id)}
-                    className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
-                  >
-                    {LL.crud.restore()}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={unarchiveMutation.isPending}
+                      onClick={() => void unarchiveMutation.mutateAsync(row.id)}
+                      className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
+                    >
+                      {LL.crud.restore()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteId(row.id)}
+                      className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
+                    >
+                      {LL.crud.deletePermanently()}
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button
@@ -186,6 +208,14 @@ function Services() {
             }}
           />
         </CrudDialog>
+      ) : null}
+      {deleteId ? (
+        <PermanentDeleteDialog
+          title={LL.crud.deletePermanently()}
+          isPending={deleteMutation.isPending}
+          onClose={() => setDeleteId(null)}
+          onConfirm={() => void deleteMutation.mutateAsync(deleteId)}
+        />
       ) : null}
     </div>
   )

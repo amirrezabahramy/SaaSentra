@@ -247,6 +247,27 @@ export const unarchiveTenant = createServerFn({ method: 'POST' })
     })
   })
 
+export const permanentlyDeleteTenant = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const tenant = await tx.tenant.findUniqueOrThrow({
+        where: { id: data.id, deletedAt: { not: null } },
+      })
+      await tx.auditLog.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.payment.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.invoice.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.serviceAction.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.membership.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.tenantFlag.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.service.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.subscription.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.tenant.delete({ where: { id: tenant.id } })
+      return { id: tenant.id, actorId: actor }
+    })
+  })
+
 export const createService = createServerFn({ method: 'POST' })
   .validator((data: unknown) => serviceSchema.parse(data))
   .handler(async ({ data }) => {
@@ -339,6 +360,20 @@ export const unarchiveService = createServerFn({ method: 'POST' })
     })
   })
 
+export const permanentlyDeleteService = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const service = await tx.service.findUniqueOrThrow({
+        where: { id: data.id, deletedAt: { not: null } },
+      })
+      await tx.serviceAction.deleteMany({ where: { serviceId: service.id } })
+      await tx.service.delete({ where: { id: service.id } })
+      return { id: service.id, actorId: actor }
+    })
+  })
+
 export const createFlag = createServerFn({ method: 'POST' })
   .validator((data: unknown) => flagDefinitionSchema.parse(data))
   .handler(async ({ data }) => {
@@ -411,6 +446,20 @@ export const unarchiveFlag = createServerFn({ method: 'POST' })
         reason: 'Feature flag restored by operator',
       })
       return flag
+    })
+  })
+
+export const permanentlyDeleteFlag = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const flag = await tx.featureFlag.findUniqueOrThrow({
+        where: { id: data.id, deletedAt: { not: null } },
+      })
+      await tx.tenantFlag.deleteMany({ where: { flagId: flag.id } })
+      await tx.featureFlag.delete({ where: { id: flag.id } })
+      return { id: flag.id, actorId: actor }
     })
   })
 
@@ -564,6 +613,29 @@ export const unarchiveSubscription = createServerFn({ method: 'POST' })
         reason: 'Subscription restored by operator',
       })
       return subscription
+    })
+  })
+
+export const permanentlyDeleteSubscription = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const subscription = await tx.subscription.findUniqueOrThrow({
+        where: { id: data.id, deletedAt: { not: null } },
+      })
+      const invoices = await tx.invoice.findMany({
+        where: { subscriptionId: subscription.id },
+        select: { id: true },
+      })
+      await tx.payment.deleteMany({
+        where: { invoiceId: { in: invoices.map((invoice) => invoice.id) } },
+      })
+      await tx.invoice.deleteMany({
+        where: { subscriptionId: subscription.id },
+      })
+      await tx.subscription.delete({ where: { id: subscription.id } })
+      return { id: subscription.id, actorId: actor }
     })
   })
 

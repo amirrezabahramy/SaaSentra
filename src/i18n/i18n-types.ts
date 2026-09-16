@@ -476,6 +476,18 @@ type RootTranslation = {
      * C​o​u​l​d​ ​n​o​t​ ​s​a​v​e​ ​c​h​a​n​g​e​s​.
      */
     saveError: string
+    /**
+     * T​h​i​s​ ​p​e​r​m​a​n​e​n​t​l​y​ ​d​e​l​e​t​e​s​ ​t​h​e​ ​a​r​c​h​i​v​e​d​ ​r​e​c​o​r​d​ ​a​n​d​ ​c​a​n​n​o​t​ ​b​e​ ​u​n​d​o​n​e​.
+     */
+    permanentDeleteWarning: string
+    /**
+     * T​y​p​e​ ​D​E​L​E​T​E​ ​t​o​ ​c​o​n​f​i​r​m
+     */
+    typeDeleteToConfirm: string
+    /**
+     * D​e​l​e​t​e​ ​p​e​r​m​a​n​e​n​t​l​y
+     */
+    deletePermanently: string
   }
   audit: {
     /**
@@ -1187,6 +1199,18 @@ export type TranslationFunctions = {
      * Could not save changes.
      */
     saveError: () => LocalizedString
+    /**
+     * This permanently deletes the archived record and cannot be undone.
+     */
+    permanentDeleteWarning: () => LocalizedString
+    /**
+     * Type DELETE to confirm
+     */
+    typeDeleteToConfirm: () => LocalizedString
+    /**
+     * Delete permanently
+     */
+    deletePermanently: () => LocalizedString
   }
   audit: {
     /**
