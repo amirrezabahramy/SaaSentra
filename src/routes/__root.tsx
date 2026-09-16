@@ -12,6 +12,12 @@ import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
 import { getAuthSession } from '#/lib/auth.functions'
+import TypesafeI18n, { useI18nContext } from '#/i18n/i18n-react'
+import { loadAllLocales } from '#/i18n/i18n-util.sync'
+import type { Locales } from '#/i18n/i18n-types'
+import { isLocale } from '#/i18n/i18n-util'
+import { LOCALE_STORAGE_KEY } from '#/lib/i18n'
+import { useEffect } from 'react'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -44,8 +50,28 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const locale: Locales = 'en'
+  loadAllLocales()
+
   return (
-    <html lang="en">
+    <TypesafeI18n locale={locale}>
+      <LocalizedDocument>{children}</LocalizedDocument>
+    </TypesafeI18n>
+  )
+}
+
+function LocalizedDocument({ children }: { children: React.ReactNode }) {
+  const { locale, setLocale } = useI18nContext()
+
+  useEffect(() => {
+    const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY)
+    if (storedLocale && isLocale(storedLocale) && storedLocale !== locale) {
+      setLocale(storedLocale)
+    }
+  }, [locale, setLocale])
+
+  return (
+    <html lang={locale} dir={locale === 'fa' ? 'rtl' : 'ltr'}>
       <head>
         <HeadContent />
       </head>

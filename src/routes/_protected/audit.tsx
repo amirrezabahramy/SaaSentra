@@ -4,6 +4,7 @@ import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
 import { formatDate } from '#/lib/format'
 import { auditQuery } from '#/lib/queries'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 export const Route = createFileRoute('/_protected/audit')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute('/_protected/audit')({
   component: Audit,
 })
 function Audit() {
+  const { LL } = useI18nContext()
   const search = Route.useSearch()
   const { data: rows } = useSuspenseQuery(
     auditQuery(search.tenantId, search.action),
@@ -30,9 +32,11 @@ function Audit() {
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
-          Operations
+          {LL.audit.kicker()}
         </p>
-        <h1 className="mt-2 font-serif text-4xl font-bold">Audit log</h1>
+        <h1 className="mt-2 font-serif text-4xl font-bold">
+          {LL.audit.title()}
+        </h1>
       </header>
       <form
         className="mb-5 flex flex-wrap gap-2"
@@ -47,7 +51,7 @@ function Audit() {
               name={field.name}
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Tenant ID"
+              placeholder={LL.audit.tenantId()}
               className="rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             />
           )}
@@ -58,7 +62,7 @@ function Audit() {
               name={field.name}
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Action contains…"
+              placeholder={LL.audit.actionPlaceholder()}
               className="rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             />
           )}
@@ -71,15 +75,15 @@ function Audit() {
               disabled={!canSubmit || isSubmitting}
               className="rounded-xl bg-(--sea-ink) px-5 font-semibold text-white"
             >
-              Filter
+              {LL.audit.filter()}
             </button>
           )}
         </form.Subscribe>
       </form>
       {rows.length === 0 ? (
         <EmptyState
-          title="No audit entries"
-          description="Operator actions will appear here."
+          title={LL.audit.noEntries()}
+          description={LL.audit.noEntriesDescription()}
         />
       ) : (
         <div className="rounded-2xl border border-(--line) bg-(--surface) divide-y divide-(--line)">
@@ -93,14 +97,14 @@ function Audit() {
               </div>
               <p className="mt-1 text-sm text-(--sea-ink-soft)">
                 {row.tenant.name} ·{' '}
-                {row.actor?.name ?? row.actor?.email ?? 'System'}
+                {row.actor?.name ?? row.actor?.email ?? LL.audit.system()}
               </p>
               <p className="mt-1 text-sm">
                 {typeof row.metadata === 'object' &&
                 row.metadata !== null &&
                 'reason' in row.metadata
                   ? String(row.metadata.reason)
-                  : 'No reason recorded'}
+                  : LL.audit.noReason()}
               </p>
             </div>
           ))}

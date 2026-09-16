@@ -1,24 +1,30 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { settingsQuery } from '#/lib/queries'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 export const Route = createFileRoute('/_protected/settings')({
   loader: ({ context }) => context.queryClient.query(settingsQuery()),
   component: Settings,
 })
 function Settings() {
+  const { LL } = useI18nContext()
   const { data } = useSuspenseQuery(settingsQuery())
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
-          Administration
+          {LL.settings.kicker()}
         </p>
-        <h1 className="mt-2 font-serif text-4xl font-bold">Settings</h1>
+        <h1 className="mt-2 font-serif text-4xl font-bold">
+          {LL.settings.title()}
+        </h1>
       </header>
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-2xl border border-(--line) bg-(--surface) p-6">
-          <h2 className="font-serif text-2xl font-bold">Team members</h2>
+          <h2 className="font-serif text-2xl font-bold">
+            {LL.settings.teamMembers()}
+          </h2>
           <div className="mt-4 divide-y divide-(--line)">
             {data.members.map((member) => (
               <div key={member.id} className="py-3">
@@ -34,10 +40,10 @@ function Settings() {
         </section>
         <section className="rounded-2xl border border-(--line) bg-(--surface) p-6">
           <h2 className="font-serif text-2xl font-bold">
-            Environment readiness
+            {LL.settings.environment()}
           </h2>
           <p className="mt-2 text-sm text-(--sea-ink-soft)">
-            Required variables are shown without exposing their values.
+            {LL.settings.environmentDescription()}
           </p>
           <div className="mt-4 space-y-2">
             {data.env.map((item) => (
@@ -51,7 +57,9 @@ function Settings() {
                     item.configured ? 'text-emerald-700' : 'text-amber-700'
                   }
                 >
-                  {item.configured ? 'Configured' : 'Missing'}
+                  {item.configured
+                    ? LL.settings.configured()
+                    : LL.settings.missing()}
                 </span>
               </div>
             ))}

@@ -8,12 +8,14 @@ import { toggleTenantFlag } from '#/lib/ops.functions'
 import { EmptyState } from '#/components/admin/empty-state'
 import { useServerFn } from '@tanstack/react-start'
 import { flagsQuery } from '#/lib/queries'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 export const Route = createFileRoute('/_protected/flags')({
   loader: ({ context }) => context.queryClient.query(flagsQuery()),
   component: Flags,
 })
 function Flags() {
+  const { LL } = useI18nContext()
   const { data } = useSuspenseQuery(flagsQuery())
   const queryClient = useQueryClient()
   const toggle = useServerFn(toggleTenantFlag)
@@ -30,14 +32,16 @@ function Flags() {
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
-          Configuration
+          {LL.flags.kicker()}
         </p>
-        <h1 className="mt-2 font-serif text-4xl font-bold">Feature flags</h1>
+        <h1 className="mt-2 font-serif text-4xl font-bold">
+          {LL.flags.title()}
+        </h1>
       </header>
       {data.flags.length === 0 ? (
         <EmptyState
-          title="No feature flags"
-          description="Flag definitions will appear here."
+          title={LL.flags.noFlags()}
+          description={LL.flags.noFlagsDescription()}
         />
       ) : (
         <div className="space-y-4">
@@ -48,7 +52,7 @@ function Flags() {
             >
               <h2 className="font-serif text-2xl font-bold">{flag.key}</h2>
               <p className="mt-1 text-sm text-(--sea-ink-soft)">
-                {flag.description ?? 'No description'}
+                {flag.description ?? LL.flags.noDescription()}
               </p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 {data.tenants.map((tenant) => {

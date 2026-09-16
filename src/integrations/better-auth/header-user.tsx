@@ -2,6 +2,7 @@ import { authClient } from '#/lib/auth-client'
 import { useMutation } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { signOut } from '#/lib/auth.functions'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 export default function BetterAuthHeader() {
   const { data: session, isPending } = authClient.useSession()
@@ -10,6 +11,7 @@ export default function BetterAuthHeader() {
     mutationFn: () => signOutFn(),
     onSuccess: () => window.location.reload(),
   })
+  const { LL } = useI18nContext()
 
   if (isPending) {
     return (
@@ -34,7 +36,7 @@ export default function BetterAuthHeader() {
           disabled={signOutMutation.isPending}
           className="flex-1 h-9 px-4 text-sm font-medium bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
         >
-          Sign out
+          {LL.auth.signOut()}
         </button>
       </div>
     )

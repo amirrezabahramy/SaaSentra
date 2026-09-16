@@ -1,4 +1,5 @@
 import type { SubscriptionStatus } from '#/generated/prisma/client'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 const styles: Record<SubscriptionStatus, string> = {
   ACTIVE: 'bg-emerald-100 text-emerald-800',
@@ -12,10 +13,11 @@ const styles: Record<SubscriptionStatus, string> = {
 }
 
 export function StatusBadge({ status }: { status: SubscriptionStatus | null }) {
+  const { LL } = useI18nContext()
   if (!status) {
     return (
       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-500">
-        No subscription
+        {LL.tenantDetail.noSubscription()}
       </span>
     )
   }
@@ -23,7 +25,7 @@ export function StatusBadge({ status }: { status: SubscriptionStatus | null }) {
     <span
       className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}
     >
-      {status.replaceAll('_', ' ')}
+      {LL.status[status]()}
     </span>
   )
 }

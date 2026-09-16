@@ -12,18 +12,18 @@ import { disableSubscription, enableSubscription } from '#/lib/ops.functions'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import { tenantDetailQuery } from '#/lib/queries'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 export const Route = createFileRoute('/_protected/tenants/$id')({
   loader: ({ context, params }) =>
     context.queryClient.query(tenantDetailQuery(params.id)),
   pendingComponent: Loading,
-  errorComponent: ({ error }) => (
-    <EmptyState title="Unable to load tenant" description={String(error)} />
-  ),
+  errorComponent: ({ error }) => <TenantErrorState message={String(error)} />,
   component: TenantDetail,
 })
 
 function TenantDetail() {
+  const { LL } = useI18nContext()
   const { id } = Route.useParams()
   const { data } = useSuspenseQuery(tenantDetailQuery(id))
   const tenant = data
@@ -72,7 +72,7 @@ function TenantDetail() {
         setActionError(
           error instanceof Error
             ? error.message
-            : 'Unable to update subscription',
+            : LL.tenantDetail.unableToUpdate(),
         )
       }
     },
@@ -81,15 +81,15 @@ function TenantDetail() {
         !value.reason.trim() ||
         value.confirmation !==
           (pendingAction === 'enable' ? 'ENABLE' : 'DISABLE')
-          ? 'Confirmation is required'
+          ? LL.tenantDetail.confirmationRequired()
           : undefined,
     },
   })
   if (!tenant)
     return (
       <EmptyState
-        title="Tenant not found"
-        description="This tenant may have been removed."
+        title={LL.tenants.notFound()}
+        description={LL.tenants.notFoundDescription()}
       />
     )
   const canEnable = ['DISABLED', 'CANCELED', 'DISABLED_AT_PERIOD_END'].includes(
@@ -103,30 +103,32 @@ function TenantDetail() {
         search={{ search: '' }}
         className="text-sm font-semibold text-(--palm)"
       >
-        ← Back to tenants
+        {LL.tenants.back()}
       </Link>
       <header className="mb-8 mt-5">
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
-          Tenant
+          {LL.tenants.tenant()}
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">{tenant.name}</h1>
         <p className="mt-2 text-(--sea-ink-soft)">{tenant.slug}</p>
       </header>
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-(--line) bg-(--surface) p-6">
-          <h2 className="font-serif text-2xl font-bold">Subscription</h2>
+          <h2 className="font-serif text-2xl font-bold">
+            {LL.tenantDetail.subscription()}
+          </h2>
           {tenant.subscription ? (
             <div className="mt-5 space-y-3">
               <div className="flex items-center justify-between">
-                <span>Plan</span>
+                <span>{LL.tenantDetail.plan()}</span>
                 <strong>{tenant.subscription.plan}</strong>
               </div>
               <div className="flex items-center justify-between">
-                <span>Status</span>
+                <span>{LL.tenantDetail.status()}</span>
                 <StatusBadge status={tenant.subscription.status} />
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span>Period ends</span>
+                <span>{LL.tenantDetail.periodEnds()}</span>
                 <span>{formatDate(tenant.subscription.currentPeriodEnd)}</span>
               </div>
               {[
@@ -148,10 +150,10 @@ function TenantDetail() {
                   className="mt-3 rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {statusMutation.isPending
-                    ? 'Updating…'
+                    ? LL.tenantDetail.updating()
                     : canEnable
-                      ? 'Re-enable subscription'
-                      : 'Disable subscription'}
+                      ? LL.tenantDetail.enable()
+                      : LL.tenantDetail.disable()}
                 </button>
               )}
               {actionError ? (
@@ -161,17 +163,20 @@ function TenantDetail() {
           ) : (
             <div className="mt-5">
               <EmptyState
-                title="No subscription"
-                description="This tenant has no current subscription."
+                title={LL.tenantDetail.noSubscription()}
+                description={LL.tenantDetail.noSubscriptionDescription()}
               />
             </div>
           )}
         </div>
         <div className="rounded-2xl border border-(--line) bg-(--surface) p-6">
-          <h2 className="font-serif text-2xl font-bold">Services & flags</h2>
+          <h2 className="font-serif text-2xl font-bold">
+            {LL.tenantDetail.servicesAndFlags()}
+          </h2>
           <p className="mt-4 text-sm">
-            {tenant.services.length} services ·{' '}
-            {tenant.flags.filter((flag) => flag.enabled).length} enabled flags
+            {tenant.services.length} {LL.tenantDetail.services()} ·{' '}
+            {tenant.flags.filter((flag) => flag.enabled).length}{' '}
+            {LL.tenantDetail.enabledFlags()}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {tenant.flags.length ? (
@@ -180,19 +185,22 @@ function TenantDetail() {
                   key={flag.key}
                   className="rounded-full bg-(--chip-bg) px-3 py-1 text-sm"
                 >
-                  {flag.key}: {flag.enabled ? 'on' : 'off'}
+                  {flag.key}:{' '}
+                  {flag.enabled ? LL.tenantDetail.on() : LL.tenantDetail.off()}
                 </span>
               ))
             ) : (
               <span className="text-sm text-(--sea-ink-soft)">
-                No flags configured
+                {LL.tenantDetail.noFlags()}
               </span>
             )}
           </div>
         </div>
       </section>
       <section className="mt-8 rounded-2xl border border-(--line) bg-(--surface) p-6">
-        <h2 className="font-serif text-2xl font-bold">Invoices</h2>
+        <h2 className="font-serif text-2xl font-bold">
+          {LL.tenantDetail.invoices()}
+        </h2>
         {tenant.invoices.length ? (
           <div className="mt-4 divide-y divide-(--line)">
             {tenant.invoices.map((invoice) => (
@@ -209,18 +217,20 @@ function TenantDetail() {
         ) : (
           <div className="mt-4">
             <EmptyState
-              title="No invoices"
-              description="Invoices will appear once billing activity begins."
+              title={LL.tenantDetail.noInvoices()}
+              description={LL.tenantDetail.noInvoicesDescription()}
             />
           </div>
         )}
       </section>
       <section className="mt-8 rounded-2xl border border-(--line) bg-(--surface) p-6">
-        <h2 className="font-serif text-2xl font-bold">Lifecycle timeline</h2>
+        <h2 className="font-serif text-2xl font-bold">
+          {LL.tenantDetail.lifecycle()}
+        </h2>
         {tenant.auditLogs.length ? (
           <div className="mt-4 space-y-5">
             {tenant.auditLogs.map((entry) => (
-              <div key={entry.id} className="border-l-2 border-(--lagoon) pl-4">
+              <div key={entry.id} className="border-s-2 border-(--lagoon) ps-4">
                 <div className="flex flex-wrap justify-between gap-2">
                   <strong>{entry.action}</strong>
                   <time className="text-sm text-(--sea-ink-soft)">
@@ -228,7 +238,7 @@ function TenantDetail() {
                   </time>
                 </div>
                 <p className="mt-1 text-sm text-(--sea-ink-soft)">
-                  {entry.reason ?? 'No reason recorded'}
+                  {entry.reason ?? LL.common.noReason()}
                   {entry.actor
                     ? ` · ${entry.actor.name ?? entry.actor.email}`
                     : ''}
@@ -239,8 +249,8 @@ function TenantDetail() {
         ) : (
           <div className="mt-4">
             <EmptyState
-              title="No lifecycle events"
-              description="Subscription history will appear here."
+              title={LL.tenantDetail.noLifecycle()}
+              description={LL.tenantDetail.noLifecycleDescription()}
             />
           </div>
         )}
@@ -258,12 +268,11 @@ function TenantDetail() {
               className="font-serif text-2xl font-bold"
             >
               {pendingAction === 'enable'
-                ? 'Re-enable subscription'
-                : 'Disable subscription'}
+                ? LL.tenantDetail.dialogEnable()
+                : LL.tenantDetail.dialogDisable()}
             </h2>
             <p className="mt-2 text-sm text-(--sea-ink-soft)">
-              This changes the tenant’s access immediately and records an audit
-              event.
+              {LL.tenantDetail.dialogDescription()}
             </p>
             <form
               onSubmit={(event) => {
@@ -274,13 +283,13 @@ function TenantDetail() {
               <actionForm.Field name="reason">
                 {(field) => (
                   <label className="mt-5 block text-sm font-semibold">
-                    Reason
+                    {LL.tenantDetail.reason()}
                     <input
                       value={field.state.value}
                       onChange={(event) =>
                         field.handleChange(event.target.value)
                       }
-                      placeholder="Required reason"
+                      placeholder={LL.tenantDetail.requiredReason()}
                       className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
                     />
                   </label>
@@ -289,11 +298,11 @@ function TenantDetail() {
               <actionForm.Field name="confirmation">
                 {(field) => (
                   <label className="mt-4 block text-sm font-semibold">
-                    Type{' '}
+                    {LL.tenantDetail.typeToConfirm()}{' '}
                     <code className="rounded bg-black/5 px-1.5 py-0.5">
                       {actionWord}
                     </code>{' '}
-                    to confirm
+                    {LL.tenantDetail.toConfirm()}
                     <input
                       value={field.state.value}
                       onChange={(event) =>
@@ -312,7 +321,7 @@ function TenantDetail() {
                   onClick={() => setPendingAction(null)}
                   className="rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold"
                 >
-                  Cancel
+                  {LL.tenantDetail.cancel()}
                 </button>
                 <actionForm.Subscribe
                   selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -326,8 +335,10 @@ function TenantDetail() {
                       className="rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isSubmitting || statusMutation.isPending
-                        ? 'Updating…'
-                        : `Yes, ${pendingAction}`}
+                        ? LL.tenantDetail.updating()
+                        : pendingAction === 'enable'
+                          ? LL.tenantDetail.yesEnable()
+                          : LL.tenantDetail.yesDisable()}
                     </button>
                   )}
                 </actionForm.Subscribe>
@@ -340,7 +351,15 @@ function TenantDetail() {
   )
 }
 function Loading() {
+  const { LL } = useI18nContext()
   return (
-    <div className="animate-pulse text-(--sea-ink-soft)">Loading tenant…</div>
+    <div className="animate-pulse text-(--sea-ink-soft)">
+      {LL.tenants.loading()}
+    </div>
   )
+}
+
+function TenantErrorState({ message }: { message: string }) {
+  const { LL } = useI18nContext()
+  return <EmptyState title={LL.tenants.unableToLoad()} description={message} />
 }

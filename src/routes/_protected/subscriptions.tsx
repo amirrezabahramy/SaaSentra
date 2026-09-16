@@ -5,6 +5,7 @@ import { StatusBadge } from '#/components/admin/status-badge'
 import { EmptyState } from '#/components/admin/empty-state'
 import { formatCurrency, formatDate } from '#/lib/format'
 import { subscriptionsQuery } from '#/lib/queries'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 export const Route = createFileRoute('/_protected/subscriptions')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -26,6 +27,7 @@ const statuses = [
   'ARCHIVED',
 ] as const
 function Subscriptions() {
+  const { LL } = useI18nContext()
   const search = Route.useSearch()
   const { data: rows } = useSuspenseQuery(subscriptionsQuery(search.status))
   const navigate = Route.useNavigate()
@@ -37,7 +39,7 @@ function Subscriptions() {
       }),
   })
   return (
-    <Page title="Subscriptions" kicker="Billing operations">
+    <Page title={LL.subscriptions.title()} kicker={LL.subscriptions.kicker()}>
       <form
         className="mb-5 flex gap-2"
         onSubmit={(event) => {
@@ -53,7 +55,7 @@ function Subscriptions() {
               onChange={(event) => field.handleChange(event.target.value)}
               className="rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             >
-              <option value="">All statuses</option>
+              <option value="">{LL.subscriptions.allStatuses()}</option>
               {statuses.map((status) => (
                 <option key={status} value={status}>
                   {status.replaceAll('_', ' ')}
@@ -70,15 +72,15 @@ function Subscriptions() {
               disabled={!canSubmit || isSubmitting}
               className="rounded-xl bg-(--sea-ink) px-5 font-semibold text-white"
             >
-              Filter
+              {LL.subscriptions.filter()}
             </button>
           )}
         </form.Subscribe>
       </form>
       {rows.length === 0 ? (
         <EmptyState
-          title="No subscriptions"
-          description="No subscriptions match this filter."
+          title={LL.subscriptions.noSubscriptions()}
+          description={LL.subscriptions.noSubscriptionsDescription()}
         />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-(--line) bg-(--surface) divide-y divide-(--line)">
@@ -92,7 +94,8 @@ function Subscriptions() {
               <div>
                 <p className="font-semibold">{row.tenant.name}</p>
                 <p className="text-sm text-(--sea-ink-soft)">
-                  {row.plan.name} · ends {formatDate(row.currentPeriodEnd)}
+                  {row.plan.name} · {LL.subscriptions.ends()}{' '}
+                  {formatDate(row.currentPeriodEnd)}
                 </p>
               </div>
               <div className="flex items-center gap-3">

@@ -4,6 +4,7 @@ import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { tenantsQuery } from '#/lib/queries'
+import { useI18nContext } from '#/i18n/i18n-react'
 
 export const Route = createFileRoute('/_protected/tenants/')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -13,13 +14,12 @@ export const Route = createFileRoute('/_protected/tenants/')({
   loader: ({ context, deps }) =>
     context.queryClient.query(tenantsQuery(deps.search)),
   pendingComponent: Loading,
-  errorComponent: ({ error }) => (
-    <EmptyState title="Unable to load tenants" description={String(error)} />
-  ),
+  errorComponent: ({ error }) => <TenantsErrorState message={String(error)} />,
   component: Tenants,
 })
 
 function Tenants() {
+  const { LL } = useI18nContext()
   const { data } = useSuspenseQuery(tenantsQuery(Route.useSearch().search))
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
@@ -34,9 +34,11 @@ function Tenants() {
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--kicker)">
-          Accounts
+          {LL.tenants.kicker()}
         </p>
-        <h1 className="mt-2 font-serif text-4xl font-bold">Tenants</h1>
+        <h1 className="mt-2 font-serif text-4xl font-bold">
+          {LL.tenants.title()}
+        </h1>
       </header>
       <form
         className="mb-5 flex gap-2"
@@ -51,7 +53,7 @@ function Tenants() {
               name={field.name}
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Search name or owner email"
+              placeholder={LL.tenants.searchPlaceholder()}
               className="w-full max-w-md rounded-xl border border-(--line) bg-white/70 px-4 py-3 outline-none focus:ring-2 focus:ring-(--lagoon)"
             />
           )}
@@ -65,15 +67,15 @@ function Tenants() {
               type="submit"
               disabled={!canSubmit || isSubmitting}
             >
-              Search
+              {LL.tenants.search()}
             </button>
           )}
         </form.Subscribe>
       </form>
       {data.length === 0 ? (
         <EmptyState
-          title="No tenants found"
-          description="Try another search or add a tenant in a later operations phase."
+          title={LL.tenants.noTenants()}
+          description={LL.tenants.noTenantsDescription()}
         />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-(--line) bg-(--surface)">
@@ -93,7 +95,7 @@ function Tenants() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-(--sea-ink-soft)">
-                    {tenant.plan ?? 'No plan'}
+                    {tenant.plan ?? LL.tenants.noPlan()}
                   </span>
                   <StatusBadge status={tenant.status} />
                 </div>
@@ -106,7 +108,15 @@ function Tenants() {
   )
 }
 function Loading() {
+  const { LL } = useI18nContext()
   return (
-    <div className="animate-pulse text-(--sea-ink-soft)">Loading tenants…</div>
+    <div className="animate-pulse text-(--sea-ink-soft)">
+      {LL.tenants.loading()}
+    </div>
   )
+}
+
+function TenantsErrorState({ message }: { message: string }) {
+  const { LL } = useI18nContext()
+  return <EmptyState title={LL.tenants.unableToLoad()} description={message} />
 }
