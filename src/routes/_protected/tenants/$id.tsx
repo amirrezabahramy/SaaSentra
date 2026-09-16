@@ -302,7 +302,7 @@ function TenantDetail() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="subscription-dialog-title"
-            className="w-full max-w-md rounded-2xl border border-(--line) bg-(--surface-strong) p-6 shadow-2xl"
+            className="w-full max-w-md rounded-2xl border border-(--line) bg-white p-6 shadow-2xl dark:bg-[#0f1b1f]"
           >
             <h2
               id="subscription-dialog-title"

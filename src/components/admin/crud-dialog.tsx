@@ -18,7 +18,7 @@ export function CrudDialog({
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-lg rounded-2xl border border-(--line) bg-white p-6 shadow-2xl opacity-100 dark:bg-[#0f1b1f]"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-(--line) bg-white p-6 shadow-2xl opacity-100 dark:bg-[#0f1b1f]"
       >
         <div className="flex items-center justify-between gap-4">
           <h2 className="font-serif text-2xl font-bold">{title}</h2>

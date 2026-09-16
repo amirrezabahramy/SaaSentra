@@ -284,6 +284,7 @@ type SubscriptionFormValue = {
   periodEnd: string
   status?: (typeof statuses)[number]
   reason?: string
+  confirmation?: string
 }
 
 const allowedStatusChanges: Record<
@@ -331,8 +332,21 @@ function SubscriptionForm({
       periodEnd: initial?.currentPeriodEnd.slice(0, 10) || '',
       status: initial?.status,
       reason: '',
+      confirmation: '',
     },
     onSubmit: ({ value }) => onSubmit(value),
+    validators: {
+      onSubmit: ({ value }) => {
+        if (!initial || value.status === initial.status) return undefined
+        if (
+          !value.reason.trim() ||
+          value.confirmation.trim() !== value.status
+        ) {
+          return LL.tenantDetail.confirmationRequired()
+        }
+        return undefined
+      },
+    },
   })
   return (
     <form
@@ -369,6 +383,9 @@ function SubscriptionForm({
       ))}
       {initial ? (
         <>
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {LL.subscriptions.statusWarning()}
+          </p>
           <form.Field name="status">
             {(field) => {
               const currentStatus = initial.status
@@ -410,6 +427,19 @@ function SubscriptionForm({
                   onChange={(event) => field.handleChange(event.target.value)}
                   className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
                   rows={2}
+                />
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="confirmation">
+            {(field) => (
+              <label className="block text-sm font-semibold">
+                {LL.subscriptions.statusChangeConfirmation()}
+                <input
+                  value={field.state.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder={LL.subscriptions.statusChangePlaceholder()}
+                  className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
                 />
               </label>
             )}

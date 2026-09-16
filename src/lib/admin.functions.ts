@@ -105,7 +105,7 @@ export const getTenants = createServerFn({ method: 'GET' })
       status: tenant.subscription?.status ?? null,
       archived: Boolean(tenant.deletedAt),
       subscriptionId: tenant.subscription?.id ?? null,
-      plan: tenant.subscription?.plan.slug ?? null,
+      plan: tenant.subscription?.plan.name ?? null,
     }))
   })
 
@@ -144,7 +144,7 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
         ? {
             id: tenant.subscription.id,
             status: tenant.subscription.status,
-            plan: tenant.subscription.plan.slug,
+            plan: tenant.subscription.plan.name,
             currentPeriodEnd:
               tenant.subscription.currentPeriodEnd.toISOString(),
             graceEndsAt: tenant.subscription.graceEndsAt?.toISOString() ?? null,
