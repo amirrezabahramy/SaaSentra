@@ -1,21 +1,26 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
-import { getOverview } from '#/lib/admin.functions'
 import { EmptyState } from '#/components/admin/empty-state'
 import { formatCurrency, formatDate } from '#/lib/format'
 import { runDunningNow } from '#/lib/dunning.functions'
+import { overviewQuery } from '#/lib/queries'
 
 export const Route = createFileRoute('/_protected/')({
-  loader: () => getOverview(),
+  loader: ({ context }) => context.queryClient.query(overviewQuery()),
   pendingComponent: Loading,
   errorComponent: ({ error }) => <ErrorState message={String(error)} />,
   component: Overview,
 })
 
 function Overview() {
-  const data = Route.useLoaderData()
-  const router = useRouter()
+  const { data } = useSuspenseQuery(overviewQuery())
+  const queryClient = useQueryClient()
   const runNow = useServerFn(runDunningNow)
+  const dunningMutation = useMutation({
+    mutationFn: () => runNow(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
@@ -33,9 +38,8 @@ function Overview() {
         </p>
         <button
           type="button"
-          onClick={() => {
-            void runNow().then(() => router.invalidate())
-          }}
+          onClick={() => void dunningMutation.mutateAsync()}
+          disabled={dunningMutation.isPending}
           className="rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white"
         >
           Run dunning now

@@ -1,16 +1,23 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { getFlags, toggleTenantFlag } from '#/lib/ops.functions'
+import { createFileRoute } from '@tanstack/react-router'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { toggleTenantFlag } from '#/lib/ops.functions'
 import { EmptyState } from '#/components/admin/empty-state'
 import { useServerFn } from '@tanstack/react-start'
+import { flagsQuery } from '#/lib/queries'
 
 export const Route = createFileRoute('/_protected/flags')({
-  loader: () => getFlags(),
+  loader: ({ context }) => context.queryClient.query(flagsQuery()),
   component: Flags,
 })
 function Flags() {
-  const data = Route.useLoaderData()
-  const router = useRouter()
+  const { data } = useSuspenseQuery(flagsQuery())
+  const queryClient = useQueryClient()
   const toggle = useServerFn(toggleTenantFlag)
+  const toggleMutation = useMutation({
+    mutationFn: (data: { tenantId: string; flagKey: string; enabled: boolean }) =>
+      toggle({ data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
+  })
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
@@ -51,14 +58,13 @@ function Flags() {
                         type="checkbox"
                         checked={enabled}
                         onChange={(event) => {
-                          void toggle({
-                            data: {
-                              tenantId: tenant.id,
-                              flagKey: flag.key,
-                              enabled: event.target.checked,
-                            },
-                          }).then(() => router.invalidate())
+                          void toggleMutation.mutateAsync({
+                            tenantId: tenant.id,
+                            flagKey: flag.key,
+                            enabled: event.target.checked,
+                          })
                         }}
+                        disabled={toggleMutation.isPending}
                       />
                     </label>
                   )

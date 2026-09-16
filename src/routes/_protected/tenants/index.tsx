@@ -1,15 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getTenants } from '#/lib/admin.functions'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
 import { StatusBadge } from '#/components/admin/status-badge'
+import { tenantsQuery } from '#/lib/queries'
 
 export const Route = createFileRoute('/_protected/tenants/')({
   validateSearch: (search: Record<string, unknown>) => ({
     search: typeof search.search === 'string' ? search.search : '',
   }),
   loaderDeps: ({ search }) => ({ search: search.search }),
-  loader: ({ deps }) =>
-    getTenants({ data: { search: deps.search || undefined } }),
+  loader: ({ context, deps }) =>
+    context.queryClient.query(tenantsQuery(deps.search)),
   pendingComponent: Loading,
   errorComponent: ({ error }) => (
     <EmptyState title="Unable to load tenants" description={String(error)} />
@@ -18,8 +20,14 @@ export const Route = createFileRoute('/_protected/tenants/')({
 })
 
 function Tenants() {
-  const data = Route.useLoaderData()
+  const { data } = useSuspenseQuery(tenantsQuery(Route.useSearch().search))
   const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const form = useForm({
+    defaultValues: { search: search.search },
+    onSubmit: ({ value }) =>
+      navigate({ search: (previous) => ({ ...previous, search: value.search }) }),
+  })
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
@@ -28,19 +36,25 @@ function Tenants() {
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">Tenants</h1>
       </header>
-      <form className="mb-5 flex gap-2" method="get">
-        <input
-          name="search"
-          defaultValue={search.search}
+      <form className="mb-5 flex gap-2" onSubmit={(event) => { event.preventDefault(); void form.handleSubmit() }}>
+        <form.Field name="search">
+          {(field) => <input
+          name={field.name}
+          value={field.state.value}
+          onChange={(event) => field.handleChange(event.target.value)}
           placeholder="Search name or owner email"
           className="w-full max-w-md rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--lagoon)]"
-        />
-        <button
+        />}
+        </form.Field>
+        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          {([canSubmit, isSubmitting]) => <button
           className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white"
           type="submit"
+          disabled={!canSubmit || isSubmitting}
         >
           Search
-        </button>
+          </button>}
+        </form.Subscribe>
       </form>
       {data.length === 0 ? (
         <EmptyState

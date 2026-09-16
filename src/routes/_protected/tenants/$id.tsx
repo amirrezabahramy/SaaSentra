@@ -1,14 +1,17 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { getTenantDetail } from '#/lib/admin.functions'
+import { createFileRoute } from '@tanstack/react-router'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { formatCurrency, formatDate } from '#/lib/format'
 import { disableSubscription, enableSubscription } from '#/lib/ops.functions'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
+import { tenantDetailQuery } from '#/lib/queries'
 
 export const Route = createFileRoute('/_protected/tenants/$id')({
-  loader: ({ params }) => getTenantDetail({ data: { id: params.id } }),
+  loader: ({ context, params }) =>
+    context.queryClient.query(tenantDetailQuery(params.id)),
   pendingComponent: Loading,
   errorComponent: ({ error }) => (
     <EmptyState title="Unable to load tenant" description={String(error)} />
@@ -17,17 +20,53 @@ export const Route = createFileRoute('/_protected/tenants/$id')({
 })
 
 function TenantDetail() {
-  const tenant = Route.useLoaderData()
-  const router = useRouter()
+  const { id } = Route.useParams()
+  const { data } = useSuspenseQuery(tenantDetailQuery(id))
+  const tenant = data
+  const queryClient = useQueryClient()
   const disable = useServerFn(disableSubscription)
   const enable = useServerFn(enableSubscription)
-  const [pending, setPending] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<
     'disable' | 'enable' | null
   >(null)
-  const [reason, setReason] = useState('')
-  const [confirmText, setConfirmText] = useState('')
+  const statusMutation = useMutation({
+    mutationFn: async (input: {
+      action: 'disable' | 'enable'
+      subscriptionId: string
+      reason: string
+    }) =>
+      input.action === 'disable'
+        ? disable({ data: { subscriptionId: input.subscriptionId, reason: input.reason } })
+        : enable({ data: { subscriptionId: input.subscriptionId, reason: input.reason } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+  const actionForm = useForm({
+    defaultValues: { reason: '', confirmation: '' },
+    onSubmit: async ({ value }) => {
+      if (!pendingAction || !tenant?.subscription) return
+      setActionError(null)
+      try {
+        await statusMutation.mutateAsync({
+          action: pendingAction,
+          subscriptionId: tenant.subscription.id,
+          reason: value.reason,
+        })
+        setPendingAction(null)
+        actionForm.reset()
+      } catch (error) {
+        setActionError(
+          error instanceof Error ? error.message : 'Unable to update subscription',
+        )
+      }
+    },
+    validators: {
+      onSubmit: ({ value }) =>
+        !value.reason.trim() || value.confirmation !== (pendingAction === 'enable' ? 'ENABLE' : 'DISABLE')
+          ? 'Confirmation is required'
+          : undefined,
+    },
+  })
   if (!tenant)
     return (
       <EmptyState
@@ -35,33 +74,6 @@ function TenantDetail() {
         description="This tenant may have been removed."
       />
     )
-  const changeStatus = async (action: 'disable' | 'enable') => {
-    if (!tenant.subscription) return
-    try {
-      setPending(true)
-      setActionError(null)
-      if (action === 'disable')
-        await disable({
-          data: { subscriptionId: tenant.subscription.id, reason },
-        })
-      else
-        await enable({
-          data: { subscriptionId: tenant.subscription.id, reason },
-        })
-      await router.invalidate()
-      setPendingAction(null)
-      setReason('')
-      setConfirmText('')
-    } catch (error) {
-      setActionError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to update subscription',
-      )
-    } finally {
-      setPending(false)
-    }
-  }
   const canEnable = ['DISABLED', 'CANCELED', 'DISABLED_AT_PERIOD_END'].includes(
     tenant.subscription?.status ?? '',
   )
@@ -105,16 +117,15 @@ function TenantDetail() {
               ].includes(tenant.subscription.status) && (
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={statusMutation.isPending}
                   onClick={() => {
                     setPendingAction(canEnable ? 'enable' : 'disable')
-                    setReason('')
-                    setConfirmText('')
+                    actionForm.reset()
                     setActionError(null)
                   }}
                   className="mt-3 rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {pending
+                  {statusMutation.isPending
                     ? 'Updating…'
                     : canEnable
                       ? 'Re-enable subscription'
@@ -235,48 +246,53 @@ function TenantDetail() {
               This changes the tenant’s access immediately and records an audit
               event.
             </p>
-            <label className="mt-5 block text-sm font-semibold">
-              Reason
-              <input
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                placeholder="Required reason"
-                className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
-              />
-            </label>
-            <label className="mt-4 block text-sm font-semibold">
-              Type{' '}
-              <code className="rounded bg-black/5 px-1.5 py-0.5">
-                {actionWord}
-              </code>{' '}
-              to confirm
-              <input
-                value={confirmText}
-                onChange={(event) => setConfirmText(event.target.value)}
-                placeholder={actionWord}
-                className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
-              />
-            </label>
+            <form onSubmit={(event) => { event.preventDefault(); void actionForm.handleSubmit() }}>
+              <actionForm.Field name="reason">
+                {(field) => <label className="mt-5 block text-sm font-semibold">
+                  Reason
+                  <input
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    placeholder="Required reason"
+                    className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+                  />
+                </label>}
+              </actionForm.Field>
+              <actionForm.Field name="confirmation">
+                {(field) => <label className="mt-4 block text-sm font-semibold">
+                  Type{' '}
+                  <code className="rounded bg-black/5 px-1.5 py-0.5">
+                    {actionWord}
+                  </code>{' '}
+                  to confirm
+                  <input
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    placeholder={actionWord}
+                    className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
+                  />
+                </label>}
+              </actionForm.Field>
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
-                disabled={pending}
+                disabled={statusMutation.isPending}
                 onClick={() => setPendingAction(null)}
                 className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm font-semibold"
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                disabled={
-                  pending || !reason.trim() || confirmText !== actionWord
-                }
-                onClick={() => void changeStatus(pendingAction)}
-                className="rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {pending ? 'Updating…' : `Yes, ${pendingAction}`}
-              </button>
+              <actionForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+                {([canSubmit, isSubmitting]) => <button
+                  type="submit"
+                  disabled={!canSubmit || isSubmitting || statusMutation.isPending}
+                  className="rounded-xl bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {isSubmitting || statusMutation.isPending ? 'Updating…' : `Yes, ${pendingAction}`}
+                </button>}
+              </actionForm.Subscribe>
             </div>
+            </form>
           </div>
         </div>
       ) : null}

@@ -1,18 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getSubscriptions } from '#/lib/ops.functions'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { useForm } from '@tanstack/react-form'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { EmptyState } from '#/components/admin/empty-state'
 import { formatCurrency, formatDate } from '#/lib/format'
+import { subscriptionsQuery } from '#/lib/queries'
 
 export const Route = createFileRoute('/_protected/subscriptions')({
   validateSearch: (search: Record<string, unknown>) => ({
     status: typeof search.status === 'string' ? search.status : '',
   }),
   loaderDeps: ({ search }) => ({ status: search.status }),
-  loader: ({ deps }) =>
-    getSubscriptions({
-      data: { status: deps.status ? (deps.status as 'ACTIVE') : undefined },
-    }),
+  loader: ({ context, deps }) =>
+    context.queryClient.query(subscriptionsQuery(deps.status)),
   component: Subscriptions,
 })
 
@@ -26,14 +26,22 @@ const statuses = [
   'ARCHIVED',
 ] as const
 function Subscriptions() {
-  const rows = Route.useLoaderData()
   const search = Route.useSearch()
+  const { data: rows } = useSuspenseQuery(subscriptionsQuery(search.status))
+  const navigate = Route.useNavigate()
+  const form = useForm({
+    defaultValues: { status: search.status },
+    onSubmit: ({ value }) =>
+      navigate({ search: (previous) => ({ ...previous, status: value.status }) }),
+  })
   return (
     <Page title="Subscriptions" kicker="Billing operations">
-      <form className="mb-5 flex gap-2" method="get">
-        <select
-          name="status"
-          defaultValue={search.status}
+      <form className="mb-5 flex gap-2" onSubmit={(event) => { event.preventDefault(); void form.handleSubmit() }}>
+        <form.Field name="status">
+          {(field) => <select
+          name={field.name}
+          value={field.state.value}
+          onChange={(event) => field.handleChange(event.target.value)}
           className="rounded-xl border border-[var(--line)] bg-white/70 px-4 py-3"
         >
           <option value="">All statuses</option>
@@ -42,10 +50,13 @@ function Subscriptions() {
               {status.replaceAll('_', ' ')}
             </option>
           ))}
-        </select>
-        <button className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white">
+        </select>}
+        </form.Field>
+        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+          {([canSubmit, isSubmitting]) => <button disabled={!canSubmit || isSubmitting} className="rounded-xl bg-[var(--sea-ink)] px-5 font-semibold text-white">
           Filter
-        </button>
+          </button>}
+        </form.Subscribe>
       </form>
       {rows.length === 0 ? (
         <EmptyState

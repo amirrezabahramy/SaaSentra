@@ -1,12 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getSettings } from '#/lib/ops.functions'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { settingsQuery } from '#/lib/queries'
 
 export const Route = createFileRoute('/_protected/settings')({
-  loader: () => getSettings(),
+  loader: ({ context }) => context.queryClient.query(settingsQuery()),
   component: Settings,
 })
 function Settings() {
-  const data = Route.useLoaderData()
+  const { data } = useSuspenseQuery(settingsQuery())
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">

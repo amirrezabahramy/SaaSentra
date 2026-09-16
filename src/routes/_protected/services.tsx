@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getServices } from '#/lib/ops.functions'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { EmptyState } from '#/components/admin/empty-state'
+import { servicesQuery } from '#/lib/queries'
 
 export const Route = createFileRoute('/_protected/services')({
-  loader: () => getServices(),
+  loader: ({ context }) => context.queryClient.query(servicesQuery()),
   component: Services,
 })
 function Services() {
-  const rows = Route.useLoaderData()
+  const { data: rows } = useSuspenseQuery(servicesQuery())
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
