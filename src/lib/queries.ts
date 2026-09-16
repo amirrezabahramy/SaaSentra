@@ -54,10 +54,10 @@ export const flagsQuery = (includeArchived = false) =>
     queryFn: () => getFlags({ data: { includeArchived } }),
   })
 
-export const plansQuery = () =>
+export const plansQuery = (includeArchived = false) =>
   queryOptions({
-    queryKey: ['admin', 'plans'],
-    queryFn: () => getPlans(),
+    queryKey: ['admin', 'plans', { includeArchived }],
+    queryFn: () => getPlans({ data: { includeArchived } }),
   })
 
 export const auditQuery = (tenantId = '', action = '') =>

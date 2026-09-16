@@ -75,6 +75,25 @@ const flagDefinitionSchema = z.object({
 })
 const flagUpdateSchema = flagDefinitionSchema.extend({ id: z.string().uuid() })
 const flagArchiveSchema = z.object({ id: z.string().uuid() })
+const planSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  priceCents: z.coerce.number().int().nonnegative(),
+  currency: z
+    .string()
+    .trim()
+    .length(3)
+    .transform((value) => value.toUpperCase()),
+  interval: z.string().trim().min(1).max(20),
+  trialDays: z.coerce.number().int().nonnegative(),
+  stripePriceId: z.string().trim().max(120).nullable().optional(),
+})
+const planUpdateSchema = planSchema.extend({ id: z.string().uuid() })
 const subscriptionCreateSchema = z.object({
   tenantId: z.string().uuid(),
   planId: z.string().uuid(),
@@ -138,6 +157,7 @@ async function createGlobalFlagAudits(
     action: string
     entityId: string
     reason: string
+    entityType?: string
   },
 ) {
   const tenants = await tx.tenant.findMany({
@@ -150,7 +170,7 @@ async function createGlobalFlagAudits(
       tenantId: tenant.id,
       actorId: data.actorId,
       action: data.action,
-      entityType: 'FeatureFlag',
+      entityType: data.entityType ?? 'FeatureFlag',
       entityId: data.entityId,
       metadata: { reason: data.reason },
     })),
@@ -463,9 +483,137 @@ export const permanentlyDeleteFlag = createServerFn({ method: 'POST' })
     })
   })
 
-export const getPlans = createServerFn({ method: 'GET' }).handler(async () =>
-  db.plan.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } }),
-)
+export const createPlan = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => planSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const plan = await tx.plan.create({
+        data: { ...data, stripePriceId: data.stripePriceId ?? null },
+      })
+      await createGlobalFlagAudits(tx, {
+        actorId: actor,
+        action: 'plan.created',
+        entityId: plan.id,
+        entityType: 'Plan',
+        reason: 'Plan created by operator',
+      })
+      return plan
+    })
+  })
+
+export const updatePlan = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => planUpdateSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const plan = await tx.plan.update({
+        where: { id: data.id, deletedAt: null },
+        data: {
+          name: data.name,
+          slug: data.slug,
+          priceCents: data.priceCents,
+          currency: data.currency,
+          interval: data.interval,
+          trialDays: data.trialDays,
+          stripePriceId: data.stripePriceId ?? null,
+        },
+      })
+      await createGlobalFlagAudits(tx, {
+        actorId: actor,
+        action: 'plan.updated',
+        entityId: plan.id,
+        entityType: 'Plan',
+        reason: 'Plan updated by operator',
+      })
+      return plan
+    })
+  })
+
+export const archivePlan = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const subscriptionCount = await tx.subscription.count({
+        where: { planId: data.id },
+      })
+      if (subscriptionCount > 0) {
+        throw new Error('Plans used by subscriptions cannot be archived')
+      }
+      const plan = await tx.plan.update({
+        where: { id: data.id, deletedAt: null },
+        data: { deletedAt: new Date() },
+      })
+      await createGlobalFlagAudits(tx, {
+        actorId: actor,
+        action: 'plan.archived',
+        entityId: plan.id,
+        entityType: 'Plan',
+        reason: 'Plan archived by operator',
+      })
+      return plan
+    })
+  })
+
+export const unarchivePlan = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const plan = await tx.plan.update({
+        where: { id: data.id },
+        data: { deletedAt: null },
+      })
+      await createGlobalFlagAudits(tx, {
+        actorId: actor,
+        action: 'plan.unarchived',
+        entityId: plan.id,
+        entityType: 'Plan',
+        reason: 'Plan restored by operator',
+      })
+      return plan
+    })
+  })
+
+export const permanentlyDeletePlan = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const plan = await tx.plan.findUniqueOrThrow({
+        where: { id: data.id, deletedAt: { not: null } },
+      })
+      const subscriptions = await tx.subscription.findMany({
+        where: { planId: plan.id },
+        select: { id: true },
+      })
+      if (subscriptions.length > 0) {
+        throw new Error('Plans used by subscriptions cannot be deleted')
+      }
+      await tx.plan.delete({ where: { id: plan.id } })
+      return { id: plan.id, actorId: actor }
+    })
+  })
+
+export const getPlans = createServerFn({ method: 'GET' })
+  .validator((data: unknown) =>
+    z.object({ includeArchived: z.boolean().optional() }).parse(data),
+  )
+  .handler(async ({ data }) =>
+    db.plan
+      .findMany({
+        where: data.includeArchived ? {} : { deletedAt: null },
+        orderBy: { name: 'asc' },
+        include: { _count: { select: { subscriptions: true } } },
+      })
+      .then((plans) =>
+        plans.map(({ _count, ...plan }) => ({
+          ...plan,
+          subscriptionCount: _count.subscriptions,
+        })),
+      ),
+  )
 
 export const createSubscription = createServerFn({ method: 'POST' })
   .validator((data: unknown) => subscriptionCreateSchema.parse(data))

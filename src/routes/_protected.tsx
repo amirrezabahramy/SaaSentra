@@ -81,6 +81,7 @@ function ProtectedLayout() {
     [LL.nav.overview(), '/'],
     [LL.nav.tenants(), '/tenants'],
     [LL.nav.subscriptions(), '/subscriptions'],
+    [LL.nav.plans(), '/plans'],
     [LL.nav.services(), '/services'],
     [LL.nav.flags(), '/flags'],
     [LL.nav.audit(), '/audit'],

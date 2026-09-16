@@ -35,6 +35,10 @@ type RootTranslation = {
      */
     subscriptions: string
     /**
+     * P​l​a​n​s
+     */
+    plans: string
+    /**
      * S​e​r​v​i​c​e​s
      */
     services: string
@@ -282,6 +286,72 @@ type RootTranslation = {
      * A​r​c​h​i​v​e​ ​s​u​b​s​c​r​i​p​t​i​o​n
      */
     archive: string
+    /**
+     * C​h​a​n​g​i​n​g​ ​s​t​a​t​u​s​ ​h​e​r​e​ ​i​s​ ​a​n​ ​e​x​c​e​p​t​i​o​n​a​l​ ​o​p​e​r​a​t​i​o​n​.​ ​P​r​e​f​e​r​ ​c​h​a​n​g​i​n​g​ ​i​t​ ​f​r​o​m​ ​t​h​e​ ​t​e​n​a​n​t​ ​p​a​n​e​l​ ​u​n​l​e​s​s​ ​n​e​c​e​s​s​a​r​y​.
+     */
+    statusWarning: string
+    /**
+     * T​y​p​e​ ​t​h​e​ ​n​e​w​ ​s​t​a​t​u​s​ ​i​n​ ​u​p​p​e​r​c​a​s​e​ ​t​o​ ​c​o​n​f​i​r​m
+     */
+    statusChangeConfirmation: string
+    /**
+     * e​.​g​.​ ​A​C​T​I​V​E
+     */
+    statusChangePlaceholder: string
+  }
+  plans: {
+    /**
+     * C​a​t​a​l​o​g
+     */
+    kicker: string
+    /**
+     * P​l​a​n​s
+     */
+    title: string
+    /**
+     * N​o​ ​p​l​a​n​s
+     */
+    noPlans: string
+    /**
+     * S​u​b​s​c​r​i​p​t​i​o​n​ ​p​l​a​n​s​ ​w​i​l​l​ ​a​p​p​e​a​r​ ​h​e​r​e​.
+     */
+    noPlansDescription: string
+    /**
+     * C​r​e​a​t​e​ ​p​l​a​n
+     */
+    create: string
+    /**
+     * E​d​i​t​ ​p​l​a​n
+     */
+    edit: string
+    /**
+     * A​r​c​h​i​v​e​ ​p​l​a​n
+     */
+    archive: string
+    /**
+     * P​r​i​c​e​ ​i​n​ ​c​e​n​t​s
+     */
+    price: string
+    /**
+     * C​u​r​r​e​n​c​y
+     */
+    currency: string
+    /**
+     * I​n​t​e​r​v​a​l
+     */
+    interval: string
+    /**
+     * T​r​i​a​l​ ​d​a​y​s
+     */
+    trialDays: string
+    /**
+     * S​t​r​i​p​e​ ​p​r​i​c​e​ ​I​D
+     */
+    stripePriceId: string
+    /**
+     * T​h​i​s​ ​p​l​a​n​ ​i​s​ ​i​n​ ​u​s​e​ ​a​n​d​ ​c​a​n​n​o​t​ ​b​e​ ​a​r​c​h​i​v​e​d​.
+     */
+    inUse: string
   }
   services: {
     /**
@@ -758,6 +828,10 @@ export type TranslationFunctions = {
      */
     subscriptions: () => LocalizedString
     /**
+     * Plans
+     */
+    plans: () => LocalizedString
+    /**
      * Services
      */
     services: () => LocalizedString
@@ -1005,6 +1079,72 @@ export type TranslationFunctions = {
      * Archive subscription
      */
     archive: () => LocalizedString
+    /**
+     * Changing status here is an exceptional operation. Prefer changing it from the tenant panel unless necessary.
+     */
+    statusWarning: () => LocalizedString
+    /**
+     * Type the new status in uppercase to confirm
+     */
+    statusChangeConfirmation: () => LocalizedString
+    /**
+     * e.g. ACTIVE
+     */
+    statusChangePlaceholder: () => LocalizedString
+  }
+  plans: {
+    /**
+     * Catalog
+     */
+    kicker: () => LocalizedString
+    /**
+     * Plans
+     */
+    title: () => LocalizedString
+    /**
+     * No plans
+     */
+    noPlans: () => LocalizedString
+    /**
+     * Subscription plans will appear here.
+     */
+    noPlansDescription: () => LocalizedString
+    /**
+     * Create plan
+     */
+    create: () => LocalizedString
+    /**
+     * Edit plan
+     */
+    edit: () => LocalizedString
+    /**
+     * Archive plan
+     */
+    archive: () => LocalizedString
+    /**
+     * Price in cents
+     */
+    price: () => LocalizedString
+    /**
+     * Currency
+     */
+    currency: () => LocalizedString
+    /**
+     * Interval
+     */
+    interval: () => LocalizedString
+    /**
+     * Trial days
+     */
+    trialDays: () => LocalizedString
+    /**
+     * Stripe price ID
+     */
+    stripePriceId: () => LocalizedString
+    /**
+     * This plan is in use and cannot be archived.
+     */
+    inUse: () => LocalizedString
   }
   services: {
     /**
