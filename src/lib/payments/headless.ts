@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db } from '#/db'
+import { env } from '#/env'
 
 export function signPaymentEvent(secret: string, payload: string) {
   return createHmac('sha256', secret).update(payload).digest('hex')
@@ -37,7 +38,19 @@ export async function deliverPaymentCallback(input: {
 export async function deliverCheckoutCallback(checkoutId: string) {
   const checkout = await db.paymentCheckout.findUniqueOrThrow({
     where: { id: checkoutId },
-    include: { service: true, subscription: { include: { plan: true } } },
+    include: {
+      service: true,
+      subscription: { include: { plan: true } },
+      tenant: {
+        include: {
+          memberships: {
+            where: { role: 'OWNER', deletedAt: null },
+            include: { user: true },
+            take: 1,
+          },
+        },
+      },
+    },
   })
   const delivery = await db.paymentDelivery.upsert({
     where: { checkoutId },
@@ -45,9 +58,15 @@ export async function deliverCheckoutCallback(checkoutId: string) {
     update: {},
   })
   if (delivery.status === 'SUCCEEDED') return delivery
+  const mode = checkout.service.paymentDeliveryMode
+  const wantsCallback = mode === 'CALLBACK' || mode === 'CALLBACK_AND_EMAIL'
+  const wantsEmail = mode === 'EMAIL' || mode === 'CALLBACK_AND_EMAIL'
   if (
-    !checkout.service.paymentCallbackUrl ||
-    !checkout.service.paymentCallbackSecret
+    (wantsCallback &&
+      (!checkout.service.paymentCallbackUrl ||
+        !checkout.service.paymentCallbackSecret)) ||
+    (wantsEmail &&
+      (!env.EMAIL_TRANSPORT_URL || !checkout.tenant.memberships[0]?.user.email))
   ) {
     return db.paymentDelivery.update({
       where: { checkoutId },
@@ -67,11 +86,28 @@ export async function deliverCheckoutCallback(checkoutId: string) {
     paymentId: checkout.providerPaymentId,
   }
   try {
-    await deliverPaymentCallback({
-      url: checkout.service.paymentCallbackUrl,
-      secret: checkout.service.paymentCallbackSecret,
-      payload,
-    })
+    if (wantsCallback) {
+      await deliverPaymentCallback({
+        url: checkout.service.paymentCallbackUrl,
+        secret: checkout.service.paymentCallbackSecret,
+        payload,
+      })
+    }
+    if (wantsEmail) {
+      const response = await fetch(env.EMAIL_TRANSPORT_URL as string, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          to: checkout.tenant.memberships[0]?.user.email,
+          subject: 'Payment completed',
+          template: 'payment.succeeded',
+          data: payload,
+        }),
+        signal: AbortSignal.timeout(10_000),
+      })
+      if (!response.ok)
+        throw new Error(`Email delivery failed: ${response.status}`)
+    }
     return db.paymentDelivery.update({
       where: { checkoutId },
       data: {

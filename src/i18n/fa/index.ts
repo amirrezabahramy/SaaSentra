@@ -125,6 +125,10 @@ const fa = {
     archive: 'آرشیو سرویس',
     paymentCallbackUrl: 'آدرس callback پرداخت',
     paymentCallbackSecret: 'کلید callback پرداخت',
+    paymentDelivery: 'تحویل نتیجه پرداخت',
+    deliveryAttempts: 'تعداد تلاش‌های تحویل',
+    noPaymentDelivery: 'هنوز تحویل پرداختی ثبت نشده است',
+    paymentDeliveryMode: 'روش تحویل نتیجه پرداخت',
   },
   flags: {
     kicker: 'پیکربندی',

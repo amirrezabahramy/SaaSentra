@@ -178,6 +178,37 @@ function Services() {
                   {LL.services.flags()}
                 </p>
               </div>
+              <div className="mt-3 rounded-xl border border-(--line) bg-white/40 p-4 text-sm">
+                <p className="font-semibold">{LL.services.paymentDelivery()}</p>
+                {row.paymentDelivery ? (
+                  <>
+                    <p
+                      className={`mt-1 font-semibold ${
+                        row.paymentDelivery.status === 'SUCCEEDED'
+                          ? 'text-emerald-700'
+                          : row.paymentDelivery.status === 'FAILED'
+                            ? 'text-red-700'
+                            : 'text-amber-700'
+                      }`}
+                    >
+                      {row.paymentDelivery.status}
+                    </p>
+                    <p className="mt-1 text-(--sea-ink-soft)">
+                      {LL.services.deliveryAttempts()}:{' '}
+                      {row.paymentDelivery.attempts}
+                    </p>
+                    {row.paymentDelivery.lastError ? (
+                      <p className="mt-1 break-words text-xs text-red-700">
+                        {row.paymentDelivery.lastError}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="mt-1 text-(--sea-ink-soft)">
+                    {LL.services.noPaymentDelivery()}
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -229,6 +260,7 @@ type ServiceFormValue = {
   deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE'
   paymentCallbackUrl?: string | null
   paymentCallbackSecret?: string | null
+  paymentDeliveryMode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL'
 }
 
 function ServiceForm({
@@ -252,6 +284,7 @@ function ServiceForm({
       deployStatus: initial?.deployStatus ?? 'HEALTHY',
       paymentCallbackUrl: initial?.paymentCallbackUrl ?? '',
       paymentCallbackSecret: '',
+      paymentDeliveryMode: initial?.paymentDeliveryMode ?? 'CALLBACK',
     },
     onSubmit: ({ value }) =>
       onSubmit({
@@ -282,6 +315,7 @@ function ServiceForm({
             LL.services.paymentCallbackSecret(),
             'input',
           ],
+          ['paymentDeliveryMode', LL.services.paymentDeliveryMode(), 'select'],
         ] as const
       ).map(([name, label, kind]) => (
         <form.Field key={name} name={name}>
@@ -298,7 +332,9 @@ function ServiceForm({
                     ? tenants
                     : name === 'controlType'
                       ? ['ENTITLEMENT', 'TOKEN', 'WEBHOOK', 'INFRA']
-                      : ['HEALTHY', 'DEGRADED', 'OFFLINE']
+                      : name === 'deployStatus'
+                        ? ['HEALTHY', 'DEGRADED', 'OFFLINE']
+                        : ['CALLBACK', 'EMAIL', 'CALLBACK_AND_EMAIL']
                   ).map((option) => {
                     const value =
                       typeof option === 'string' ? option : option.id

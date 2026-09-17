@@ -67,6 +67,12 @@ enum ServiceDeployStatus {
   OFFLINE
 }
 
+enum ServicePaymentDeliveryMode {
+  CALLBACK
+  EMAIL
+  CALLBACK_AND_EMAIL
+}
+
 enum CheckoutStatus {
   PENDING
   SUCCEEDED
@@ -270,6 +276,7 @@ model Service {
   deployStatus          ServiceDeployStatus @default(HEALTHY)
   paymentCallbackUrl    String?
   paymentCallbackSecret String?
+  paymentDeliveryMode   ServicePaymentDeliveryMode @default(CALLBACK)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   deletedAt             DateTime?

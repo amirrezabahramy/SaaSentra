@@ -446,6 +446,22 @@ type RootTranslation = {
      * P​a​y​m​e​n​t​ ​c​a​l​l​b​a​c​k​ ​s​e​c​r​e​t
      */
     paymentCallbackSecret: string
+    /**
+     * P​a​y​m​e​n​t​ ​d​e​l​i​v​e​r​y
+     */
+    paymentDelivery: string
+    /**
+     * D​e​l​i​v​e​r​y​ ​a​t​t​e​m​p​t​s
+     */
+    deliveryAttempts: string
+    /**
+     * N​o​ ​p​a​y​m​e​n​t​ ​d​e​l​i​v​e​r​y​ ​r​e​c​o​r​d​e​d
+     */
+    noPaymentDelivery: string
+    /**
+     * P​a​y​m​e​n​t​ ​d​e​l​i​v​e​r​y​ ​m​o​d​e
+     */
+    paymentDeliveryMode: string
   }
   flags: {
     /**
@@ -1279,6 +1295,22 @@ export type TranslationFunctions = {
      * Payment callback secret
      */
     paymentCallbackSecret: () => LocalizedString
+    /**
+     * Payment delivery
+     */
+    paymentDelivery: () => LocalizedString
+    /**
+     * Delivery attempts
+     */
+    deliveryAttempts: () => LocalizedString
+    /**
+     * No payment delivery recorded
+     */
+    noPaymentDelivery: () => LocalizedString
+    /**
+     * Payment delivery mode
+     */
+    paymentDeliveryMode: () => LocalizedString
   }
   flags: {
     /**

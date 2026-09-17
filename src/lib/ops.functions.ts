@@ -67,6 +67,7 @@ const serviceSchema = z.object({
     .max(200)
     .nullable()
     .optional(),
+  paymentDeliveryMode: z.enum(['CALLBACK', 'EMAIL', 'CALLBACK_AND_EMAIL']),
 })
 const serviceUpdateSchema = serviceSchema.extend({ id: z.string().uuid() })
 const serviceArchiveSchema = z.object({
@@ -307,6 +308,7 @@ export const createService = createServerFn({ method: 'POST' })
           endpointUrl: data.endpointUrl ?? null,
           paymentCallbackUrl: data.paymentCallbackUrl ?? null,
           paymentCallbackSecret: data.paymentCallbackSecret ?? null,
+          paymentDeliveryMode: data.paymentDeliveryMode,
         },
       })
       await createAudit(tx, {
@@ -338,6 +340,7 @@ export const updateService = createServerFn({ method: 'POST' })
           ...(data.paymentCallbackSecret
             ? { paymentCallbackSecret: data.paymentCallbackSecret }
             : {}),
+          paymentDeliveryMode: data.paymentDeliveryMode,
         },
       })
       await createAudit(tx, {
@@ -880,7 +883,14 @@ export const getServices = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const services = await db.service.findMany({
       where: data.includeArchived ? {} : { deletedAt: null },
-      include: { tenant: true },
+      include: {
+        tenant: true,
+        paymentCheckouts: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: { delivery: true },
+        },
+      },
       orderBy: { name: 'asc' },
     })
     return Promise.all(
@@ -890,6 +900,17 @@ export const getServices = createServerFn({ method: 'GET' })
         controlType: service.controlType,
         deployStatus: service.deployStatus,
         paymentCallbackUrl: service.paymentCallbackUrl,
+        paymentDeliveryMode: service.paymentDeliveryMode,
+        paymentDelivery: service.paymentCheckouts[0]?.delivery
+          ? {
+              status: service.paymentCheckouts[0].delivery.status,
+              attempts: service.paymentCheckouts[0].delivery.attempts,
+              lastError: service.paymentCheckouts[0].delivery.lastError,
+              deliveredAt:
+                service.paymentCheckouts[0].delivery.deliveredAt?.toISOString() ??
+                null,
+            }
+          : null,
         tenantId: service.tenantId,
         tenantName: service.tenant.name,
         archived: Boolean(service.deletedAt),

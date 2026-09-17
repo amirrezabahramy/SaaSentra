@@ -201,6 +201,9 @@ async function main() {
       controlType: ServiceControlType.ENTITLEMENT,
       endpointUrl: null,
       deployStatus: ServiceDeployStatus.HEALTHY,
+      paymentDeliveryMode: 'CALLBACK',
+      paymentCallbackUrl: null,
+      paymentCallbackSecret: null,
     },
   })
 

@@ -125,6 +125,10 @@ const en = {
     archive: 'Archive service',
     paymentCallbackUrl: 'Payment callback URL',
     paymentCallbackSecret: 'Payment callback secret',
+    paymentDelivery: 'Payment delivery',
+    deliveryAttempts: 'Delivery attempts',
+    noPaymentDelivery: 'No payment delivery recorded',
+    paymentDeliveryMode: 'Payment delivery mode',
   },
   flags: {
     kicker: 'Configuration',
