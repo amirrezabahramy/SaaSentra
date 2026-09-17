@@ -6,6 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
+    "start": "dotenv -e .env.local -- node .output/server/index.mjs",
     "dev": "dotenv -e .env.local -- vite dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vite build",
