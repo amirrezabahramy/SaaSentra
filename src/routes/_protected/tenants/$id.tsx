@@ -143,6 +143,12 @@ function TenantDetail() {
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">{tenant.name}</h1>
         <p className="mt-2 text-(--sea-ink-soft)">{tenant.slug}</p>
+        <p className="mt-2 text-sm text-(--sea-ink-soft)">
+          {LL.audit.tenantId()}:{' '}
+          <code className="rounded border border-(--line) px-2 py-1 font-mono text-xs">
+            {tenant.id}
+          </code>
+        </p>
         <div className="mt-4 flex gap-2">
           <button
             type="button"
@@ -191,43 +197,47 @@ function TenantDetail() {
                     : formatDate(tenant.subscription.currentPeriodEnd)}
                 </span>
               </div>
-              {tenant.subscription.planType === 'SERIAL_KEY' ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    void regenerateMutation.mutateAsync(tenant.subscription!.id)
-                  }
-                  disabled={regenerateMutation.isPending}
-                  className="rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold disabled:opacity-40"
-                >
-                  {LL.subscriptions.regenerateKey()}
-                </button>
-              ) : null}
-              {[
-                'ACTIVE',
-                'PAST_DUE',
-                'GRACE_PERIOD',
-                'DISABLED',
-                'CANCELED',
-                'DISABLED_AT_PERIOD_END',
-              ].includes(tenant.subscription.status) && (
-                <button
-                  type="button"
-                  disabled={statusMutation.isPending}
-                  onClick={() => {
-                    setPendingAction(canEnable ? 'enable' : 'disable')
-                    actionForm.reset()
-                    setActionError(null)
-                  }}
-                  className="mt-3 rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {statusMutation.isPending
-                    ? LL.tenantDetail.updating()
-                    : canEnable
-                      ? LL.tenantDetail.enable()
-                      : LL.tenantDetail.disable()}
-                </button>
-              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {tenant.subscription.planType === 'SERIAL_KEY' ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void regenerateMutation.mutateAsync(
+                        tenant.subscription!.id,
+                      )
+                    }
+                    disabled={regenerateMutation.isPending}
+                    className="rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold disabled:opacity-40"
+                  >
+                    {LL.subscriptions.regenerateKey()}
+                  </button>
+                ) : null}
+                {[
+                  'ACTIVE',
+                  'PAST_DUE',
+                  'GRACE_PERIOD',
+                  'DISABLED',
+                  'CANCELED',
+                  'DISABLED_AT_PERIOD_END',
+                ].includes(tenant.subscription.status) ? (
+                  <button
+                    type="button"
+                    disabled={statusMutation.isPending}
+                    onClick={() => {
+                      setPendingAction(canEnable ? 'enable' : 'disable')
+                      actionForm.reset()
+                      setActionError(null)
+                    }}
+                    className="rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {statusMutation.isPending
+                      ? LL.tenantDetail.updating()
+                      : canEnable
+                        ? LL.tenantDetail.enable()
+                        : LL.tenantDetail.disable()}
+                  </button>
+                ) : null}
+              </div>
               {actionError ? (
                 <p className="text-sm text-red-700">{actionError}</p>
               ) : null}
