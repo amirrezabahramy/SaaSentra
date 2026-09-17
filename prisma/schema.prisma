@@ -74,6 +74,13 @@ enum CheckoutStatus {
   EXPIRED
 }
 
+enum PaymentDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  NOT_CONFIGURED
+}
+
 model User {
   id            String       @id @default(uuid())
   email         String       @unique
@@ -290,9 +297,22 @@ model PaymentCheckout {
   service           Service         @relation(fields: [serviceId], references: [id])
   subscription      Subscription?   @relation(fields: [subscriptionId], references: [id])
   plan              Plan            @relation(fields: [planId], references: [id])
+  delivery          PaymentDelivery?
 
   @@index([tenantId, createdAt])
   @@index([serviceId, status])
+}
+
+model PaymentDelivery {
+  id          String                 @id @default(uuid())
+  checkoutId  String                 @unique
+  status      PaymentDeliveryStatus  @default(PENDING)
+  attempts    Int                    @default(0)
+  lastError   String?
+  deliveredAt DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  checkout    PaymentCheckout        @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
 }
 
 model ServiceAction {

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { db } from '#/db'
 import { ALLOWED_TRANSITIONS, transitionSubscription } from '#/lib/lifecycle'
-import { deliverPaymentCallback } from '#/lib/payments/headless'
+import { deliverCheckoutCallback } from '#/lib/payments/headless'
 import { settleVerifiedPayment } from '#/lib/payments/orchestrator'
 import {
   record,
@@ -184,29 +184,7 @@ async function handleEvent(
           },
         })
         if (!settled.duplicate) {
-          const updated = await db.paymentCheckout.findUniqueOrThrow({
-            where: { id: checkout.id },
-            include: {
-              subscription: { include: { plan: true } },
-              service: true,
-            },
-          })
-          await deliverPaymentCallback({
-            url: updated.service.paymentCallbackUrl,
-            secret: updated.service.paymentCallbackSecret,
-            payload: {
-              event: 'payment.succeeded',
-              checkoutId: updated.id,
-              tenantId: updated.tenantId,
-              subscriptionId: updated.subscription?.id,
-              plan: updated.subscription?.plan.slug,
-              serialKey: updated.subscription?.serialKey,
-              periodEnd: updated.subscription?.plan.isPermanent
-                ? null
-                : updated.subscription?.currentPeriodEnd.toISOString(),
-              paymentId: paymentIntent,
-            },
-          })
+          await deliverCheckoutCallback(checkout.id)
         }
       }
     } else if (subscriptionId)

@@ -3,7 +3,7 @@ import { env } from '#/env'
 import { db } from '#/db'
 import { resolvePaymentProvider } from '#/lib/payments/resolver'
 import { settleVerifiedPayment } from '#/lib/payments/orchestrator'
-import { deliverPaymentCallback } from '#/lib/payments/headless'
+import { deliverCheckoutCallback } from '#/lib/payments/headless'
 
 function redirectToCheckout(
   status: 'success' | 'canceled',
@@ -84,28 +84,9 @@ export const Route = createFileRoute('/api/payments/zibal/callback')({
             checkoutId: checkout.id,
             planId: checkout.plan.id,
           })
+          await deliverCheckoutCallback(checkout.id)
           const settled = await db.paymentCheckout.findUniqueOrThrow({
             where: { id: checkout.id },
-            include: {
-              subscription: { include: { plan: true } },
-              service: true,
-            },
-          })
-          await deliverPaymentCallback({
-            url: settled.service.paymentCallbackUrl,
-            secret: settled.service.paymentCallbackSecret,
-            payload: {
-              event: 'payment.succeeded',
-              checkoutId: settled.id,
-              tenantId: settled.tenantId,
-              subscriptionId: settled.subscription?.id,
-              plan: settled.subscription?.plan.slug,
-              serialKey: settled.subscription?.serialKey,
-              periodEnd: settled.subscription?.plan.isPermanent
-                ? null
-                : settled.subscription?.currentPeriodEnd.toISOString(),
-              paymentId: trackId,
-            },
           })
           return redirectToCheckout('success', trackId, settled.returnUrl)
         } catch {

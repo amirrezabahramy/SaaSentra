@@ -110,6 +110,11 @@ export async function settleVerifiedPayment(input: {
           providerPaymentId: input.verified.providerPaymentId,
         },
       })
+      await tx.paymentDelivery.upsert({
+        where: { checkoutId: input.checkoutId },
+        create: { checkoutId: input.checkoutId },
+        update: { status: 'PENDING', lastError: null },
+      })
     }
     await tx.auditLog.create({
       data: {

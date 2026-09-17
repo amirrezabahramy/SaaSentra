@@ -27,6 +27,7 @@ import { Route as ApiPaymentsZibalCallbackRouteImport } from './routes/api/payme
 import { Route as ApiV1EntitlementsTenantIdRouteImport } from './routes/api/v1/entitlements/$tenantId'
 import { Route as ApiV1PaymentsCheckoutRouteImport } from './routes/api/v1/payments/checkout'
 import { Route as ApiV1PaymentsCheckoutsIdRouteImport } from './routes/api/v1/payments/checkouts/$id'
+import { Route as ApiV1PaymentsCheckoutsIdDeliverRouteImport } from './routes/api/v1/payments/checkouts/$id/deliver'
 
 const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
@@ -120,6 +121,12 @@ const ApiV1PaymentsCheckoutsIdRoute =
     path: '/api/v1/payments/checkouts/$id',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiV1PaymentsCheckoutsIdDeliverRoute =
+  ApiV1PaymentsCheckoutsIdDeliverRouteImport.update({
+    id: '/deliver',
+    path: '/deliver',
+    getParentRoute: () => ApiV1PaymentsCheckoutsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
@@ -138,7 +145,8 @@ export interface FileRoutesByFullPath {
   '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
   '/api/v1/payments/checkout': typeof ApiV1PaymentsCheckoutRoute
-  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRoute
+  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRouteWithChildren
+  '/api/v1/payments/checkouts/$id/deliver': typeof ApiV1PaymentsCheckoutsIdDeliverRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -157,7 +165,8 @@ export interface FileRoutesByTo {
   '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
   '/api/v1/payments/checkout': typeof ApiV1PaymentsCheckoutRoute
-  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRoute
+  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRouteWithChildren
+  '/api/v1/payments/checkouts/$id/deliver': typeof ApiV1PaymentsCheckoutsIdDeliverRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,7 +187,8 @@ export interface FileRoutesById {
   '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
   '/api/v1/payments/checkout': typeof ApiV1PaymentsCheckoutRoute
-  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRoute
+  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRouteWithChildren
+  '/api/v1/payments/checkouts/$id/deliver': typeof ApiV1PaymentsCheckoutsIdDeliverRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/api/v1/entitlements/$tenantId'
     | '/api/v1/payments/checkout'
     | '/api/v1/payments/checkouts/$id'
+    | '/api/v1/payments/checkouts/$id/deliver'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/api/v1/entitlements/$tenantId'
     | '/api/v1/payments/checkout'
     | '/api/v1/payments/checkouts/$id'
+    | '/api/v1/payments/checkouts/$id/deliver'
   id:
     | '__root__'
     | '/_protected'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/api/v1/entitlements/$tenantId'
     | '/api/v1/payments/checkout'
     | '/api/v1/payments/checkouts/$id'
+    | '/api/v1/payments/checkouts/$id/deliver'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -250,7 +263,7 @@ export interface RootRouteChildren {
   ApiPaymentsZibalCallbackRoute: typeof ApiPaymentsZibalCallbackRoute
   ApiV1EntitlementsTenantIdRoute: typeof ApiV1EntitlementsTenantIdRoute
   ApiV1PaymentsCheckoutRoute: typeof ApiV1PaymentsCheckoutRoute
-  ApiV1PaymentsCheckoutsIdRoute: typeof ApiV1PaymentsCheckoutsIdRoute
+  ApiV1PaymentsCheckoutsIdRoute: typeof ApiV1PaymentsCheckoutsIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -381,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1PaymentsCheckoutsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/payments/checkouts/$id/deliver': {
+      id: '/api/v1/payments/checkouts/$id/deliver'
+      path: '/deliver'
+      fullPath: '/api/v1/payments/checkouts/$id/deliver'
+      preLoaderRoute: typeof ApiV1PaymentsCheckoutsIdDeliverRouteImport
+      parentRoute: typeof ApiV1PaymentsCheckoutsIdRoute
+    }
   }
 }
 
@@ -412,6 +432,20 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
   ProtectedRouteChildren,
 )
 
+interface ApiV1PaymentsCheckoutsIdRouteChildren {
+  ApiV1PaymentsCheckoutsIdDeliverRoute: typeof ApiV1PaymentsCheckoutsIdDeliverRoute
+}
+
+const ApiV1PaymentsCheckoutsIdRouteChildren: ApiV1PaymentsCheckoutsIdRouteChildren =
+  {
+    ApiV1PaymentsCheckoutsIdDeliverRoute: ApiV1PaymentsCheckoutsIdDeliverRoute,
+  }
+
+const ApiV1PaymentsCheckoutsIdRouteWithChildren =
+  ApiV1PaymentsCheckoutsIdRoute._addFileChildren(
+    ApiV1PaymentsCheckoutsIdRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   ProtectedRoute: ProtectedRouteWithChildren,
   LoginRoute: LoginRoute,
@@ -421,7 +455,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPaymentsZibalCallbackRoute: ApiPaymentsZibalCallbackRoute,
   ApiV1EntitlementsTenantIdRoute: ApiV1EntitlementsTenantIdRoute,
   ApiV1PaymentsCheckoutRoute: ApiV1PaymentsCheckoutRoute,
-  ApiV1PaymentsCheckoutsIdRoute: ApiV1PaymentsCheckoutsIdRoute,
+  ApiV1PaymentsCheckoutsIdRoute: ApiV1PaymentsCheckoutsIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
