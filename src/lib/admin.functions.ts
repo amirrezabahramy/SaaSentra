@@ -145,6 +145,9 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
             id: tenant.subscription.id,
             status: tenant.subscription.status,
             plan: tenant.subscription.plan.name,
+            planType: tenant.subscription.plan.type,
+            isPermanent: tenant.subscription.plan.isPermanent,
+            serialKey: tenant.subscription.serialKey,
             currentPeriodEnd:
               tenant.subscription.currentPeriodEnd.toISOString(),
             graceEndsAt: tenant.subscription.graceEndsAt?.toISOString() ?? null,

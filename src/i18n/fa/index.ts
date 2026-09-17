@@ -85,6 +85,10 @@ const fa = {
     statusChangeConfirmation:
       'برای تأیید، وضعیت جدید را با حروف بزرگ وارد کنید',
     statusChangePlaceholder: 'مثلاً ACTIVE',
+    serialKey: 'کلید سریال',
+    regenerateKey: 'تولید مجدد کلید',
+    copyKey: 'کپی کلید',
+    copied: 'کپی شد',
   },
   plans: {
     kicker: 'کاتالوگ',
@@ -99,6 +103,10 @@ const fa = {
     interval: 'بازه پرداخت',
     trialDays: 'روزهای آزمایشی',
     stripePriceId: 'شناسه قیمت Stripe',
+    type: 'نوع پلن',
+    subscriptionType: 'اشتراکی',
+    serialKeyType: 'کلید سریال',
+    permanent: 'دائمی / بدون انقضا',
     inUse: 'این پلن در حال استفاده است و قابل آرشیو نیست.',
   },
   services: {

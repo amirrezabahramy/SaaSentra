@@ -25,7 +25,12 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
         }
 
         try {
-          return Response.json(await getEntitlement(params.tenantId))
+          return Response.json(
+            await getEntitlement(params.tenantId, {
+              validateSerialKey: true,
+              serialKey: request.headers.get('x-serial-key') ?? undefined,
+            }),
+          )
         } catch {
           return Response.json({ error: 'Tenant not found' }, { status: 404 })
         }

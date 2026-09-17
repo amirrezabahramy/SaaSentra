@@ -47,6 +47,20 @@ async function main() {
       stripePriceId: proStripePriceId,
     },
   })
+  await db.plan.upsert({
+    where: { slug: 'lifetime-serial' },
+    update: { type: 'SERIAL_KEY', isPermanent: true },
+    create: {
+      name: 'Lifetime Serial',
+      slug: 'lifetime-serial',
+      type: 'SERIAL_KEY',
+      isPermanent: true,
+      priceCents: 9900,
+      currency: 'USD',
+      interval: 'lifetime',
+      trialDays: 0,
+    },
+  })
 
   // --- Feature flags -----------------------------------------------------
   const flagKeys = [

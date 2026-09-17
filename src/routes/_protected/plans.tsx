@@ -30,6 +30,8 @@ export const Route = createFileRoute('/_protected/plans')({
 type PlanFormValue = {
   name: string
   slug: string
+  type: 'SUBSCRIPTION' | 'SERIAL_KEY'
+  isPermanent: boolean
   priceCents: number
   currency: string
   interval: string
@@ -125,6 +127,12 @@ function Plans() {
                 <div>
                   <h2 className="font-serif text-2xl font-bold">{plan.name}</h2>
                   <p className="text-sm text-(--sea-ink-soft)">{plan.slug}</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-(--kicker)">
+                    {plan.type === 'SERIAL_KEY'
+                      ? LL.plans.serialKeyType()
+                      : LL.plans.subscriptionType()}
+                    {plan.isPermanent ? ` · ${LL.plans.permanent()}` : ''}
+                  </p>
                 </div>
                 {plan.deletedAt ? (
                   <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
@@ -230,6 +238,8 @@ function PlanForm({
     id?: string
     name: string
     slug: string
+    type: 'SUBSCRIPTION' | 'SERIAL_KEY'
+    isPermanent: boolean
     priceCents: number
     currency: string
     interval: string
@@ -245,6 +255,8 @@ function PlanForm({
       id: undefined as string | undefined,
       name: initial?.name ?? '',
       slug: initial?.slug ?? '',
+      type: initial?.type ?? 'SUBSCRIPTION',
+      isPermanent: initial?.isPermanent ?? false,
       priceCents: initial?.priceCents ?? 0,
       currency: initial?.currency ?? 'USD',
       interval: initial?.interval ?? 'month',
@@ -292,6 +304,40 @@ function PlanForm({
           )}
         </form.Field>
       ))}
+      <form.Field name="type">
+        {(field) => (
+          <label className="block text-sm font-semibold">
+            {LL.plans.type()}
+            <select
+              value={field.state.value}
+              onChange={(event) =>
+                field.handleChange(
+                  event.target.value as 'SUBSCRIPTION' | 'SERIAL_KEY',
+                )
+              }
+              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+            >
+              <option value="SUBSCRIPTION">
+                {LL.plans.subscriptionType()}
+              </option>
+              <option value="SERIAL_KEY">{LL.plans.serialKeyType()}</option>
+            </select>
+          </label>
+        )}
+      </form.Field>
+      <form.Field name="isPermanent">
+        {(field) => (
+          <label className="flex items-center gap-3 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={field.state.value}
+              onChange={(event) => field.handleChange(event.target.checked)}
+              className="size-4"
+            />
+            {LL.plans.permanent()}
+          </label>
+        )}
+      </form.Field>
       <form.Subscribe
         selector={(state) => [state.canSubmit, state.isSubmitting]}
       >

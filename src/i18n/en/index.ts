@@ -85,6 +85,10 @@ const en = {
       'Changing status here is an exceptional operation. Prefer changing it from the tenant panel unless necessary.',
     statusChangeConfirmation: 'Type the new status in uppercase to confirm',
     statusChangePlaceholder: 'e.g. ACTIVE',
+    serialKey: 'Serial key',
+    regenerateKey: 'Regenerate key',
+    copyKey: 'Copy key',
+    copied: 'Copied',
   },
   plans: {
     kicker: 'Catalog',
@@ -99,6 +103,10 @@ const en = {
     interval: 'Interval',
     trialDays: 'Trial days',
     stripePriceId: 'Stripe price ID',
+    type: 'Plan type',
+    subscriptionType: 'Subscription',
+    serialKeyType: 'Serial key',
+    permanent: 'Permanent / timeless',
     inUse: 'This plan is in use and cannot be archived.',
   },
   services: {

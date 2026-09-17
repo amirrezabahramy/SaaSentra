@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from '#/lib/format'
 import {
   disableSubscription,
   enableSubscription,
+  regenerateSerialKey,
   archiveTenant,
   updateTenant,
 } from '#/lib/ops.functions'
@@ -19,6 +20,7 @@ import { useState } from 'react'
 import { tenantDetailQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
 import { CrudDialog } from '#/components/admin/crud-dialog'
+import { SerialKey } from '#/components/admin/serial-key'
 
 export const Route = createFileRoute('/_protected/tenants/$id')({
   loader: ({ context, params }) =>
@@ -37,6 +39,7 @@ function TenantDetail() {
   const queryClient = useQueryClient()
   const disable = useServerFn(disableSubscription)
   const enable = useServerFn(enableSubscription)
+  const regenerate = useServerFn(regenerateSerialKey)
   const update = useServerFn(updateTenant)
   const archive = useServerFn(archiveTenant)
   const [tenantDialog, setTenantDialog] = useState<'edit' | 'archive' | null>(
@@ -65,6 +68,11 @@ function TenantDetail() {
               reason: input.reason,
             },
           }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+  const regenerateMutation = useMutation({
+    mutationFn: (subscriptionId: string) =>
+      regenerate({ data: { id: subscriptionId } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
   const tenantMutation = useMutation({
@@ -164,14 +172,37 @@ function TenantDetail() {
                 <span>{LL.tenantDetail.plan()}</span>
                 <strong>{tenant.subscription.plan}</strong>
               </div>
+              {tenant.subscription.planType === 'SERIAL_KEY' &&
+              tenant.subscription.serialKey ? (
+                <div className="text-sm">
+                  <span>{LL.subscriptions.serialKey()}</span>
+                  <SerialKey value={tenant.subscription.serialKey} />
+                </div>
+              ) : null}
               <div className="flex items-center justify-between">
                 <span>{LL.tenantDetail.status()}</span>
                 <StatusBadge status={tenant.subscription.status} />
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>{LL.tenantDetail.periodEnds()}</span>
-                <span>{formatDate(tenant.subscription.currentPeriodEnd)}</span>
+                <span>
+                  {tenant.subscription.isPermanent
+                    ? LL.plans.permanent()
+                    : formatDate(tenant.subscription.currentPeriodEnd)}
+                </span>
               </div>
+              {tenant.subscription.planType === 'SERIAL_KEY' ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void regenerateMutation.mutateAsync(tenant.subscription!.id)
+                  }
+                  disabled={regenerateMutation.isPending}
+                  className="rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold disabled:opacity-40"
+                >
+                  {LL.subscriptions.regenerateKey()}
+                </button>
+              ) : null}
               {[
                 'ACTIVE',
                 'PAST_DUE',

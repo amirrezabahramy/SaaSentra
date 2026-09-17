@@ -6,6 +6,7 @@ import { auth } from './auth'
 import {
   disable,
   enable,
+  generateSerialKey,
   getEntitlement,
   transitionSubscription,
 } from './lifecycle'
@@ -83,6 +84,8 @@ const planSchema = z.object({
     .min(1)
     .max(80)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  type: z.enum(['SUBSCRIPTION', 'SERIAL_KEY']),
+  isPermanent: z.boolean(),
   priceCents: z.coerce.number().int().nonnegative(),
   currency: z
     .string()
@@ -97,7 +100,7 @@ const planUpdateSchema = planSchema.extend({ id: z.string().uuid() })
 const subscriptionCreateSchema = z.object({
   tenantId: z.string().uuid(),
   planId: z.string().uuid(),
-  periodEnd: z.coerce.date(),
+  periodEnd: z.coerce.date().nullable().optional(),
 })
 const subscriptionUpdateSchema = subscriptionCreateSchema.extend({
   id: z.string().uuid(),
@@ -512,6 +515,8 @@ export const updatePlan = createServerFn({ method: 'POST' })
         data: {
           name: data.name,
           slug: data.slug,
+          type: data.type,
+          isPermanent: data.isPermanent,
           priceCents: data.priceCents,
           currency: data.currency,
           interval: data.interval,
@@ -620,6 +625,13 @@ export const createSubscription = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const actor = await actorId()
     return db.$transaction(async (tx) => {
+      const plan = await tx.plan.findUniqueOrThrow({
+        where: { id: data.planId },
+      })
+      const periodEnd = plan.isPermanent
+        ? new Date('9999-12-31T23:59:59.999Z')
+        : data.periodEnd
+      if (!periodEnd) throw new Error('Period end is required for this plan')
       const existing = await tx.subscription.findUnique({
         where: { tenantId: data.tenantId },
       })
@@ -631,9 +643,10 @@ export const createSubscription = createServerFn({ method: 'POST' })
           where: { id: existing.id },
           data: {
             planId: data.planId,
-            currentPeriodEnd: data.periodEnd,
+            currentPeriodEnd: periodEnd,
             deletedAt: null,
             status: 'TRIALING',
+            serialKey: plan.type === 'SERIAL_KEY' ? generateSerialKey() : null,
           },
         })
         await createAudit(tx, {
@@ -650,7 +663,8 @@ export const createSubscription = createServerFn({ method: 'POST' })
         data: {
           tenantId: data.tenantId,
           planId: data.planId,
-          currentPeriodEnd: data.periodEnd,
+          currentPeriodEnd: periodEnd,
+          serialKey: plan.type === 'SERIAL_KEY' ? generateSerialKey() : null,
         },
       })
       await createAudit(tx, {
@@ -671,6 +685,7 @@ export const updateSubscription = createServerFn({ method: 'POST' })
     const actor = await actorId()
     const current = await db.subscription.findUniqueOrThrow({
       where: { id: data.id, deletedAt: null },
+      include: { plan: true },
     })
     if (data.tenantId !== current.tenantId) {
       const existing = await db.subscription.findUnique({
@@ -688,12 +703,26 @@ export const updateSubscription = createServerFn({ method: 'POST' })
       })
     }
     return db.$transaction(async (tx) => {
+      const plan = await tx.plan.findUniqueOrThrow({
+        where: { id: data.planId },
+      })
+      const periodEnd = plan.isPermanent
+        ? new Date('9999-12-31T23:59:59.999Z')
+        : data.periodEnd
+      if (!periodEnd) throw new Error('Period end is required for this plan')
       const subscription = await tx.subscription.update({
         where: { id: data.id, deletedAt: null },
         data: {
           tenantId: data.tenantId,
           planId: data.planId,
-          currentPeriodEnd: data.periodEnd,
+          currentPeriodEnd: periodEnd,
+          serialKey:
+            plan.type === 'SERIAL_KEY'
+              ? current.plan.type === 'SERIAL_KEY' &&
+                current.planId === data.planId
+                ? current.serialKey
+                : generateSerialKey()
+              : null,
         },
       })
       if (!targetStatus || targetStatus === current.status) {
@@ -707,6 +736,34 @@ export const updateSubscription = createServerFn({ method: 'POST' })
         })
       }
       return subscription
+    })
+  })
+
+export const regenerateSerialKey = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    return db.$transaction(async (tx) => {
+      const subscription = await tx.subscription.findUniqueOrThrow({
+        where: { id: data.id, deletedAt: null },
+        include: { plan: true },
+      })
+      if (subscription.plan.type !== 'SERIAL_KEY') {
+        throw new Error('Only serial-key plans can regenerate a serial key')
+      }
+      const updated = await tx.subscription.update({
+        where: { id: subscription.id },
+        data: { serialKey: generateSerialKey() },
+      })
+      await createAudit(tx, {
+        tenantId: subscription.tenantId,
+        actorId: actor,
+        action: 'subscription.serial_key_regenerated',
+        entityType: 'Subscription',
+        entityId: subscription.id,
+        reason: 'Serial key regenerated by operator',
+      })
+      return updated
     })
   })
 

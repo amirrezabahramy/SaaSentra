@@ -298,6 +298,22 @@ type RootTranslation = {
      * e​.​g​.​ ​A​C​T​I​V​E
      */
     statusChangePlaceholder: string
+    /**
+     * S​e​r​i​a​l​ ​k​e​y
+     */
+    serialKey: string
+    /**
+     * R​e​g​e​n​e​r​a​t​e​ ​k​e​y
+     */
+    regenerateKey: string
+    /**
+     * C​o​p​y​ ​k​e​y
+     */
+    copyKey: string
+    /**
+     * C​o​p​i​e​d
+     */
+    copied: string
   }
   plans: {
     /**
@@ -348,6 +364,22 @@ type RootTranslation = {
      * S​t​r​i​p​e​ ​p​r​i​c​e​ ​I​D
      */
     stripePriceId: string
+    /**
+     * P​l​a​n​ ​t​y​p​e
+     */
+    type: string
+    /**
+     * S​u​b​s​c​r​i​p​t​i​o​n
+     */
+    subscriptionType: string
+    /**
+     * S​e​r​i​a​l​ ​k​e​y
+     */
+    serialKeyType: string
+    /**
+     * P​e​r​m​a​n​e​n​t​ ​/​ ​t​i​m​e​l​e​s​s
+     */
+    permanent: string
     /**
      * T​h​i​s​ ​p​l​a​n​ ​i​s​ ​i​n​ ​u​s​e​ ​a​n​d​ ​c​a​n​n​o​t​ ​b​e​ ​a​r​c​h​i​v​e​d​.
      */
@@ -1091,6 +1123,22 @@ export type TranslationFunctions = {
      * e.g. ACTIVE
      */
     statusChangePlaceholder: () => LocalizedString
+    /**
+     * Serial key
+     */
+    serialKey: () => LocalizedString
+    /**
+     * Regenerate key
+     */
+    regenerateKey: () => LocalizedString
+    /**
+     * Copy key
+     */
+    copyKey: () => LocalizedString
+    /**
+     * Copied
+     */
+    copied: () => LocalizedString
   }
   plans: {
     /**
@@ -1141,6 +1189,22 @@ export type TranslationFunctions = {
      * Stripe price ID
      */
     stripePriceId: () => LocalizedString
+    /**
+     * Plan type
+     */
+    type: () => LocalizedString
+    /**
+     * Subscription
+     */
+    subscriptionType: () => LocalizedString
+    /**
+     * Serial key
+     */
+    serialKeyType: () => LocalizedString
+    /**
+     * Permanent / timeless
+     */
+    permanent: () => LocalizedString
     /**
      * This plan is in use and cannot be archived.
      */

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { db } from '../db'
 import type { Prisma, SubscriptionStatus } from '#/generated/prisma/client'
 
@@ -99,7 +100,14 @@ export async function transitionSubscription(
 }
 
 /** Return the current entitlement snapshot for a tenant. */
-export async function getEntitlement(tenantId: string) {
+export function generateSerialKey() {
+  return `SK-${randomBytes(18).toString('base64url').toUpperCase()}`
+}
+
+export async function getEntitlement(
+  tenantId: string,
+  options: { validateSerialKey?: boolean; serialKey?: string } = {},
+) {
   const tenant = await db.tenant.findUniqueOrThrow({
     where: { id: tenantId },
     include: {
@@ -118,6 +126,10 @@ export async function getEntitlement(tenantId: string) {
       periodEnd: null,
     }
   }
+  const hasValidSerialKey =
+    !options.validateSerialKey ||
+    subscription?.plan.type !== 'SERIAL_KEY' ||
+    Boolean(options.serialKey && options.serialKey === subscription.serialKey)
   const flags = Object.fromEntries(
     tenant.flags
       .filter((tenantFlag) => !tenantFlag.flag.deletedAt)
@@ -125,7 +137,8 @@ export async function getEntitlement(tenantId: string) {
   )
   const active = Boolean(
     subscription &&
-    now < subscription.currentPeriodEnd &&
+    hasValidSerialKey &&
+    (subscription.plan.isPermanent || now < subscription.currentPeriodEnd) &&
     (subscription.status === 'ACTIVE' ||
       subscription.status === 'DISABLED_AT_PERIOD_END'),
   )
@@ -134,7 +147,9 @@ export async function getEntitlement(tenantId: string) {
     active,
     plan: subscription?.plan.slug ?? null,
     flags,
-    periodEnd: subscription?.currentPeriodEnd ?? null,
+    periodEnd: subscription?.plan.isPermanent
+      ? null
+      : (subscription?.currentPeriodEnd ?? null),
   }
 }
 

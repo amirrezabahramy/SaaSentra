@@ -24,6 +24,11 @@ enum SubscriptionStatus {
   ARCHIVED
 }
 
+enum PlanType {
+  SUBSCRIPTION
+  SERIAL_KEY
+}
+
 enum InvoiceStatus {
   DRAFT
   OPEN
@@ -151,6 +156,8 @@ model Plan {
   id            String         @id @default(uuid())
   name          String
   slug          String         @unique
+  type          PlanType       @default(SUBSCRIPTION)
+  isPermanent   Boolean        @default(false)
   priceCents    Int            @default(0)
   currency      String         @default("USD")
   interval      String         @default("month")
@@ -171,6 +178,7 @@ model Subscription {
   status               SubscriptionStatus @default(TRIALING)
   currentPeriodStart   DateTime           @default(now())
   currentPeriodEnd     DateTime
+  serialKey            String?            @unique
   cancelAt             DateTime?
   graceEndsAt          DateTime?
   disabledAt           DateTime?

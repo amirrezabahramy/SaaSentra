@@ -19,10 +19,12 @@ import {
   archiveSubscription,
   createSubscription,
   permanentlyDeleteSubscription,
+  regenerateSerialKey,
   unarchiveSubscription,
   updateSubscription,
 } from '#/lib/ops.functions'
 import { useI18nContext } from '#/i18n/i18n-react'
+import { SerialKey } from '#/components/admin/serial-key'
 
 export const Route = createFileRoute('/_protected/subscriptions')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -57,6 +59,7 @@ function Subscriptions() {
   const update = useServerFn(updateSubscription)
   const archive = useServerFn(archiveSubscription)
   const unarchive = useServerFn(unarchiveSubscription)
+  const regenerate = useServerFn(regenerateSerialKey)
   const [dialog, setDialog] = useState<(typeof rows)[number] | 'create' | null>(
     null,
   )
@@ -66,7 +69,7 @@ function Subscriptions() {
         ? update({
             data: {
               ...value,
-              periodEnd: new Date(value.periodEnd),
+              periodEnd: value.periodEnd ? new Date(value.periodEnd) : null,
               reason:
                 value.reason?.trim() ||
                 'Subscription details updated by operator',
@@ -76,7 +79,7 @@ function Subscriptions() {
             data: {
               tenantId: value.tenantId,
               planId: value.planId,
-              periodEnd: new Date(value.periodEnd),
+              periodEnd: value.periodEnd ? new Date(value.periodEnd) : null,
             },
           }),
     onSuccess: async () => {
@@ -107,6 +110,11 @@ function Subscriptions() {
       })
       setDeleteId(null)
     },
+  })
+  const regenerateMutation = useMutation({
+    mutationFn: (id: string) => regenerate({ data: { id } }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] }),
   })
   const navigate = Route.useNavigate()
   const form = useForm({
@@ -183,9 +191,23 @@ function Subscriptions() {
                   {row.tenant.name}
                 </Link>
                 <p className="text-sm text-(--sea-ink-soft)">
-                  {row.plan.name} · {LL.subscriptions.ends()}{' '}
-                  {formatDate(row.currentPeriodEnd)}
+                  {row.plan.name} ·{' '}
+                  {row.plan.type === 'SERIAL_KEY'
+                    ? LL.plans.serialKeyType()
+                    : LL.plans.subscriptionType()}{' '}
+                  · {LL.subscriptions.ends()}{' '}
+                  {row.plan.isPermanent
+                    ? LL.plans.permanent()
+                    : formatDate(row.currentPeriodEnd)}
                 </p>
+                {row.plan.type === 'SERIAL_KEY' && row.serialKey ? (
+                  <div>
+                    <p className="mt-2 text-xs font-semibold text-(--sea-ink-soft)">
+                      {LL.subscriptions.serialKey()}
+                    </p>
+                    <SerialKey value={row.serialKey} />
+                  </div>
+                ) : null}
               </div>
               <div className="flex items-center gap-3">
                 <span>{formatCurrency(row.plan.priceCents)}</span>
@@ -199,6 +221,16 @@ function Subscriptions() {
                 >
                   {LL.subscriptions.edit()}
                 </button>
+                {row.plan.type === 'SERIAL_KEY' && row.status !== 'ARCHIVED' ? (
+                  <button
+                    type="button"
+                    onClick={() => void regenerateMutation.mutateAsync(row.id)}
+                    disabled={regenerateMutation.isPending}
+                    className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold disabled:opacity-40"
+                  >
+                    {LL.subscriptions.regenerateKey()}
+                  </button>
+                ) : null}
                 {row.status === 'ARCHIVED' ? (
                   <>
                     <button
@@ -309,7 +341,12 @@ function SubscriptionForm({
   onSubmit,
 }: {
   tenants: Array<{ id: string; name: string; subscriptionId: string | null }>
-  plans: Array<{ id: string; name: string }>
+  plans: Array<{
+    id: string
+    name: string
+    type: 'SUBSCRIPTION' | 'SERIAL_KEY'
+    isPermanent: boolean
+  }>
   initial?: {
     id: string
     tenantId: string
@@ -374,6 +411,9 @@ function SubscriptionForm({
                 {options.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.name}
+                    {'type' in option && option.type === 'SERIAL_KEY'
+                      ? ` · ${LL.plans.serialKeyType()}`
+                      : ''}
                   </option>
                 ))}
               </select>
@@ -446,20 +486,35 @@ function SubscriptionForm({
           </form.Field>
         </>
       ) : null}
-      <form.Field name="periodEnd">
-        {(field) => (
-          <label className="block text-sm font-semibold">
-            {LL.crud.periodEnd()}
-            <input
-              type="date"
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-              required
-            />
-          </label>
-        )}
-      </form.Field>
+      <form.Subscribe selector={(state) => state.values.planId}>
+        {(planId) => {
+          const selectedPlan = plans.find((plan) => plan.id === planId)
+          return (
+            <form.Field name="periodEnd">
+              {(field) => (
+                <label className="block text-sm font-semibold">
+                  {LL.crud.periodEnd()}
+                  {selectedPlan?.isPermanent ? (
+                    <p className="mt-2 text-sm font-normal text-(--sea-ink-soft)">
+                      {LL.plans.permanent()}
+                    </p>
+                  ) : (
+                    <input
+                      type="date"
+                      value={field.state.value}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                      required
+                    />
+                  )}
+                </label>
+              )}
+            </form.Field>
+          )
+        }}
+      </form.Subscribe>
       <form.Subscribe
         selector={(state) => [state.canSubmit, state.isSubmitting]}
       >
