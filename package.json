@@ -21,7 +21,7 @@
     "db:deploy": "dotenv -e .env.local -- prisma migrate deploy",
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
-    "db:reset": "dotenv -e .env.local -- prisma dev",
+    "db:reset": "dotenv -e .env.local -- prisma migrate reset",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- prisma db seed",
     "typesafe-i18n": "typesafe-i18n"
