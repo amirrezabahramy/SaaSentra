@@ -129,6 +129,8 @@ const en = {
     deliveryAttempts: 'Delivery attempts',
     noPaymentDelivery: 'No payment delivery recorded',
     paymentDeliveryMode: 'Payment delivery mode',
+    serviceId: 'Service ID',
+    copyServiceId: 'Copy service ID',
   },
   flags: {
     kicker: 'Configuration',

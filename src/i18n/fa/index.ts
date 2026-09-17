@@ -129,6 +129,8 @@ const fa = {
     deliveryAttempts: 'تعداد تلاش‌های تحویل',
     noPaymentDelivery: 'هنوز تحویل پرداختی ثبت نشده است',
     paymentDeliveryMode: 'روش تحویل نتیجه پرداخت',
+    serviceId: 'شناسه سرویس',
+    copyServiceId: 'کپی شناسه سرویس',
   },
   flags: {
     kicker: 'پیکربندی',

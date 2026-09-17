@@ -462,6 +462,14 @@ type RootTranslation = {
      * P​a​y​m​e​n​t​ ​d​e​l​i​v​e​r​y​ ​m​o​d​e
      */
     paymentDeliveryMode: string
+    /**
+     * S​e​r​v​i​c​e​ ​I​D
+     */
+    serviceId: string
+    /**
+     * C​o​p​y​ ​s​e​r​v​i​c​e​ ​I​D
+     */
+    copyServiceId: string
   }
   flags: {
     /**
@@ -1311,6 +1319,14 @@ export type TranslationFunctions = {
      * Payment delivery mode
      */
     paymentDeliveryMode: () => LocalizedString
+    /**
+     * Service ID
+     */
+    serviceId: () => LocalizedString
+    /**
+     * Copy service ID
+     */
+    copyServiceId: () => LocalizedString
   }
   flags: {
     /**

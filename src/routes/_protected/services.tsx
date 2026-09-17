@@ -8,6 +8,7 @@ import { useForm } from '@tanstack/react-form'
 import { useServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import { EmptyState } from '#/components/admin/empty-state'
+import { CopyableValue } from '#/components/admin/copyable-value'
 import {
   CrudDialog,
   PermanentDeleteDialog,
@@ -164,6 +165,15 @@ function Services() {
               <p className="mt-2 text-sm text-(--sea-ink-soft)">
                 {row.tenantName} · {row.controlType}
               </p>
+              <div className="mt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-(--sea-ink-soft)">
+                  {LL.services.serviceId()}
+                </p>
+                <CopyableValue
+                  value={row.id}
+                  label={LL.services.copyServiceId()}
+                />
+              </div>
               <div className="mt-5 rounded-xl bg-white/50 p-4 text-sm">
                 <p className="font-semibold">
                   {LL.services.entitlement()}:{' '}
