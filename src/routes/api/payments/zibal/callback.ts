@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { env } from '#/env'
 import { db } from '#/db'
 import { resolvePaymentProvider } from '#/lib/payments/resolver'
+import { settleVerifiedPayment } from '#/lib/payments/orchestrator'
 
 function redirectToCheckout(
   status: 'success' | 'canceled',
@@ -23,6 +24,12 @@ export const Route = createFileRoute('/api/payments/zibal/callback')({
         const success = url.searchParams.get('success')
         if (!trackId || success !== '1') return redirectToCheckout('canceled')
 
+        const existingPayment = await db.payment.findUnique({
+          where: { id: `zibal:${trackId}` },
+        })
+        if (existingPayment?.status === 'SUCCEEDED')
+          return redirectToCheckout('success', trackId)
+
         const subscription = await db.subscription.findFirst({
           where: {
             providerSubscriptionId: `zibal_checkout_session:${trackId}`,
@@ -39,10 +46,14 @@ export const Route = createFileRoute('/api/payments/zibal/callback')({
             amountMinor: subscription.plan.priceMinor,
             currency: subscription.plan.currency,
           })
-          return redirectToCheckout(
-            verified.status === 'SUCCEEDED' ? 'success' : 'canceled',
-            trackId,
-          )
+          if (verified.status !== 'SUCCEEDED')
+            return redirectToCheckout('canceled', trackId)
+          await settleVerifiedPayment({
+            provider: 'ZIBAL',
+            subscriptionId: subscription.id,
+            verified,
+          })
+          return redirectToCheckout('success', trackId)
         } catch {
           return redirectToCheckout('canceled', trackId)
         }
