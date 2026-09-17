@@ -173,6 +173,8 @@ const en = {
       'This permanently deletes the archived record and cannot be undone.',
     typeDeleteToConfirm: 'Type DELETE to confirm',
     deletePermanently: 'Delete permanently',
+    copyId: 'Copy ID',
+    copied: 'Copied',
   },
   audit: {
     kicker: 'Operations',

@@ -173,6 +173,8 @@ const fa = {
       'این کار رکورد آرشیوشده را برای همیشه حذف می‌کند و قابل بازگشت نیست.',
     typeDeleteToConfirm: 'برای تأیید DELETE را وارد کنید',
     deletePermanently: 'حذف دائمی',
+    copyId: 'کپی شناسه',
+    copied: 'کپی شد',
   },
   audit: {
     kicker: 'عملیات',

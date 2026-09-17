@@ -622,6 +622,14 @@ type RootTranslation = {
      * D​e​l​e​t​e​ ​p​e​r​m​a​n​e​n​t​l​y
      */
     deletePermanently: string
+    /**
+     * C​o​p​y​ ​I​D
+     */
+    copyId: string
+    /**
+     * C​o​p​i​e​d
+     */
+    copied: string
   }
   audit: {
     /**
@@ -1479,6 +1487,14 @@ export type TranslationFunctions = {
      * Delete permanently
      */
     deletePermanently: () => LocalizedString
+    /**
+     * Copy ID
+     */
+    copyId: () => LocalizedString
+    /**
+     * Copied
+     */
+    copied: () => LocalizedString
   }
   audit: {
     /**

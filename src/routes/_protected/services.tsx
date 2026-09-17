@@ -172,6 +172,7 @@ function Services() {
                 <CopyableValue
                   value={row.id}
                   label={LL.services.copyServiceId()}
+                  copiedLabel={LL.crud.copied()}
                 />
               </div>
               <div className="mt-5 rounded-xl bg-white/50 p-4 text-sm">

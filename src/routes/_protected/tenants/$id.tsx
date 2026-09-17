@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { EmptyState } from '#/components/admin/empty-state'
+import { CopyableValue } from '#/components/admin/copyable-value'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { formatCurrency, formatDate } from '#/lib/format'
 import {
@@ -145,9 +146,11 @@ function TenantDetail() {
         <p className="mt-2 text-(--sea-ink-soft)">{tenant.slug}</p>
         <p className="mt-2 text-sm text-(--sea-ink-soft)">
           {LL.audit.tenantId()}:{' '}
-          <code className="rounded border border-(--line) px-2 py-1 font-mono text-xs">
-            {tenant.id}
-          </code>
+          <CopyableValue
+            value={tenant.id}
+            label={LL.crud.copyId()}
+            copiedLabel={LL.crud.copied()}
+          />
         </p>
         <div className="mt-4 flex gap-2">
           <button
