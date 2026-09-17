@@ -26,6 +26,7 @@ export async function settleVerifiedPayment(input: {
   subscriptionId: string
   verified: VerifiedPayment
   checkoutId?: string
+  planId?: string
 }) {
   if (input.verified.status !== 'SUCCEEDED')
     throw new Error('Payment was not successful')
@@ -39,22 +40,24 @@ export async function settleVerifiedPayment(input: {
       where: { id: input.subscriptionId, deletedAt: null },
       include: { plan: true },
     })
+    const targetPlan = input.planId
+      ? await tx.plan.findUniqueOrThrow({ where: { id: input.planId } })
+      : subscription.plan
     if (subscription.status === 'ARCHIVED')
       throw new Error('Archived subscriptions cannot receive payments')
     if (
       input.verified.amountMinor !== null &&
-      input.verified.amountMinor !== subscription.plan.priceMinor
+      input.verified.amountMinor !== targetPlan.priceMinor
     )
       throw new Error('Payment amount does not match the plan price')
     if (
       input.verified.currency !== null &&
-      input.verified.currency !== subscription.plan.currency
+      input.verified.currency !== targetPlan.currency
     )
       throw new Error('Payment currency does not match the plan currency')
 
-    const amountMinor =
-      input.verified.amountMinor ?? subscription.plan.priceMinor
-    const currency = input.verified.currency ?? subscription.plan.currency
+    const amountMinor = input.verified.amountMinor ?? targetPlan.priceMinor
+    const currency = input.verified.currency ?? targetPlan.currency
     const invoiceNumber = `${input.provider.toLowerCase()}:${input.verified.providerPaymentId}`
     const now = new Date()
     const invoice = await tx.invoice.create({
@@ -87,13 +90,14 @@ export async function settleVerifiedPayment(input: {
         currentPeriodStart: now,
         currentPeriodEnd: nextPeriodEnd(
           subscription.currentPeriodEnd,
-          subscription.plan.interval,
-          subscription.plan.isPermanent,
+          targetPlan.interval,
+          targetPlan.isPermanent,
         ),
+        planId: targetPlan.id,
         graceEndsAt: null,
         disabledAt: null,
         serialKey:
-          subscription.plan.type === 'SERIAL_KEY'
+          targetPlan.type === 'SERIAL_KEY'
             ? (subscription.serialKey ?? generateSerialKey())
             : null,
       },

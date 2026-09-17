@@ -175,6 +175,7 @@ async function handleEvent(
           provider: 'STRIPE',
           subscriptionId,
           checkoutId,
+          planId: checkout.plan.id,
           verified: {
             providerPaymentId: paymentIntent,
             status: 'SUCCEEDED',

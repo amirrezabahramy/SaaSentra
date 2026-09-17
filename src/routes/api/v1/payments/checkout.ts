@@ -49,10 +49,7 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
 
         const now = new Date()
         const subscription = tenant.subscription
-          ? await db.subscription.update({
-              where: { id: tenant.subscription.id },
-              data: { planId },
-            })
+          ? tenant.subscription
           : await db.subscription.create({
               data: {
                 tenantId,

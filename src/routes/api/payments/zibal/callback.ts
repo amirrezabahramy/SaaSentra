@@ -82,6 +82,7 @@ export const Route = createFileRoute('/api/payments/zibal/callback')({
             subscriptionId: checkout.subscription.id,
             verified,
             checkoutId: checkout.id,
+            planId: checkout.plan.id,
           })
           const settled = await db.paymentCheckout.findUniqueOrThrow({
             where: { id: checkout.id },
