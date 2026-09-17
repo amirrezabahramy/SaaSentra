@@ -32,11 +32,11 @@ type PlanFormValue = {
   slug: string
   type: 'SUBSCRIPTION' | 'SERIAL_KEY'
   isPermanent: boolean
-  priceCents: number
-  currency: string
+  priceMinor: number
+  currency: 'USD' | 'IRR'
   interval: string
   trialDays: number
-  stripePriceId: string
+  providerPriceId: string
 }
 
 function Plans() {
@@ -57,10 +57,10 @@ function Plans() {
     mutationFn: (value: PlanFormValue & { id?: string }) =>
       value.id
         ? update({
-            data: { ...value, stripePriceId: value.stripePriceId || null },
+            data: { ...value, providerPriceId: value.providerPriceId || null },
           })
         : create({
-            data: { ...value, stripePriceId: value.stripePriceId || null },
+            data: { ...value, providerPriceId: value.providerPriceId || null },
           }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
@@ -145,7 +145,7 @@ function Plans() {
                 ) : null}
               </div>
               <p className="mt-4 text-sm text-(--sea-ink-soft)">
-                {plan.priceCents} {plan.currency} · {plan.interval} ·{' '}
+                {plan.priceMinor} {plan.currency} · {plan.interval} ·{' '}
                 {plan.trialDays} {LL.plans.trialDays()}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
@@ -240,11 +240,11 @@ function PlanForm({
     slug: string
     type: 'SUBSCRIPTION' | 'SERIAL_KEY'
     isPermanent: boolean
-    priceCents: number
-    currency: string
+    priceMinor: number
+    currency: 'USD' | 'IRR'
     interval: string
     trialDays: number
-    stripePriceId: string | null
+    providerPriceId: string | null
   }
   isPending: boolean
   onSubmit: (value: PlanFormValue & { id?: string }) => void
@@ -257,22 +257,22 @@ function PlanForm({
       slug: initial?.slug ?? '',
       type: initial?.type ?? 'SUBSCRIPTION',
       isPermanent: initial?.isPermanent ?? false,
-      priceCents: initial?.priceCents ?? 0,
+      priceMinor: initial?.priceMinor ?? 0,
       currency: initial?.currency ?? 'USD',
       interval: initial?.interval ?? 'month',
       trialDays: initial?.trialDays ?? 0,
-      stripePriceId: initial?.stripePriceId ?? '',
+      providerPriceId: initial?.providerPriceId ?? '',
     },
     onSubmit: ({ value }) => onSubmit({ ...value, id: initial?.id }),
   })
   const fields = [
     ['name', LL.crud.name(), 'text'],
     ['slug', LL.crud.slug(), 'text'],
-    ['priceCents', LL.plans.price(), 'number'],
+    ['priceMinor', LL.plans.price(), 'number'],
     ['currency', LL.plans.currency(), 'text'],
     ['interval', LL.plans.interval(), 'text'],
     ['trialDays', LL.plans.trialDays(), 'number'],
-    ['stripePriceId', LL.plans.stripePriceId(), 'text'],
+    ['providerPriceId', LL.plans.providerPriceId(), 'text'],
   ] as const
   return (
     <form
@@ -298,7 +298,7 @@ function PlanForm({
                   )
                 }
                 className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-                required={name !== 'stripePriceId'}
+                required={name !== 'providerPriceId'}
               />
             </label>
           )}

@@ -15,7 +15,7 @@ export function calculateMrr(
   subscriptions: ReadonlyArray<{
     status: SubscriptionStatus
     currentPeriodEnd: Date
-    plan: { priceCents: number }
+    plan: { priceMinor: number }
   }>,
   now = new Date(),
 ): number {
@@ -23,7 +23,7 @@ export function calculateMrr(
     (total, subscription) =>
       total +
       (isRevenueActive(subscription.status, subscription.currentPeriodEnd, now)
-        ? subscription.plan.priceCents
+        ? subscription.plan.priceMinor
         : 0),
     0,
   )

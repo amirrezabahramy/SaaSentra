@@ -23,11 +23,13 @@ export const createCheckoutSession = createServerFn({ method: 'POST' })
       }),
       db.plan.findUniqueOrThrow({ where: { id: data.planId } }),
     ])
-    if (!plan.stripePriceId) throw new Error('Plan has no Stripe price ID')
+    if (plan.provider !== 'STRIPE')
+      throw new Error('This plan is not configured for Stripe')
+    if (!plan.providerPriceId) throw new Error('Plan has no provider price ID')
 
     const params = new URLSearchParams({
       mode: 'subscription',
-      'line_items[0][price]': plan.stripePriceId,
+      'line_items[0][price]': plan.providerPriceId,
       'line_items[0][quantity]': '1',
       success_url: `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/?checkout=success`,
       cancel_url: `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/?checkout=canceled`,
@@ -54,7 +56,9 @@ export const createCheckoutSession = createServerFn({ method: 'POST' })
     if (tenant.subscription) {
       await db.subscription.update({
         where: { id: tenant.subscription.id },
-        data: { stripeSubscriptionId: `checkout_session:${sessionId}` },
+        data: {
+          providerSubscriptionId: `stripe_checkout_session:${sessionId}`,
+        },
       })
     }
     return { id: sessionId, url: stringValue(checkout.url) }

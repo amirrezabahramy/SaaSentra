@@ -167,7 +167,7 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
       invoices: tenant.invoices.map((invoice) => ({
         id: invoice.id,
         number: invoice.number,
-        amountCents: invoice.amountCents,
+        amountMinor: invoice.amountMinor,
         currency: invoice.currency,
         status: invoice.status,
         createdAt: invoice.createdAt.toISOString(),

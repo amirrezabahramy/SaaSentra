@@ -23,28 +23,30 @@ async function main() {
   // --- Plans -------------------------------------------------------------
   const starter = await db.plan.upsert({
     where: { slug: 'starter' },
-    update: { stripePriceId: starterStripePriceId },
+    update: { providerPriceId: starterStripePriceId },
     create: {
       name: 'Starter',
       slug: 'starter',
-      priceCents: 1900,
+      priceMinor: 1900,
       currency: 'USD',
       interval: 'month',
       trialDays: 14,
-      stripePriceId: starterStripePriceId,
+      provider: 'STRIPE',
+      providerPriceId: starterStripePriceId,
     },
   })
   const pro = await db.plan.upsert({
     where: { slug: 'pro' },
-    update: { stripePriceId: proStripePriceId },
+    update: { providerPriceId: proStripePriceId },
     create: {
       name: 'Pro',
       slug: 'pro',
-      priceCents: 4900,
+      priceMinor: 4900,
       currency: 'USD',
       interval: 'month',
       trialDays: 14,
-      stripePriceId: proStripePriceId,
+      provider: 'STRIPE',
+      providerPriceId: proStripePriceId,
     },
   })
   await db.plan.upsert({
@@ -55,7 +57,7 @@ async function main() {
       slug: 'lifetime-serial',
       type: 'SERIAL_KEY',
       isPermanent: true,
-      priceCents: 9900,
+      priceMinor: 9900,
       currency: 'USD',
       interval: 'lifetime',
       trialDays: 0,

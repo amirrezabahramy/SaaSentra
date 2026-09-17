@@ -210,7 +210,9 @@ function Subscriptions() {
                 ) : null}
               </div>
               <div className="flex items-center gap-3">
-                <span>{formatCurrency(row.plan.priceCents)}</span>
+                <span>
+                  {formatCurrency(row.plan.priceMinor, row.plan.currency)}
+                </span>
                 <StatusBadge status={row.status} />
               </div>
               <div className="flex gap-2">

@@ -86,15 +86,12 @@ const planSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   type: z.enum(['SUBSCRIPTION', 'SERIAL_KEY']),
   isPermanent: z.boolean(),
-  priceCents: z.coerce.number().int().nonnegative(),
-  currency: z
-    .string()
-    .trim()
-    .length(3)
-    .transform((value) => value.toUpperCase()),
+  priceMinor: z.coerce.number().int().nonnegative(),
+  currency: z.enum(['USD', 'IRR']),
   interval: z.string().trim().min(1).max(20),
   trialDays: z.coerce.number().int().nonnegative(),
-  stripePriceId: z.string().trim().max(120).nullable().optional(),
+  provider: z.enum(['STRIPE', 'ZIBAL']),
+  providerPriceId: z.string().trim().max(120).nullable().optional(),
 })
 const planUpdateSchema = planSchema.extend({ id: z.string().uuid() })
 const subscriptionCreateSchema = z.object({
@@ -492,7 +489,7 @@ export const createPlan = createServerFn({ method: 'POST' })
     const actor = await actorId()
     return db.$transaction(async (tx) => {
       const plan = await tx.plan.create({
-        data: { ...data, stripePriceId: data.stripePriceId ?? null },
+        data: { ...data, providerPriceId: data.providerPriceId ?? null },
       })
       await createGlobalFlagAudits(tx, {
         actorId: actor,
@@ -517,11 +514,12 @@ export const updatePlan = createServerFn({ method: 'POST' })
           slug: data.slug,
           type: data.type,
           isPermanent: data.isPermanent,
-          priceCents: data.priceCents,
+          priceMinor: data.priceMinor,
           currency: data.currency,
           interval: data.interval,
           trialDays: data.trialDays,
-          stripePriceId: data.stripePriceId ?? null,
+          provider: data.provider,
+          providerPriceId: data.providerPriceId ?? null,
         },
       })
       await createGlobalFlagAudits(tx, {

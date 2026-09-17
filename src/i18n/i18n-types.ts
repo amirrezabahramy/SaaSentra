@@ -345,7 +345,7 @@ type RootTranslation = {
      */
     archive: string
     /**
-     * P​r​i​c​e​ ​i​n​ ​c​e​n​t​s
+     * P​r​i​c​e​ ​i​n​ ​m​i​n​o​r​ ​u​n​i​t​s
      */
     price: string
     /**
@@ -361,9 +361,9 @@ type RootTranslation = {
      */
     trialDays: string
     /**
-     * S​t​r​i​p​e​ ​p​r​i​c​e​ ​I​D
+     * P​r​o​v​i​d​e​r​ ​p​r​i​c​e​ ​I​D
      */
-    stripePriceId: string
+    providerPriceId: string
     /**
      * P​l​a​n​ ​t​y​p​e
      */
@@ -1170,7 +1170,7 @@ export type TranslationFunctions = {
      */
     archive: () => LocalizedString
     /**
-     * Price in cents
+     * Price in minor units
      */
     price: () => LocalizedString
     /**
@@ -1186,9 +1186,9 @@ export type TranslationFunctions = {
      */
     trialDays: () => LocalizedString
     /**
-     * Stripe price ID
+     * Provider price ID
      */
-    stripePriceId: () => LocalizedString
+    providerPriceId: () => LocalizedString
     /**
      * Plan type
      */

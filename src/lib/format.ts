@@ -1,9 +1,9 @@
-export function formatCurrency(cents: number, currency = 'USD'): string {
+export function formatCurrency(minor: number, currency = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
-  }).format(cents / 100)
+  }).format(currency === 'IRR' ? minor : minor / 100)
 }
 
 export function formatDate(value: string | Date | null): string {

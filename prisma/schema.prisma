@@ -29,6 +29,16 @@ enum PlanType {
   SERIAL_KEY
 }
 
+enum Currency {
+  USD
+  IRR
+}
+
+enum PaymentProvider {
+  STRIPE
+  ZIBAL
+}
+
 enum InvoiceStatus {
   DRAFT
   OPEN
@@ -158,11 +168,12 @@ model Plan {
   slug          String         @unique
   type          PlanType       @default(SUBSCRIPTION)
   isPermanent   Boolean        @default(false)
-  priceCents    Int            @default(0)
-  currency      String         @default("USD")
+  priceMinor    Int            @default(0)
+  currency      Currency       @default(USD)
   interval      String         @default("month")
   trialDays     Int            @default(0)
-  stripePriceId String?
+  provider      PaymentProvider @default(STRIPE)
+  providerPriceId String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   deletedAt     DateTime?
@@ -182,8 +193,8 @@ model Subscription {
   cancelAt             DateTime?
   graceEndsAt          DateTime?
   disabledAt           DateTime?
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
+  providerCustomerId   String?
+  providerSubscriptionId String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?
@@ -200,8 +211,8 @@ model Invoice {
   tenantId       String
   subscriptionId String?
   number         String        @unique
-  amountCents    Int
-  currency       String        @default("USD")
+  amountMinor    Int
+  currency       Currency      @default(USD)
   status         InvoiceStatus @default(DRAFT)
   dueDate        DateTime?
   paidAt         DateTime?
@@ -219,10 +230,11 @@ model Payment {
   id                    String        @id @default(uuid())
   tenantId              String
   invoiceId             String?
-  amountCents           Int
-  currency              String        @default("USD")
+  amountMinor           Int
+  currency              Currency      @default(USD)
   status                PaymentStatus @default(PENDING)
-  stripePaymentIntentId String?
+  provider              PaymentProvider @default(STRIPE)
+  providerPaymentId     String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   deletedAt             DateTime?

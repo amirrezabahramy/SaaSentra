@@ -8,6 +8,7 @@ import {
   verifyStripeSignature,
 } from '#/lib/stripe'
 import type {
+  Currency,
   InvoiceStatus,
   PaymentStatus,
   SubscriptionStatus,
@@ -41,6 +42,11 @@ function paymentStatus(value: string | null): PaymentStatus {
   return 'PENDING'
 }
 
+function currencyValue(value: string | null): Currency | null {
+  const currency = value?.toUpperCase()
+  return currency === 'USD' || currency === 'IRR' ? currency : null
+}
+
 async function findSubscription(object: Record<string, unknown>) {
   const meta = metadata(object.metadata)
   const id = stringValue(meta.subscriptionId)
@@ -51,11 +57,11 @@ async function findSubscription(object: Record<string, unknown>) {
     where: {
       OR: [
         ...(id ? [{ id }] : []),
-        ...(stripeId ? [{ stripeSubscriptionId: stripeId }] : []),
+        ...(stripeId ? [{ providerSubscriptionId: stripeId }] : []),
         ...(relatedSubscription
-          ? [{ stripeSubscriptionId: relatedSubscription }]
+          ? [{ providerSubscriptionId: relatedSubscription }]
           : []),
-        ...(customer ? [{ stripeCustomerId: customer }] : []),
+        ...(customer ? [{ providerCustomerId: customer }] : []),
       ],
     },
   })
@@ -91,7 +97,8 @@ async function mirrorInvoice(
   if (!subscription) return
   const amount =
     numberValue(object.amount_due) ?? numberValue(object.amount_paid) ?? 0
-  const currency = stringValue(object.currency)?.toUpperCase() ?? 'USD'
+  const currency = currencyValue(stringValue(object.currency))
+  if (!currency) return
   const status = invoiceStatus(stringValue(object.status))
   const invoice = await db.invoice.upsert({
     where: { number: `stripe:${stripeInvoiceId}` },
@@ -99,13 +106,13 @@ async function mirrorInvoice(
       tenantId: subscription.tenantId,
       subscriptionId: subscription.id,
       number: `stripe:${stripeInvoiceId}`,
-      amountCents: amount,
+      amountMinor: amount,
       currency,
       status,
       paidAt: status === 'PAID' ? new Date() : null,
     },
     update: {
-      amountCents: amount,
+      amountMinor: amount,
       currency,
       status,
       paidAt: status === 'PAID' ? new Date() : null,
@@ -128,14 +135,15 @@ async function mirrorInvoice(
         id: `stripe:${paymentIntent}`,
         tenantId: subscription.tenantId,
         invoiceId: invoice.id,
-        amountCents: amount,
+        amountMinor: amount,
         currency,
         status: mirroredPaymentStatus,
-        stripePaymentIntentId: paymentIntent,
+        provider: 'STRIPE',
+        providerPaymentId: paymentIntent,
       },
       update: {
         invoiceId: invoice.id,
-        amountCents: amount,
+        amountMinor: amount,
         currency,
         status: mirroredPaymentStatus,
       },
@@ -169,8 +177,10 @@ async function handleEvent(
       await db.subscription.update({
         where: { id: subscription.id },
         data: {
-          ...(stripeSubscriptionId ? { stripeSubscriptionId } : {}),
-          ...(customerId ? { stripeCustomerId: customerId } : {}),
+          ...(stripeSubscriptionId
+            ? { providerSubscriptionId: stripeSubscriptionId }
+            : {}),
+          ...(customerId ? { providerCustomerId: customerId } : {}),
           ...(periodEnd
             ? { currentPeriodEnd: new Date(periodEnd * 1000) }
             : {}),

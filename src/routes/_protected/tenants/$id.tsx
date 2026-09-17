@@ -291,7 +291,7 @@ function TenantDetail() {
                   {invoice.number} · {invoice.status}
                 </span>
                 <span>
-                  {formatCurrency(invoice.amountCents, invoice.currency)}
+                  {formatCurrency(invoice.amountMinor, invoice.currency)}
                 </span>
               </div>
             ))}
