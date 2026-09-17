@@ -12,6 +12,7 @@ export const env = createEnv({
     SERVICE_SECRET: z.string(),
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),
+    ZIBAL_MERCHANT: z.string().optional(),
   },
 
   /**

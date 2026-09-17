@@ -23,6 +23,7 @@ import { Route as ProtectedTenantsIndexRouteImport } from './routes/_protected/t
 import { Route as ProtectedTenantsIdRouteImport } from './routes/_protected/tenants/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiPaymentsZibalCallbackRouteImport } from './routes/api/payments/zibal/callback'
 import { Route as ApiV1EntitlementsTenantIdRouteImport } from './routes/api/v1/entitlements/$tenantId'
 
 const ProtectedRoute = ProtectedRouteImport.update({
@@ -94,6 +95,12 @@ const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   path: '/api/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPaymentsZibalCallbackRoute =
+  ApiPaymentsZibalCallbackRouteImport.update({
+    id: '/api/payments/zibal/callback',
+    path: '/api/payments/zibal/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiV1EntitlementsTenantIdRoute =
   ApiV1EntitlementsTenantIdRouteImport.update({
     id: '/api/v1/entitlements/$tenantId',
@@ -115,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/tenants/': typeof ProtectedTenantsIndexRoute
+  '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRoutesByTo {
@@ -131,6 +139,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/tenants': typeof ProtectedTenantsIndexRoute
+  '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRoutesById {
@@ -149,6 +158,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/_protected/tenants/': typeof ProtectedTenantsIndexRoute
+  '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
 }
 export interface FileRouteTypes {
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/stripe/webhook'
     | '/tenants/'
+    | '/api/payments/zibal/callback'
     | '/api/v1/entitlements/$tenantId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/stripe/webhook'
     | '/tenants'
+    | '/api/payments/zibal/callback'
     | '/api/v1/entitlements/$tenantId'
   id:
     | '__root__'
@@ -200,6 +212,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/stripe/webhook'
     | '/_protected/tenants/'
+    | '/api/payments/zibal/callback'
     | '/api/v1/entitlements/$tenantId'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +222,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiPaymentsZibalCallbackRoute: typeof ApiPaymentsZibalCallbackRoute
   ApiV1EntitlementsTenantIdRoute: typeof ApiV1EntitlementsTenantIdRoute
 }
 
@@ -312,6 +326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/payments/zibal/callback': {
+      id: '/api/payments/zibal/callback'
+      path: '/api/payments/zibal/callback'
+      fullPath: '/api/payments/zibal/callback'
+      preLoaderRoute: typeof ApiPaymentsZibalCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/entitlements/$tenantId': {
       id: '/api/v1/entitlements/$tenantId'
       path: '/api/v1/entitlements/$tenantId'
@@ -356,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiPaymentsZibalCallbackRoute: ApiPaymentsZibalCallbackRoute,
   ApiV1EntitlementsTenantIdRoute: ApiV1EntitlementsTenantIdRoute,
 }
 export const routeTree = rootRouteImport

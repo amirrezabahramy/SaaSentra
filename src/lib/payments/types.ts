@@ -9,6 +9,7 @@ export type CreatePaymentInput = {
   amountMinor: number
   currency: Currency
   subscriptionId?: string
+  callbackUrl: string
   successUrl: string
   cancelUrl: string
 }

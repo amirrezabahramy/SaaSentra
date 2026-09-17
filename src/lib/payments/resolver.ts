@@ -1,8 +1,10 @@
 import { stripeProvider } from './stripe.provider'
+import { zibalProvider } from './zibal.provider'
 import type { PaymentProvider, PaymentProviderAdapter } from './types'
 
 const providers: Partial<Record<PaymentProvider, PaymentProviderAdapter>> = {
   STRIPE: stripeProvider,
+  ZIBAL: zibalProvider,
 }
 
 export function resolvePaymentProvider(

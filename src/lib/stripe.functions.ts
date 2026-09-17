@@ -30,6 +30,7 @@ export const createCheckoutSession = createServerFn({ method: 'POST' })
       amountMinor: plan.priceMinor,
       currency: plan.currency,
       subscriptionId: tenant.subscription?.id,
+      callbackUrl: `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/api/payments/zibal/callback`,
       successUrl: `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/?checkout=success`,
       cancelUrl: `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'}/?checkout=canceled`,
     })
