@@ -67,6 +67,13 @@ enum ServiceDeployStatus {
   OFFLINE
 }
 
+enum CheckoutStatus {
+  PENDING
+  SUCCEEDED
+  CANCELED
+  EXPIRED
+}
+
 model User {
   id            String       @id @default(uuid())
   email         String       @unique
@@ -85,20 +92,21 @@ model User {
 }
 
 model Tenant {
-  id             String          @id @default(uuid())
-  name           String
-  slug           String          @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  deletedAt      DateTime?
-  memberships    Membership[]
-  subscription   Subscription?
-  invoices       Invoice[]
-  payments       Payment[]
-  services       Service[]
-  flags          TenantFlag[]
-  auditLogs      AuditLog[]
-  serviceActions ServiceAction[]
+  id               String            @id @default(uuid())
+  name             String
+  slug             String            @unique
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  memberships      Membership[]
+  subscription     Subscription?
+  invoices         Invoice[]
+  payments         Payment[]
+  services         Service[]
+  flags            TenantFlag[]
+  auditLogs        AuditLog[]
+  serviceActions   ServiceAction[]
+  paymentCheckouts PaymentCheckout[]
 
   @@index([slug])
 }
@@ -163,44 +171,46 @@ model Verification {
 }
 
 model Plan {
-  id            String         @id @default(uuid())
-  name          String
-  slug          String         @unique
-  type          PlanType       @default(SUBSCRIPTION)
-  isPermanent   Boolean        @default(false)
-  priceMinor    Int            @default(0)
-  currency      Currency       @default(USD)
-  interval      String         @default("month")
-  trialDays     Int            @default(0)
-  provider      PaymentProvider @default(STRIPE)
-  providerPriceId String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  deletedAt     DateTime?
-  subscriptions Subscription[]
+  id               String            @id @default(uuid())
+  name             String
+  slug             String            @unique
+  type             PlanType          @default(SUBSCRIPTION)
+  isPermanent      Boolean           @default(false)
+  priceMinor       Int               @default(0)
+  currency         Currency          @default(USD)
+  interval         String            @default("month")
+  trialDays        Int               @default(0)
+  provider         PaymentProvider   @default(STRIPE)
+  providerPriceId  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  subscriptions    Subscription[]
+  paymentCheckouts PaymentCheckout[]
 
   @@index([slug])
 }
 
 model Subscription {
-  id                   String             @id @default(uuid())
-  tenantId             String             @unique
-  planId               String
-  status               SubscriptionStatus @default(TRIALING)
-  currentPeriodStart   DateTime           @default(now())
-  currentPeriodEnd     DateTime
-  serialKey            String?            @unique
-  cancelAt             DateTime?
-  graceEndsAt          DateTime?
-  disabledAt           DateTime?
-  providerCustomerId   String?
+  id                     String             @id @default(uuid())
+  tenantId               String             @unique
+  planId                 String
+  status                 SubscriptionStatus @default(TRIALING)
+  currentPeriodStart     DateTime           @default(now())
+  currentPeriodEnd       DateTime
+  serialKey              String?            @unique
+  cancelAt               DateTime?
+  graceEndsAt            DateTime?
+  disabledAt             DateTime?
+  providerCustomerId     String?
   providerSubscriptionId String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  deletedAt            DateTime?
-  tenant               Tenant             @relation(fields: [tenantId], references: [id])
-  plan                 Plan               @relation(fields: [planId], references: [id])
-  invoices             Invoice[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+  tenant                 Tenant             @relation(fields: [tenantId], references: [id])
+  plan                   Plan               @relation(fields: [planId], references: [id])
+  invoices               Invoice[]
+  paymentCheckouts       PaymentCheckout[]
 
   @@index([tenantId, createdAt])
   @@index([status])
@@ -227,37 +237,62 @@ model Invoice {
 }
 
 model Payment {
-  id                    String        @id @default(uuid())
-  tenantId              String
-  invoiceId             String?
-  amountMinor           Int
-  currency              Currency      @default(USD)
-  status                PaymentStatus @default(PENDING)
-  provider              PaymentProvider @default(STRIPE)
-  providerPaymentId     String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  deletedAt             DateTime?
-  tenant                Tenant        @relation(fields: [tenantId], references: [id])
-  invoice               Invoice?      @relation(fields: [invoiceId], references: [id])
+  id                String          @id @default(uuid())
+  tenantId          String
+  invoiceId         String?
+  amountMinor       Int
+  currency          Currency        @default(USD)
+  status            PaymentStatus   @default(PENDING)
+  provider          PaymentProvider @default(STRIPE)
+  providerPaymentId String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime?
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
+  invoice           Invoice?        @relation(fields: [invoiceId], references: [id])
 
   @@index([tenantId, createdAt])
 }
 
 model Service {
-  id           String              @id @default(uuid())
-  tenantId     String
-  name         String
-  controlType  ServiceControlType  @default(ENTITLEMENT)
-  endpointUrl  String?
-  deployStatus ServiceDeployStatus @default(HEALTHY)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  deletedAt    DateTime?
-  tenant       Tenant              @relation(fields: [tenantId], references: [id])
-  actions      ServiceAction[]
+  id                    String              @id @default(uuid())
+  tenantId              String
+  name                  String
+  controlType           ServiceControlType  @default(ENTITLEMENT)
+  endpointUrl           String?
+  deployStatus          ServiceDeployStatus @default(HEALTHY)
+  paymentCallbackUrl    String?
+  paymentCallbackSecret String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+  tenant                Tenant              @relation(fields: [tenantId], references: [id])
+  actions               ServiceAction[]
+  paymentCheckouts      PaymentCheckout[]
 
   @@index([tenantId, createdAt])
+}
+
+model PaymentCheckout {
+  id                String          @id @default(uuid())
+  tenantId          String
+  serviceId         String
+  subscriptionId    String?
+  planId            String
+  provider          PaymentProvider
+  providerPaymentId String?         @unique
+  status            CheckoutStatus  @default(PENDING)
+  returnUrl         String?
+  expiresAt         DateTime
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
+  service           Service         @relation(fields: [serviceId], references: [id])
+  subscription      Subscription?   @relation(fields: [subscriptionId], references: [id])
+  plan              Plan            @relation(fields: [planId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([serviceId, status])
 }
 
 model ServiceAction {

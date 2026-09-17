@@ -25,6 +25,8 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiPaymentsZibalCallbackRouteImport } from './routes/api/payments/zibal/callback'
 import { Route as ApiV1EntitlementsTenantIdRouteImport } from './routes/api/v1/entitlements/$tenantId'
+import { Route as ApiV1PaymentsCheckoutRouteImport } from './routes/api/v1/payments/checkout'
+import { Route as ApiV1PaymentsCheckoutsIdRouteImport } from './routes/api/v1/payments/checkouts/$id'
 
 const ProtectedRoute = ProtectedRouteImport.update({
   id: '/_protected',
@@ -107,6 +109,17 @@ const ApiV1EntitlementsTenantIdRoute =
     path: '/api/v1/entitlements/$tenantId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiV1PaymentsCheckoutRoute = ApiV1PaymentsCheckoutRouteImport.update({
+  id: '/api/v1/payments/checkout',
+  path: '/api/v1/payments/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1PaymentsCheckoutsIdRoute =
+  ApiV1PaymentsCheckoutsIdRouteImport.update({
+    id: '/api/v1/payments/checkouts/$id',
+    path: '/api/v1/payments/checkouts/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ProtectedIndexRoute
@@ -124,6 +137,8 @@ export interface FileRoutesByFullPath {
   '/tenants/': typeof ProtectedTenantsIndexRoute
   '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
+  '/api/v1/payments/checkout': typeof ApiV1PaymentsCheckoutRoute
+  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -141,6 +156,8 @@ export interface FileRoutesByTo {
   '/tenants': typeof ProtectedTenantsIndexRoute
   '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
+  '/api/v1/payments/checkout': typeof ApiV1PaymentsCheckoutRoute
+  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -160,6 +177,8 @@ export interface FileRoutesById {
   '/_protected/tenants/': typeof ProtectedTenantsIndexRoute
   '/api/payments/zibal/callback': typeof ApiPaymentsZibalCallbackRoute
   '/api/v1/entitlements/$tenantId': typeof ApiV1EntitlementsTenantIdRoute
+  '/api/v1/payments/checkout': typeof ApiV1PaymentsCheckoutRoute
+  '/api/v1/payments/checkouts/$id': typeof ApiV1PaymentsCheckoutsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -179,6 +198,8 @@ export interface FileRouteTypes {
     | '/tenants/'
     | '/api/payments/zibal/callback'
     | '/api/v1/entitlements/$tenantId'
+    | '/api/v1/payments/checkout'
+    | '/api/v1/payments/checkouts/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -196,6 +217,8 @@ export interface FileRouteTypes {
     | '/tenants'
     | '/api/payments/zibal/callback'
     | '/api/v1/entitlements/$tenantId'
+    | '/api/v1/payments/checkout'
+    | '/api/v1/payments/checkouts/$id'
   id:
     | '__root__'
     | '/_protected'
@@ -214,6 +237,8 @@ export interface FileRouteTypes {
     | '/_protected/tenants/'
     | '/api/payments/zibal/callback'
     | '/api/v1/entitlements/$tenantId'
+    | '/api/v1/payments/checkout'
+    | '/api/v1/payments/checkouts/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -224,6 +249,8 @@ export interface RootRouteChildren {
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiPaymentsZibalCallbackRoute: typeof ApiPaymentsZibalCallbackRoute
   ApiV1EntitlementsTenantIdRoute: typeof ApiV1EntitlementsTenantIdRoute
+  ApiV1PaymentsCheckoutRoute: typeof ApiV1PaymentsCheckoutRoute
+  ApiV1PaymentsCheckoutsIdRoute: typeof ApiV1PaymentsCheckoutsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -340,6 +367,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1EntitlementsTenantIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/payments/checkout': {
+      id: '/api/v1/payments/checkout'
+      path: '/api/v1/payments/checkout'
+      fullPath: '/api/v1/payments/checkout'
+      preLoaderRoute: typeof ApiV1PaymentsCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/payments/checkouts/$id': {
+      id: '/api/v1/payments/checkouts/$id'
+      path: '/api/v1/payments/checkouts/$id'
+      fullPath: '/api/v1/payments/checkouts/$id'
+      preLoaderRoute: typeof ApiV1PaymentsCheckoutsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -379,6 +420,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiPaymentsZibalCallbackRoute: ApiPaymentsZibalCallbackRoute,
   ApiV1EntitlementsTenantIdRoute: ApiV1EntitlementsTenantIdRoute,
+  ApiV1PaymentsCheckoutRoute: ApiV1PaymentsCheckoutRoute,
+  ApiV1PaymentsCheckoutsIdRoute: ApiV1PaymentsCheckoutsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

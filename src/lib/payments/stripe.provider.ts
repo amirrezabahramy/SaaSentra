@@ -25,6 +25,7 @@ export const stripeProvider: PaymentProviderAdapter = {
       'subscription_data[metadata][tenantId]': input.tenantId,
       'subscription_data[metadata][planId]': input.planId,
     })
+    if (input.checkoutId) params.set('client_reference_id', input.checkoutId)
     if (input.subscriptionId) {
       params.set('metadata[subscriptionId]', input.subscriptionId)
       params.set(

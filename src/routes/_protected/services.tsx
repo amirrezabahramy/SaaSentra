@@ -227,6 +227,8 @@ type ServiceFormValue = {
   controlType: 'ENTITLEMENT' | 'TOKEN' | 'WEBHOOK' | 'INFRA'
   endpointUrl?: string | null
   deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE'
+  paymentCallbackUrl?: string | null
+  paymentCallbackSecret?: string | null
 }
 
 function ServiceForm({
@@ -248,11 +250,15 @@ function ServiceForm({
       controlType: initial?.controlType ?? 'ENTITLEMENT',
       endpointUrl: initial?.endpointUrl ?? '',
       deployStatus: initial?.deployStatus ?? 'HEALTHY',
+      paymentCallbackUrl: initial?.paymentCallbackUrl ?? '',
+      paymentCallbackSecret: '',
     },
     onSubmit: ({ value }) =>
       onSubmit({
         ...value,
         endpointUrl: value.endpointUrl.trim() || null,
+        paymentCallbackUrl: value.paymentCallbackUrl.trim() || null,
+        paymentCallbackSecret: value.paymentCallbackSecret.trim() || null,
       }),
   })
   return (
@@ -270,6 +276,12 @@ function ServiceForm({
           ['controlType', LL.crud.controlType(), 'select'],
           ['endpointUrl', LL.crud.endpointUrl(), 'input'],
           ['deployStatus', LL.crud.deployStatus(), 'select'],
+          ['paymentCallbackUrl', LL.services.paymentCallbackUrl(), 'input'],
+          [
+            'paymentCallbackSecret',
+            LL.services.paymentCallbackSecret(),
+            'input',
+          ],
         ] as const
       ).map(([name, label, kind]) => (
         <form.Field key={name} name={name}>

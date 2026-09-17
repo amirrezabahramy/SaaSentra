@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { db } from '#/db'
 import { ALLOWED_TRANSITIONS, transitionSubscription } from '#/lib/lifecycle'
+import { deliverPaymentCallback } from '#/lib/payments/headless'
+import { settleVerifiedPayment } from '#/lib/payments/orchestrator'
 import {
   record,
   numberValue,
@@ -159,8 +161,54 @@ async function handleEvent(
   const object = eventObject(event)
   const meta = metadata(object.metadata)
   if (type === 'checkout.session.completed') {
+    const checkoutId = stringValue(object.client_reference_id)
     const subscriptionId = stringValue(meta.subscriptionId) ?? subscription?.id
-    if (subscriptionId)
+    const paymentIntent = stringValue(object.payment_intent)
+    const paid = stringValue(object.payment_status) === 'paid'
+    if (checkoutId && subscriptionId && paymentIntent && paid) {
+      const checkout = await db.paymentCheckout.findUnique({
+        where: { id: checkoutId },
+        include: { plan: true, service: true },
+      })
+      if (checkout && checkout.status === 'PENDING') {
+        const settled = await settleVerifiedPayment({
+          provider: 'STRIPE',
+          subscriptionId,
+          checkoutId,
+          verified: {
+            providerPaymentId: paymentIntent,
+            status: 'SUCCEEDED',
+            amountMinor: numberValue(object.amount_total),
+            currency: currencyValue(stringValue(object.currency)),
+          },
+        })
+        if (!settled.duplicate) {
+          const updated = await db.paymentCheckout.findUniqueOrThrow({
+            where: { id: checkout.id },
+            include: {
+              subscription: { include: { plan: true } },
+              service: true,
+            },
+          })
+          await deliverPaymentCallback({
+            url: updated.service.paymentCallbackUrl,
+            secret: updated.service.paymentCallbackSecret,
+            payload: {
+              event: 'payment.succeeded',
+              checkoutId: updated.id,
+              tenantId: updated.tenantId,
+              subscriptionId: updated.subscription?.id,
+              plan: updated.subscription?.plan.slug,
+              serialKey: updated.subscription?.serialKey,
+              periodEnd: updated.subscription?.plan.isPermanent
+                ? null
+                : updated.subscription?.currentPeriodEnd.toISOString(),
+              paymentId: paymentIntent,
+            },
+          })
+        }
+      }
+    } else if (subscriptionId)
       await transitionIfAllowed(
         subscriptionId,
         'ACTIVE',

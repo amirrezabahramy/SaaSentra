@@ -51,7 +51,10 @@ export const zibalProvider: PaymentProviderAdapter = {
       amount: input.amountMinor,
       callbackUrl: input.callbackUrl,
       description: `Subscription payment for tenant ${input.tenantId}`,
-      orderId: input.subscriptionId ?? `${input.tenantId}-${Date.now()}`,
+      orderId:
+        input.checkoutId ??
+        input.subscriptionId ??
+        `${input.tenantId}-${Date.now()}`,
     })
     if (numberValue(result.resultCode) !== 100)
       throw new Error(zibalError(result, 'Zibal payment request failed'))

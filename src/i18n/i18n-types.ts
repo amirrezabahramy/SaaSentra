@@ -438,6 +438,14 @@ type RootTranslation = {
      * A​r​c​h​i​v​e​ ​s​e​r​v​i​c​e
      */
     archive: string
+    /**
+     * P​a​y​m​e​n​t​ ​c​a​l​l​b​a​c​k​ ​U​R​L
+     */
+    paymentCallbackUrl: string
+    /**
+     * P​a​y​m​e​n​t​ ​c​a​l​l​b​a​c​k​ ​s​e​c​r​e​t
+     */
+    paymentCallbackSecret: string
   }
   flags: {
     /**
@@ -1263,6 +1271,14 @@ export type TranslationFunctions = {
      * Archive service
      */
     archive: () => LocalizedString
+    /**
+     * Payment callback URL
+     */
+    paymentCallbackUrl: () => LocalizedString
+    /**
+     * Payment callback secret
+     */
+    paymentCallbackSecret: () => LocalizedString
   }
   flags: {
     /**

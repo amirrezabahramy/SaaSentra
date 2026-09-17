@@ -59,6 +59,14 @@ const serviceSchema = z.object({
   controlType: z.enum(['ENTITLEMENT', 'TOKEN', 'WEBHOOK', 'INFRA']),
   endpointUrl: z.string().trim().url().nullable().optional(),
   deployStatus: z.enum(['HEALTHY', 'DEGRADED', 'OFFLINE']),
+  paymentCallbackUrl: z.string().trim().url().nullable().optional(),
+  paymentCallbackSecret: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .nullable()
+    .optional(),
 })
 const serviceUpdateSchema = serviceSchema.extend({ id: z.string().uuid() })
 const serviceArchiveSchema = z.object({
@@ -297,6 +305,8 @@ export const createService = createServerFn({ method: 'POST' })
         data: {
           ...data,
           endpointUrl: data.endpointUrl ?? null,
+          paymentCallbackUrl: data.paymentCallbackUrl ?? null,
+          paymentCallbackSecret: data.paymentCallbackSecret ?? null,
         },
       })
       await createAudit(tx, {
@@ -324,6 +334,10 @@ export const updateService = createServerFn({ method: 'POST' })
           controlType: data.controlType,
           endpointUrl: data.endpointUrl ?? null,
           deployStatus: data.deployStatus,
+          paymentCallbackUrl: data.paymentCallbackUrl ?? null,
+          ...(data.paymentCallbackSecret
+            ? { paymentCallbackSecret: data.paymentCallbackSecret }
+            : {}),
         },
       })
       await createAudit(tx, {
@@ -875,6 +889,7 @@ export const getServices = createServerFn({ method: 'GET' })
         name: service.name,
         controlType: service.controlType,
         deployStatus: service.deployStatus,
+        paymentCallbackUrl: service.paymentCallbackUrl,
         tenantId: service.tenantId,
         tenantName: service.tenant.name,
         archived: Boolean(service.deletedAt),

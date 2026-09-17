@@ -3,6 +3,7 @@ import type { Currency, PaymentProvider } from '#/generated/prisma/client'
 export type { Currency, PaymentProvider }
 
 export type CreatePaymentInput = {
+  checkoutId?: string
   tenantId: string
   planId: string
   providerPriceId?: string

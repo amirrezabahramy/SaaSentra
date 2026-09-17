@@ -123,6 +123,8 @@ const fa = {
     create: 'ایجاد سرویس',
     edit: 'ویرایش سرویس',
     archive: 'آرشیو سرویس',
+    paymentCallbackUrl: 'آدرس callback پرداخت',
+    paymentCallbackSecret: 'کلید callback پرداخت',
   },
   flags: {
     kicker: 'پیکربندی',

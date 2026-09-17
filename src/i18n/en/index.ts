@@ -123,6 +123,8 @@ const en = {
     create: 'Create service',
     edit: 'Edit service',
     archive: 'Archive service',
+    paymentCallbackUrl: 'Payment callback URL',
+    paymentCallbackSecret: 'Payment callback secret',
   },
   flags: {
     kicker: 'Configuration',

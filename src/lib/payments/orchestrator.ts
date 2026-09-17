@@ -1,4 +1,5 @@
 import { db } from '#/db'
+import { generateSerialKey } from '#/lib/lifecycle'
 import type { PaymentProvider, VerifiedPayment } from './types'
 
 const permanentPeriodEnd = new Date('9999-12-31T23:59:59.999Z')
@@ -24,6 +25,7 @@ export async function settleVerifiedPayment(input: {
   provider: PaymentProvider
   subscriptionId: string
   verified: VerifiedPayment
+  checkoutId?: string
 }) {
   if (input.verified.status !== 'SUCCEEDED')
     throw new Error('Payment was not successful')
@@ -90,8 +92,21 @@ export async function settleVerifiedPayment(input: {
         ),
         graceEndsAt: null,
         disabledAt: null,
+        serialKey:
+          subscription.plan.type === 'SERIAL_KEY'
+            ? (subscription.serialKey ?? generateSerialKey())
+            : null,
       },
     })
+    if (input.checkoutId) {
+      await tx.paymentCheckout.update({
+        where: { id: input.checkoutId },
+        data: {
+          status: 'SUCCEEDED',
+          providerPaymentId: input.verified.providerPaymentId,
+        },
+      })
+    }
     await tx.auditLog.create({
       data: {
         tenantId: subscription.tenantId,
