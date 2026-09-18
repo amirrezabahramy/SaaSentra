@@ -26,6 +26,9 @@ export const Route = createFileRoute('/api/v1/payments/checkouts/$id')({
           status: checkout.status,
           provider: checkout.provider,
           plan: checkout.plan.slug,
+          planType: checkout.plan.type,
+          tenantId: checkout.tenantId,
+          serviceId: checkout.serviceId,
           subscription: checkout.subscription
             ? {
                 id: checkout.subscription.id,

@@ -172,6 +172,7 @@ export async function getEntitlement(
     return {
       active: false,
       plan: null,
+      planId: null,
       flags: {},
       periodEnd: null,
       planType: null,
@@ -194,6 +195,7 @@ export async function getEntitlement(
     return {
       active: false,
       plan: subscription.plan.slug,
+      planId: subscription.planId,
       flags: {},
       periodEnd: subscription.plan.isPermanent
         ? null
@@ -245,6 +247,7 @@ export async function getEntitlement(
   return {
     active,
     plan: subscription.plan.slug,
+    planId: subscription.planId,
     planType: subscription.plan.type,
     flags,
     periodEnd: subscription.plan.isPermanent
