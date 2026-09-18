@@ -15,9 +15,8 @@ const ownerEmail = process.env.OWNER_EMAIL ?? 'owner@example.com'
 const ownerPassword = process.env.OWNER_PASSWORD ?? 'Owner123!'
 const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@example.com'
 const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin123!'
-const starterStripePriceId =
-  process.env.STRIPE_PRICE_STARTER ?? 'price_starter_test'
-const proStripePriceId = process.env.STRIPE_PRICE_PRO ?? 'price_pro_test'
+const starterStripePriceId = 'price_starter_test'
+const proStripePriceId = 'price_pro_test'
 
 async function main() {
   // --- Plans -------------------------------------------------------------
@@ -51,16 +50,22 @@ async function main() {
   })
   await db.plan.upsert({
     where: { slug: 'lifetime-serial' },
-    update: { type: 'SERIAL_KEY', isPermanent: true },
+    update: {
+      type: 'SERIAL_KEY',
+      isPermanent: true,
+      provider: 'ZIBAL',
+      currency: 'IRR',
+    },
     create: {
       name: 'Lifetime Serial',
       slug: 'lifetime-serial',
       type: 'SERIAL_KEY',
       isPermanent: true,
       priceMinor: 9900,
-      currency: 'USD',
+      currency: 'IRR',
       interval: 'lifetime',
       trialDays: 0,
+      provider: 'ZIBAL',
     },
   })
 

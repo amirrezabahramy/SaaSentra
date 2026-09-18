@@ -234,7 +234,8 @@ function Subscriptions() {
                 <button
                   type="button"
                   onClick={() => setDialog(row)}
-                  className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
+                  disabled={Boolean(row.deletedAt)}
+                  className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {LL.subscriptions.edit()}
                 </button>
@@ -341,20 +342,6 @@ type SubscriptionFormValue = {
   confirmation?: string
 }
 
-const allowedStatusChanges: Record<
-  (typeof statuses)[number],
-  readonly (typeof statuses)[number][]
-> = {
-  TRIALING: ['ACTIVE', 'PAST_DUE', 'CANCELED'],
-  ACTIVE: ['PAST_DUE', 'CANCELED'],
-  PAST_DUE: ['GRACE_PERIOD', 'ACTIVE'],
-  GRACE_PERIOD: ['DISABLED', 'ACTIVE'],
-  DISABLED: ['ACTIVE', 'ARCHIVED'],
-  CANCELED: [],
-  DISABLED_AT_PERIOD_END: ['DISABLED'],
-  ARCHIVED: [],
-}
-
 function SubscriptionForm({
   tenants,
   plans,
@@ -447,7 +434,6 @@ function SubscriptionForm({
           </p>
           <form.Field name="status">
             {(field) => {
-              const currentStatus = initial.status
               return (
                 <label className="block text-sm font-semibold">
                   {LL.crud.status()}
@@ -464,10 +450,7 @@ function SubscriptionForm({
                       <option
                         key={status}
                         value={status}
-                        disabled={
-                          status !== currentStatus &&
-                          !allowedStatusChanges[currentStatus].includes(status)
-                        }
+                        disabled={status === 'ARCHIVED'}
                       >
                         {LL.status[status]()}
                       </option>

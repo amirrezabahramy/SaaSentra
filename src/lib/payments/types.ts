@@ -6,6 +6,8 @@ export type CreatePaymentInput = {
   checkoutId?: string
   tenantId: string
   planId: string
+  planType: 'SUBSCRIPTION' | 'SERIAL_KEY'
+  isPermanent: boolean
   providerPriceId?: string
   amountMinor: number
   currency: Currency

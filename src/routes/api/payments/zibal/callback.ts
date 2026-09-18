@@ -64,7 +64,11 @@ export const Route = createFileRoute('/api/payments/zibal/callback')({
               verified,
             })
             return redirectToCheckout('success', trackId)
-          } catch {
+          } catch (error) {
+            console.error('[zibal] legacy payment settlement failed', {
+              trackId,
+              error: error instanceof Error ? error.message : String(error),
+            })
             return redirectToCheckout('canceled', trackId)
           }
         }
@@ -96,7 +100,12 @@ export const Route = createFileRoute('/api/payments/zibal/callback')({
             checkout.id,
             settled.returnUrl,
           )
-        } catch {
+        } catch (error) {
+          console.error('[zibal] payment settlement failed', {
+            trackId,
+            checkoutId: checkout.id,
+            error: error instanceof Error ? error.message : String(error),
+          })
           return redirectToCheckout('canceled', trackId)
         }
       },

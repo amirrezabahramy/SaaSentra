@@ -26,6 +26,8 @@ export const createCheckoutSession = createServerFn({ method: 'POST' })
     const checkout = await resolvePaymentProvider(plan.provider).createPayment({
       tenantId: tenant.id,
       planId: plan.id,
+      planType: plan.type,
+      isPermanent: plan.isPermanent,
       providerPriceId: plan.providerPriceId ?? undefined,
       amountMinor: plan.priceMinor,
       currency: plan.currency,

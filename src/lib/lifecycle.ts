@@ -30,13 +30,6 @@ function asJsonObject(value: Record<string, unknown>): Prisma.InputJsonObject {
   return value as Prisma.InputJsonObject
 }
 
-function canTransition(
-  from: SubscriptionStatus,
-  to: SubscriptionStatus,
-): boolean {
-  return ALLOWED_TRANSITIONS[from].includes(to)
-}
-
 function calculateCancellationRefundMinor(input: {
   status: SubscriptionStatus
   priceMinor: number
@@ -68,25 +61,8 @@ export async function transitionSubscription(
       return subscription
     }
 
-    if (subscription.status === 'CANCELED') {
-      throw new Error('Canceled subscriptions cannot be uncanceled')
-    }
     if (to === 'CANCELED' && subscription.plan.isPermanent) {
       throw new Error('Permanent subscriptions cannot be canceled')
-    }
-
-    const isAuthorizedImmediateDisable =
-      to === 'DISABLED' &&
-      options.allowImmediateDisable === true &&
-      Boolean(options.actorId)
-
-    if (
-      !canTransition(subscription.status, to) &&
-      !isAuthorizedImmediateDisable
-    ) {
-      throw new Error(
-        `Illegal subscription transition: ${subscription.status} -> ${to}`,
-      )
     }
 
     const now = new Date()
@@ -96,6 +72,13 @@ export async function transitionSubscription(
         status: to,
         ...(to === 'DISABLED' ? { disabledAt: now } : {}),
         ...(to === 'ACTIVE' ? { disabledAt: null, graceEndsAt: null } : {}),
+        ...(subscription.status === 'CANCELED' && to !== 'CANCELED'
+          ? {
+              canceledAt: null,
+              cancelAt: null,
+              cancellationRefundMinor: null,
+            }
+          : {}),
         ...(to === 'CANCELED'
           ? {
               canceledAt: now,
@@ -176,8 +159,10 @@ export async function getEntitlement(
       flags: {},
       periodEnd: null,
       planType: null,
-      status: subscription?.status ?? null,
-      reason: 'TENANT_ARCHIVED' as const,
+      serialKeyMatches: false,
+      serialKeySubmitted: false,
+      status: null,
+      reason: 'NO_SUBSCRIPTION' as const,
     }
   }
   if (!subscription) {
@@ -187,6 +172,8 @@ export async function getEntitlement(
       flags: {},
       periodEnd: null,
       planType: null,
+      serialKeyMatches: false,
+      serialKeySubmitted: false,
       status: null,
       reason: 'NO_SUBSCRIPTION' as const,
     }
@@ -194,25 +181,29 @@ export async function getEntitlement(
   if (subscription.deletedAt || subscription.status === 'ARCHIVED') {
     return {
       active: false,
-      plan: subscription.plan.slug,
-      planId: subscription.planId,
+      plan: null,
+      planId: null,
       flags: {},
-      periodEnd: subscription.plan.isPermanent
-        ? null
-        : subscription.currentPeriodEnd,
-      planType: subscription.plan.type,
-      status: subscription.status,
-      reason: 'SUBSCRIPTION_ARCHIVED' as const,
+      periodEnd: null,
+      planType: null,
+      serialKeyMatches: false,
+      serialKeySubmitted: false,
+      status: null,
+      reason: 'NO_SUBSCRIPTION' as const,
     }
   }
+  const serialKeySubmitted =
+    subscription.plan.type !== 'SERIAL_KEY' ||
+    subscription.submittedSerialKey === subscription.serialKey
+  const serialKeyMatches =
+    subscription.plan.type !== 'SERIAL_KEY' ||
+    (options.serialKey
+      ? options.serialKey === subscription.serialKey
+      : serialKeySubmitted)
   const hasValidSerialKey =
     !options.validateSerialKey ||
     subscription.plan.type !== 'SERIAL_KEY' ||
-    Boolean(
-      options.serialKey &&
-      options.serialKey === subscription.serialKey &&
-      subscription.submittedSerialKey === options.serialKey,
-    )
+    serialKeyMatches
   const flags = Object.fromEntries(
     tenant.flags
       .filter((tenantFlag) => !tenantFlag.flag.deletedAt)
@@ -227,13 +218,12 @@ export async function getEntitlement(
     subscription.status === 'DISABLED_AT_PERIOD_END'
   const active = hasValidSerialKey && isWithinPeriod && isLifecycleActive
 
-  const serialKeyMatches =
-    subscription.plan.type !== 'SERIAL_KEY' ||
-    options.serialKey === subscription.serialKey
   const reason = !hasValidSerialKey
-    ? serialKeyMatches
-      ? ('SERIAL_KEY_NOT_SUBMITTED' as const)
-      : ('SERIAL_KEY_INVALID' as const)
+    ? serialKeySubmitted
+      ? ('SERIAL_KEY_INVALID' as const)
+      : options.serialKey
+        ? ('SERIAL_KEY_INVALID' as const)
+        : ('SERIAL_KEY_NOT_SUBMITTED' as const)
     : !isWithinPeriod
       ? ('EXPIRED' as const)
       : !isLifecycleActive
@@ -249,6 +239,8 @@ export async function getEntitlement(
     plan: subscription.plan.slug,
     planId: subscription.planId,
     planType: subscription.plan.type,
+    serialKeyMatches,
+    serialKeySubmitted,
     flags,
     periodEnd: subscription.plan.isPermanent
       ? null

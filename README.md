@@ -80,9 +80,8 @@ curl -sS \
 
 ### 7. Stripe test-mode webhook testing
 
-Set real Stripe test-mode values in `.env.local`, including the `price_...` IDs
-for `STRIPE_PRICE_STARTER` and `STRIPE_PRICE_PRO`, then reseed so the plan
-records use those IDs:
+Set real Stripe test-mode values in the Stripe plans from the dashboard’s Plans
+section, then reseed only if you want to restore the default demo plan records:
 
 ```bash
 npm run db:seed

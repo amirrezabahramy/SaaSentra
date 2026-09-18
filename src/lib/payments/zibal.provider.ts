@@ -23,7 +23,12 @@ function stringValue(value: unknown): string | null {
 }
 
 function numberValue(value: unknown): number | null {
-  return typeof value === 'number' ? value : null
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
 }
 
 async function zibalRequest(path: string, body: ZibalRecord) {
@@ -33,8 +38,18 @@ async function zibalRequest(path: string, body: ZibalRecord) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ merchant: env.ZIBAL_MERCHANT, ...body }),
   })
-  const result: unknown = await response.json()
-  if (!response.ok) throw new Error('Zibal request failed')
+  const rawBody = await response.text()
+  let result: unknown = {}
+  try {
+    result = rawBody ? JSON.parse(rawBody) : {}
+  } catch {
+    throw new Error(`Zibal returned invalid JSON (${response.status})`)
+  }
+  if (!response.ok) {
+    throw new Error(
+      zibalError(record(result), `Zibal request failed (${response.status})`),
+    )
+  }
   return record(result)
 }
 
@@ -56,7 +71,7 @@ export const zibalProvider: PaymentProviderAdapter = {
         input.subscriptionId ??
         `${input.tenantId}-${Date.now()}`,
     })
-    if (numberValue(result.resultCode) !== 100)
+    if (numberValue(result.result) !== 100)
       throw new Error(zibalError(result, 'Zibal payment request failed'))
     const trackId = stringValue(result.trackId)
     if (!trackId) throw new Error('Zibal did not return a track ID')
@@ -67,7 +82,7 @@ export const zibalProvider: PaymentProviderAdapter = {
     const result = await zibalRequest('/v1/verify', {
       trackId: input.paymentId,
     })
-    const succeeded = numberValue(result.resultCode) === 100
+    const succeeded = numberValue(result.result) === 100
     return {
       providerPaymentId: input.paymentId,
       status: succeeded ? 'SUCCEEDED' : 'FAILED',

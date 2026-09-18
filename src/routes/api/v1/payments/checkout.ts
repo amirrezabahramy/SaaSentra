@@ -51,6 +51,11 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             { error: 'Stripe plans must use USD currency' },
             { status: 400 },
           )
+        if (plan.provider === 'STRIPE' && !plan.providerPriceId)
+          return Response.json(
+            { error: 'Stripe plans require a provider price ID' },
+            { status: 400 },
+          )
         if (
           tenant.subscription?.deletedAt ||
           tenant.subscription?.status === 'ARCHIVED'
@@ -123,6 +128,8 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             checkoutId: checkout.id,
             tenantId,
             planId,
+            planType: plan.type,
+            isPermanent: plan.isPermanent,
             providerPriceId: plan.providerPriceId ?? undefined,
             amountMinor: plan.priceMinor,
             currency: plan.currency,
@@ -145,6 +152,7 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             expiresAt: checkout.expiresAt.toISOString(),
           })
         } catch (error) {
+          console.log(error)
           await db.paymentCheckout.update({
             where: { id: checkout.id },
             data: { status: 'CANCELED' },

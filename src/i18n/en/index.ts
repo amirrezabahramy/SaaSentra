@@ -107,6 +107,8 @@ const en = {
     interval: 'Interval',
     trialDays: 'Trial days',
     providerPriceId: 'Provider price ID',
+    gatewayDetailsWarning:
+      'Gateway product and price settings are independent from these plan definitions. Configure them manually in the selected gateway and ensure the currency, amount, billing interval, and provider price ID match exactly.',
     provider: 'Payment provider',
     stripe: 'Stripe',
     zibal: 'Zibal',

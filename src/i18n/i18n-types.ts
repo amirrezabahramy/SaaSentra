@@ -372,6 +372,10 @@ type RootTranslation = {
 		 */
 		providerPriceId: string
 		/**
+		 * G​a​t​e​w​a​y​ ​p​r​o​d​u​c​t​ ​a​n​d​ ​p​r​i​c​e​ ​s​e​t​t​i​n​g​s​ ​a​r​e​ ​i​n​d​e​p​e​n​d​e​n​t​ ​f​r​o​m​ ​t​h​e​s​e​ ​p​l​a​n​ ​d​e​f​i​n​i​t​i​o​n​s​.​ ​C​o​n​f​i​g​u​r​e​ ​t​h​e​m​ ​m​a​n​u​a​l​l​y​ ​i​n​ ​t​h​e​ ​s​e​l​e​c​t​e​d​ ​g​a​t​e​w​a​y​ ​a​n​d​ ​e​n​s​u​r​e​ ​t​h​e​ ​c​u​r​r​e​n​c​y​,​ ​a​m​o​u​n​t​,​ ​b​i​l​l​i​n​g​ ​i​n​t​e​r​v​a​l​,​ ​a​n​d​ ​p​r​o​v​i​d​e​r​ ​p​r​i​c​e​ ​I​D​ ​m​a​t​c​h​ ​e​x​a​c​t​l​y​.
+		 */
+		gatewayDetailsWarning: string
+		/**
 		 * P​a​y​m​e​n​t​ ​p​r​o​v​i​d​e​r
 		 */
 		provider: string
@@ -1264,6 +1268,10 @@ export type TranslationFunctions = {
 		 * Provider price ID
 		 */
 		providerPriceId: () => LocalizedString
+		/**
+		 * Gateway product and price settings are independent from these plan definitions. Configure them manually in the selected gateway and ensure the currency, amount, billing interval, and provider price ID match exactly.
+		 */
+		gatewayDetailsWarning: () => LocalizedString
 		/**
 		 * Payment provider
 		 */

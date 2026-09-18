@@ -1,9 +1,11 @@
 export function formatCurrency(minor: number, currency = 'USD'): string {
+  const hasMinorUnitDisplay = currency !== 'IRR'
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-    maximumFractionDigits: 0,
-  }).format(currency === 'IRR' ? minor : minor / 100)
+    minimumFractionDigits: hasMinorUnitDisplay ? 2 : 0,
+    maximumFractionDigits: hasMinorUnitDisplay ? 2 : 0,
+  }).format(hasMinorUnitDisplay ? minor / 100 : minor)
 }
 
 export function formatDate(value: string | Date | null): string {

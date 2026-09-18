@@ -61,7 +61,12 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
           where: { id: params.tenantId, deletedAt: null },
           include: { subscription: { include: { plan: true } } },
         })
-        if (!tenant || !tenant.subscription) {
+        if (
+          !tenant ||
+          !tenant.subscription ||
+          tenant.subscription.deletedAt ||
+          tenant.subscription.status === 'ARCHIVED'
+        ) {
           return Response.json(
             { error: 'Tenant or subscription not found' },
             { status: 404 },

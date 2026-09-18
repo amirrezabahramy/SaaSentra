@@ -13,24 +13,28 @@ export const stripeProvider: PaymentProviderAdapter = {
   async createPayment(input: CreatePaymentInput): Promise<PaymentCheckout> {
     if (!input.providerPriceId)
       throw new Error('Stripe plan has no provider price ID')
+    const mode = input.planType === 'SERIAL_KEY' ? 'payment' : 'subscription'
     const params = new URLSearchParams({
-      mode: 'subscription',
+      mode,
       'line_items[0][price]': input.providerPriceId,
       'line_items[0][quantity]': '1',
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       'metadata[tenantId]': input.tenantId,
       'metadata[planId]': input.planId,
-      'subscription_data[metadata][tenantId]': input.tenantId,
-      'subscription_data[metadata][planId]': input.planId,
     })
+    if (mode === 'subscription') {
+      params.set('subscription_data[metadata][tenantId]', input.tenantId)
+      params.set('subscription_data[metadata][planId]', input.planId)
+    }
     if (input.checkoutId) params.set('client_reference_id', input.checkoutId)
     if (input.subscriptionId) {
       params.set('metadata[subscriptionId]', input.subscriptionId)
-      params.set(
-        'subscription_data[metadata][subscriptionId]',
-        input.subscriptionId,
-      )
+      if (mode === 'subscription')
+        params.set(
+          'subscription_data[metadata][subscriptionId]',
+          input.subscriptionId,
+        )
     }
 
     const checkout = await stripeRequest<{ id?: unknown; url?: unknown }>(

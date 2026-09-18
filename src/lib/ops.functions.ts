@@ -704,8 +704,8 @@ export const updateSubscription = createServerFn({ method: 'POST' })
       where: { id: data.id, deletedAt: null },
       include: { plan: true },
     })
-    if (current.status === 'CANCELED') {
-      throw new Error('Canceled subscriptions can only be archived or deleted')
+    if (data.status === 'ARCHIVED') {
+      throw new Error('Subscriptions must be archived with the archive action')
     }
     const targetPlan = await db.plan.findUniqueOrThrow({
       where: { id: data.planId },

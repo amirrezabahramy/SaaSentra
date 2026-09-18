@@ -19,6 +19,7 @@ import {
   unarchivePlan,
   updatePlan,
 } from '#/lib/ops.functions'
+import { formatCurrency } from '#/lib/format'
 import { plansQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
 
@@ -146,8 +147,8 @@ function Plans() {
                 ) : null}
               </div>
               <p className="mt-4 text-sm text-(--sea-ink-soft)">
-                {plan.priceMinor} {plan.currency} · {plan.interval} ·{' '}
-                {plan.trialDays} {LL.plans.trialDays()}
+                {formatCurrency(plan.priceMinor, plan.currency)} ·{' '}
+                {plan.interval} · {plan.trialDays} {LL.plans.trialDays()}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {plan.deletedAt ? (
@@ -292,6 +293,9 @@ function PlanForm({
               {label}
               <input
                 type={type}
+                min={type === 'number' ? 0 : undefined}
+                step={name === 'priceMinor' ? 1 : undefined}
+                inputMode={name === 'priceMinor' ? 'numeric' : undefined}
                 value={field.state.value}
                 onChange={(event) =>
                   field.handleChange(
@@ -307,6 +311,9 @@ function PlanForm({
           )}
         </form.Field>
       ))}
+      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 sm:col-span-2">
+        {LL.plans.gatewayDetailsWarning()}
+      </p>
       <form.Field name="provider">
         {(field) => (
           <label className="block text-sm font-semibold">
