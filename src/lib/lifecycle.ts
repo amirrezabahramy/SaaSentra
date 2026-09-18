@@ -10,11 +10,11 @@ export const ALLOWED_TRANSITIONS: Record<
 > = {
   TRIALING: ['ACTIVE', 'PAST_DUE', 'CANCELED'],
   ACTIVE: ['PAST_DUE', 'CANCELED'],
-  PAST_DUE: ['GRACE_PERIOD', 'ACTIVE'],
-  GRACE_PERIOD: ['DISABLED', 'ACTIVE'],
+  PAST_DUE: ['GRACE_PERIOD', 'ACTIVE', 'CANCELED'],
+  GRACE_PERIOD: ['DISABLED', 'ACTIVE', 'CANCELED'],
   DISABLED: ['ACTIVE', 'ARCHIVED'],
-  CANCELED: ['DISABLED_AT_PERIOD_END'],
-  DISABLED_AT_PERIOD_END: ['DISABLED'],
+  CANCELED: [],
+  DISABLED_AT_PERIOD_END: ['DISABLED', 'CANCELED'],
   ARCHIVED: [],
 }
 
@@ -37,6 +37,21 @@ function canTransition(
   return ALLOWED_TRANSITIONS[from].includes(to)
 }
 
+function calculateCancellationRefundMinor(input: {
+  status: SubscriptionStatus
+  priceMinor: number
+  currentPeriodStart: Date
+  currentPeriodEnd: Date
+  now: Date
+}) {
+  if (input.status === 'GRACE_PERIOD' || input.status === 'TRIALING') return 0
+  const total =
+    input.currentPeriodEnd.getTime() - input.currentPeriodStart.getTime()
+  const remaining = input.currentPeriodEnd.getTime() - input.now.getTime()
+  if (total <= 0 || remaining <= 0) return 0
+  return Math.floor(input.priceMinor * Math.min(remaining / total, 1))
+}
+
 /** Apply one legal subscription transition and record exactly one audit row. */
 export async function transitionSubscription(
   subscriptionId: string,
@@ -46,10 +61,18 @@ export async function transitionSubscription(
   return db.$transaction(async (tx) => {
     const subscription = await tx.subscription.findUniqueOrThrow({
       where: { id: subscriptionId },
+      include: { plan: true },
     })
 
     if (subscription.status === to) {
       return subscription
+    }
+
+    if (subscription.status === 'CANCELED') {
+      throw new Error('Canceled subscriptions cannot be uncanceled')
+    }
+    if (to === 'CANCELED' && subscription.plan.isPermanent) {
+      throw new Error('Permanent subscriptions cannot be canceled')
     }
 
     const isAuthorizedImmediateDisable =
@@ -73,6 +96,19 @@ export async function transitionSubscription(
         status: to,
         ...(to === 'DISABLED' ? { disabledAt: now } : {}),
         ...(to === 'ACTIVE' ? { disabledAt: null, graceEndsAt: null } : {}),
+        ...(to === 'CANCELED'
+          ? {
+              canceledAt: now,
+              cancelAt: now,
+              cancellationRefundMinor: calculateCancellationRefundMinor({
+                status: subscription.status,
+                priceMinor: subscription.plan.priceMinor,
+                currentPeriodStart: subscription.currentPeriodStart,
+                currentPeriodEnd: subscription.currentPeriodEnd,
+                now,
+              }),
+            }
+          : {}),
         ...(options.graceEndsAt !== undefined
           ? { graceEndsAt: options.graceEndsAt }
           : {}),
@@ -170,7 +206,11 @@ export async function getEntitlement(
   const hasValidSerialKey =
     !options.validateSerialKey ||
     subscription.plan.type !== 'SERIAL_KEY' ||
-    Boolean(options.serialKey && options.serialKey === subscription.serialKey)
+    Boolean(
+      options.serialKey &&
+      options.serialKey === subscription.serialKey &&
+      subscription.submittedSerialKey === options.serialKey,
+    )
   const flags = Object.fromEntries(
     tenant.flags
       .filter((tenantFlag) => !tenantFlag.flag.deletedAt)
@@ -179,17 +219,28 @@ export async function getEntitlement(
   const isWithinPeriod =
     subscription.plan.isPermanent || now < subscription.currentPeriodEnd
   const isLifecycleActive =
+    subscription.status === 'TRIALING' ||
     subscription.status === 'ACTIVE' ||
+    subscription.status === 'PAST_DUE' ||
     subscription.status === 'DISABLED_AT_PERIOD_END'
   const active = hasValidSerialKey && isWithinPeriod && isLifecycleActive
 
+  const serialKeyMatches =
+    subscription.plan.type !== 'SERIAL_KEY' ||
+    options.serialKey === subscription.serialKey
   const reason = !hasValidSerialKey
-    ? ('SERIAL_KEY_INVALID' as const)
+    ? serialKeyMatches
+      ? ('SERIAL_KEY_NOT_SUBMITTED' as const)
+      : ('SERIAL_KEY_INVALID' as const)
     : !isWithinPeriod
       ? ('EXPIRED' as const)
       : !isLifecycleActive
         ? subscription.status
-        : ('ACTIVE' as const)
+        : subscription.status === 'PAST_DUE'
+          ? ('PAST_DUE' as const)
+          : subscription.status === 'TRIALING'
+            ? ('TRIALING' as const)
+            : ('ACTIVE' as const)
 
   return {
     active,
@@ -206,12 +257,12 @@ export async function getEntitlement(
 
 export async function disable(
   subscriptionId: string,
-  reason: string,
+  reason?: string,
   options: Omit<LifecycleOptions, 'reason'> = {},
 ) {
   return transitionSubscription(subscriptionId, 'DISABLED', {
     ...options,
-    reason,
+    reason: reason ?? 'Subscription disabled by operator',
     allowImmediateDisable: true,
     metadata: { ...options.metadata, operatorDisable: true },
   })
@@ -225,9 +276,10 @@ export async function enable(
     where: { id: subscriptionId },
     select: { status: true },
   })
-  const target =
-    subscription.status === 'CANCELED' ? 'DISABLED_AT_PERIOD_END' : 'ACTIVE'
-  return transitionSubscription(subscriptionId, target, options)
+  if (subscription.status === 'CANCELED') {
+    throw new Error('Canceled subscriptions cannot be uncanceled')
+  }
+  return transitionSubscription(subscriptionId, 'ACTIVE', options)
 }
 
 export async function enterGracePeriod(

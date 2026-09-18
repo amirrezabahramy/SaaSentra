@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from '#/lib/format'
 import {
   disableSubscription,
   enableSubscription,
+  cancelSubscription,
   regenerateSerialKey,
   archiveTenant,
   updateTenant,
@@ -22,6 +23,7 @@ import { tenantDetailQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
 import { CrudDialog } from '#/components/admin/crud-dialog'
 import { SerialKey } from '#/components/admin/serial-key'
+import { normalizeStatusConfirmation } from '#/lib/status'
 
 export const Route = createFileRoute('/_protected/tenants/$id')({
   loader: ({ context, params }) =>
@@ -40,6 +42,7 @@ function TenantDetail() {
   const queryClient = useQueryClient()
   const disable = useServerFn(disableSubscription)
   const enable = useServerFn(enableSubscription)
+  const cancel = useServerFn(cancelSubscription)
   const regenerate = useServerFn(regenerateSerialKey)
   const update = useServerFn(updateTenant)
   const archive = useServerFn(archiveTenant)
@@ -48,11 +51,11 @@ function TenantDetail() {
   )
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<
-    'disable' | 'enable' | null
+    'disable' | 'enable' | 'cancel' | null
   >(null)
   const statusMutation = useMutation({
     mutationFn: async (input: {
-      action: 'disable' | 'enable'
+      action: 'disable' | 'enable' | 'cancel'
       subscriptionId: string
       reason: string
     }) =>
@@ -63,12 +66,19 @@ function TenantDetail() {
               reason: input.reason,
             },
           })
-        : enable({
-            data: {
-              subscriptionId: input.subscriptionId,
-              reason: input.reason,
-            },
-          }),
+        : input.action === 'enable'
+          ? enable({
+              data: {
+                subscriptionId: input.subscriptionId,
+                reason: input.reason,
+              },
+            })
+          : cancel({
+              data: {
+                subscriptionId: input.subscriptionId,
+                reason: input.reason,
+              },
+            }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
   const regenerateMutation = useMutation({
@@ -111,9 +121,12 @@ function TenantDetail() {
     },
     validators: {
       onSubmit: ({ value }) =>
-        !value.reason.trim() ||
-        value.confirmation !==
-          (pendingAction === 'enable' ? 'ENABLE' : 'DISABLE')
+        normalizeStatusConfirmation(value.confirmation) !==
+        (pendingAction === 'enable'
+          ? 'ENABLE'
+          : pendingAction === 'cancel'
+            ? 'CANCEL'
+            : 'DISABLE')
           ? LL.tenantDetail.confirmationRequired()
           : undefined,
     },
@@ -125,10 +138,22 @@ function TenantDetail() {
         description={LL.tenants.notFoundDescription()}
       />
     )
-  const canEnable = ['DISABLED', 'CANCELED', 'DISABLED_AT_PERIOD_END'].includes(
+  const canEnable = ['DISABLED', 'DISABLED_AT_PERIOD_END'].includes(
     tenant.subscription?.status ?? '',
   )
-  const actionWord = pendingAction === 'enable' ? 'ENABLE' : 'DISABLE'
+  const canCancel = Boolean(
+    tenant.subscription &&
+    !tenant.subscription.isPermanent &&
+    ['TRIALING', 'ACTIVE', 'PAST_DUE', 'GRACE_PERIOD'].includes(
+      tenant.subscription.status,
+    ),
+  )
+  const actionWord =
+    pendingAction === 'enable'
+      ? 'ENABLE'
+      : pendingAction === 'cancel'
+        ? 'CANCEL'
+        : 'DISABLE'
   return (
     <div className="mx-auto max-w-6xl">
       <Link
@@ -200,6 +225,18 @@ function TenantDetail() {
                     : formatDate(tenant.subscription.currentPeriodEnd)}
                 </span>
               </div>
+              {tenant.subscription.status === 'CANCELED' &&
+              tenant.subscription.cancellationRefundMinor !== null ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span>{LL.subscriptions.cancellationRefund()}</span>
+                  <strong>
+                    {formatCurrency(
+                      tenant.subscription.cancellationRefundMinor,
+                      tenant.subscription.planCurrency,
+                    )}
+                  </strong>
+                </div>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 {tenant.subscription.planType === 'SERIAL_KEY' ? (
                   <button
@@ -220,7 +257,6 @@ function TenantDetail() {
                   'PAST_DUE',
                   'GRACE_PERIOD',
                   'DISABLED',
-                  'CANCELED',
                   'DISABLED_AT_PERIOD_END',
                 ].includes(tenant.subscription.status) ? (
                   <button
@@ -238,6 +274,20 @@ function TenantDetail() {
                       : canEnable
                         ? LL.tenantDetail.enable()
                         : LL.tenantDetail.disable()}
+                  </button>
+                ) : null}
+                {canCancel ? (
+                  <button
+                    type="button"
+                    disabled={statusMutation.isPending}
+                    onClick={() => {
+                      setPendingAction('cancel')
+                      actionForm.reset()
+                      setActionError(null)
+                    }}
+                    className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50"
+                  >
+                    {LL.tenantDetail.dialogCancel()}
                   </button>
                 ) : null}
               </div>
@@ -354,7 +404,9 @@ function TenantDetail() {
             >
               {pendingAction === 'enable'
                 ? LL.tenantDetail.dialogEnable()
-                : LL.tenantDetail.dialogDisable()}
+                : pendingAction === 'cancel'
+                  ? LL.tenantDetail.dialogCancel()
+                  : LL.tenantDetail.dialogDisable()}
             </h2>
             <p className="mt-2 text-sm text-(--sea-ink-soft)">
               {LL.tenantDetail.dialogDescription()}
@@ -374,7 +426,7 @@ function TenantDetail() {
                       onChange={(event) =>
                         field.handleChange(event.target.value)
                       }
-                      placeholder={LL.tenantDetail.requiredReason()}
+                      placeholder={LL.tenantDetail.reason()}
                       className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
                     />
                   </label>
@@ -423,7 +475,9 @@ function TenantDetail() {
                         ? LL.tenantDetail.updating()
                         : pendingAction === 'enable'
                           ? LL.tenantDetail.yesEnable()
-                          : LL.tenantDetail.yesDisable()}
+                          : pendingAction === 'cancel'
+                            ? LL.tenantDetail.yesCancel()
+                            : LL.tenantDetail.yesDisable()}
                     </button>
                   )}
                 </actionForm.Subscribe>

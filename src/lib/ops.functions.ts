@@ -13,7 +13,7 @@ import {
 
 const reasonSchema = z.object({
   subscriptionId: z.string().uuid(),
-  reason: z.string().trim().min(1).max(500),
+  reason: z.string().trim().max(500).optional(),
 })
 const statusSchema = z.object({
   status: z
@@ -122,7 +122,7 @@ const subscriptionUpdateSchema = subscriptionCreateSchema.extend({
       'TRIALING',
     ])
     .optional(),
-  reason: z.string().trim().min(1).max(500),
+  reason: z.string().trim().max(500).optional(),
 })
 const subscriptionArchiveSchema = z.object({
   id: z.string().uuid(),
@@ -662,6 +662,7 @@ export const createSubscription = createServerFn({ method: 'POST' })
             deletedAt: null,
             status: 'TRIALING',
             serialKey: plan.type === 'SERIAL_KEY' ? generateSerialKey() : null,
+            submittedSerialKey: null,
           },
         })
         await createAudit(tx, {
@@ -680,6 +681,7 @@ export const createSubscription = createServerFn({ method: 'POST' })
           planId: data.planId,
           currentPeriodEnd: periodEnd,
           serialKey: plan.type === 'SERIAL_KEY' ? generateSerialKey() : null,
+          submittedSerialKey: null,
         },
       })
       await createAudit(tx, {
@@ -702,6 +704,15 @@ export const updateSubscription = createServerFn({ method: 'POST' })
       where: { id: data.id, deletedAt: null },
       include: { plan: true },
     })
+    if (current.status === 'CANCELED') {
+      throw new Error('Canceled subscriptions can only be archived or deleted')
+    }
+    const targetPlan = await db.plan.findUniqueOrThrow({
+      where: { id: data.planId },
+    })
+    if (data.status === 'CANCELED' && targetPlan.isPermanent) {
+      throw new Error('Permanent subscriptions cannot be canceled')
+    }
     if (data.tenantId !== current.tenantId) {
       const existing = await db.subscription.findUnique({
         where: { tenantId: data.tenantId },
@@ -718,9 +729,7 @@ export const updateSubscription = createServerFn({ method: 'POST' })
       })
     }
     return db.$transaction(async (tx) => {
-      const plan = await tx.plan.findUniqueOrThrow({
-        where: { id: data.planId },
-      })
+      const plan = targetPlan
       const periodEnd = plan.isPermanent
         ? new Date('9999-12-31T23:59:59.999Z')
         : data.periodEnd
@@ -738,6 +747,12 @@ export const updateSubscription = createServerFn({ method: 'POST' })
                 ? current.serialKey
                 : generateSerialKey()
               : null,
+          submittedSerialKey:
+            plan.type === 'SERIAL_KEY' &&
+            current.plan.type === 'SERIAL_KEY' &&
+            current.planId === data.planId
+              ? current.submittedSerialKey
+              : null,
         },
       })
       if (!targetStatus || targetStatus === current.status) {
@@ -747,7 +762,7 @@ export const updateSubscription = createServerFn({ method: 'POST' })
           action: 'subscription.updated',
           entityType: 'Subscription',
           entityId: subscription.id,
-          reason: data.reason,
+          reason: data.reason ?? 'Subscription updated by operator',
         })
       }
       return subscription
@@ -768,7 +783,10 @@ export const regenerateSerialKey = createServerFn({ method: 'POST' })
       }
       const updated = await tx.subscription.update({
         where: { id: subscription.id },
-        data: { serialKey: generateSerialKey() },
+        data: {
+          serialKey: generateSerialKey(),
+          submittedSerialKey: null,
+        },
       })
       await createAudit(tx, {
         tenantId: subscription.tenantId,
@@ -789,8 +807,8 @@ export const archiveSubscription = createServerFn({ method: 'POST' })
     const current = await db.subscription.findUniqueOrThrow({
       where: { id: data.id, deletedAt: null },
     })
-    if (!['DISABLED', 'ARCHIVED'].includes(current.status)) {
-      throw new Error('Only disabled subscriptions can be archived')
+    if (!['DISABLED', 'CANCELED', 'ARCHIVED'].includes(current.status)) {
+      throw new Error('Only disabled or canceled subscriptions can be archived')
     }
     if (current.status === 'DISABLED') {
       await transitionSubscription(data.id, 'ARCHIVED', {
@@ -820,6 +838,12 @@ export const unarchiveSubscription = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const actor = await actorId()
     return db.$transaction(async (tx) => {
+      const current = await tx.subscription.findUniqueOrThrow({
+        where: { id: data.id },
+      })
+      if (current.status === 'CANCELED') {
+        throw new Error('Canceled subscriptions cannot be restored')
+      }
       const subscription = await tx.subscription.update({
         where: { id: data.id },
         data: { deletedAt: null, status: 'DISABLED' },
@@ -1013,6 +1037,31 @@ export const enableSubscription = createServerFn({ method: 'POST' })
       reason: data.reason,
     }),
   )
+
+export const cancelSubscription = createServerFn({ method: 'POST' })
+  .validator((data: unknown) =>
+    z
+      .object({
+        subscriptionId: z.string().uuid(),
+        reason: z.string().trim().max(500).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    const subscription = await db.subscription.findUniqueOrThrow({
+      where: { id: data.subscriptionId, deletedAt: null },
+      include: { tenant: { include: { memberships: true } }, plan: true },
+    })
+    const member = subscription.tenant.memberships.find(
+      (membership) => membership.userId === actor && !membership.deletedAt,
+    )
+    if (!member) throw new Error('Only the tenant owner or an admin can cancel')
+    return transitionSubscription(data.subscriptionId, 'CANCELED', {
+      actorId: actor,
+      reason: data.reason ?? 'Subscription canceled by tenant operator',
+    })
+  })
 
 export const toggleTenantFlag = createServerFn({ method: 'POST' })
   .validator((data: unknown) => flagSchema.parse(data))

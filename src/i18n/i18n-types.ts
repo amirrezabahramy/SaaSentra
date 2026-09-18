@@ -290,13 +290,21 @@ type RootTranslation = {
 		 */
 		statusWarning: string
 		/**
-		 * T​y​p​e​ ​t​h​e​ ​n​e​w​ ​s​t​a​t​u​s​ ​i​n​ ​u​p​p​e​r​c​a​s​e​ ​t​o​ ​c​o​n​f​i​r​m
+		 * T​y​p​e​ ​t​h​e​ ​n​e​w​ ​s​t​a​t​u​s​ ​i​n​ ​u​p​p​e​r​c​a​s​e​ ​a​n​d​ ​r​e​p​l​a​c​e​ ​s​p​a​c​e​s​ ​w​i​t​h​ ​u​n​d​e​r​s​c​o​r​e​s
 		 */
 		statusChangeConfirmation: string
 		/**
-		 * e​.​g​.​ ​A​C​T​I​V​E
+		 * e​.​g​.​ ​D​I​S​A​B​L​E​D​_​A​T​_​P​E​R​I​O​D​_​E​N​D
 		 */
 		statusChangePlaceholder: string
+		/**
+		 * C​a​n​c​e​l​l​a​t​i​o​n​ ​i​s​ ​p​e​r​m​a​n​e​n​t​.​ ​I​t​ ​c​a​n​n​o​t​ ​b​e​ ​u​n​d​o​n​e​;​ ​t​h​e​ ​s​u​b​s​c​r​i​p​t​i​o​n​ ​c​a​n​ ​o​n​l​y​ ​b​e​ ​a​r​c​h​i​v​e​d​ ​o​r​ ​d​e​l​e​t​e​d​ ​a​f​t​e​r​w​a​r​d​.
+		 */
+		cancellationWarning: string
+		/**
+		 * E​l​i​g​i​b​l​e​ ​r​e​f​u​n​d
+		 */
+		cancellationRefund: string
 		/**
 		 * S​e​r​i​a​l​ ​k​e​y
 		 */
@@ -796,6 +804,10 @@ type RootTranslation = {
 		 */
 		dialogEnable: string
 		/**
+		 * C​a​n​c​e​l​ ​s​u​b​s​c​r​i​p​t​i​o​n
+		 */
+		dialogCancel: string
+		/**
 		 * T​h​i​s​ ​c​h​a​n​g​e​s​ ​t​h​e​ ​t​e​n​a​n​t​’​s​ ​a​c​c​e​s​s​ ​i​m​m​e​d​i​a​t​e​l​y​ ​a​n​d​ ​r​e​c​o​r​d​s​ ​a​n​ ​a​u​d​i​t​ ​e​v​e​n​t​.
 		 */
 		dialogDescription: string
@@ -839,6 +851,10 @@ type RootTranslation = {
 		 * Y​e​s​,​ ​d​i​s​a​b​l​e
 		 */
 		yesDisable: string
+		/**
+		 * Y​e​s​,​ ​c​a​n​c​e​l​ ​s​u​b​s​c​r​i​p​t​i​o​n
+		 */
+		yesCancel: string
 		/**
 		 * o​n
 		 */
@@ -1167,13 +1183,21 @@ export type TranslationFunctions = {
 		 */
 		statusWarning: () => LocalizedString
 		/**
-		 * Type the new status in uppercase to confirm
+		 * Type the new status in uppercase and replace spaces with underscores
 		 */
 		statusChangeConfirmation: () => LocalizedString
 		/**
-		 * e.g. ACTIVE
+		 * e.g. DISABLED_AT_PERIOD_END
 		 */
 		statusChangePlaceholder: () => LocalizedString
+		/**
+		 * Cancellation is permanent. It cannot be undone; the subscription can only be archived or deleted afterward.
+		 */
+		cancellationWarning: () => LocalizedString
+		/**
+		 * Eligible refund
+		 */
+		cancellationRefund: () => LocalizedString
 		/**
 		 * Serial key
 		 */
@@ -1673,6 +1697,10 @@ export type TranslationFunctions = {
 		 */
 		dialogEnable: () => LocalizedString
 		/**
+		 * Cancel subscription
+		 */
+		dialogCancel: () => LocalizedString
+		/**
 		 * This changes the tenant’s access immediately and records an audit event.
 		 */
 		dialogDescription: () => LocalizedString
@@ -1716,6 +1744,10 @@ export type TranslationFunctions = {
 		 * Yes, disable
 		 */
 		yesDisable: () => LocalizedString
+		/**
+		 * Yes, cancel subscription
+		 */
+		yesCancel: () => LocalizedString
 		/**
 		 * on
 		 */

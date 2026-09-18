@@ -43,8 +43,20 @@ export async function settleVerifiedPayment(input: {
     const targetPlan = input.planId
       ? await tx.plan.findUniqueOrThrow({ where: { id: input.planId } })
       : subscription.plan
-    if (subscription.status === 'ARCHIVED')
+    if (subscription.status === 'ARCHIVED' || subscription.deletedAt)
       throw new Error('Archived subscriptions cannot receive payments')
+    if (
+      subscription.status === 'CANCELED' ||
+      subscription.status === 'DISABLED_AT_PERIOD_END'
+    )
+      throw new Error('This subscription cannot receive payments')
+    if (
+      subscription.status === 'DISABLED' &&
+      subscription.currentPeriodEnd > new Date()
+    )
+      throw new Error(
+        'This subscription cannot be reactivated before its period ends',
+      )
     if (
       input.verified.amountMinor !== null &&
       input.verified.amountMinor !== targetPlan.priceMinor
@@ -99,6 +111,12 @@ export async function settleVerifiedPayment(input: {
         serialKey:
           targetPlan.type === 'SERIAL_KEY'
             ? (subscription.serialKey ?? generateSerialKey())
+            : null,
+        submittedSerialKey:
+          targetPlan.type === 'SERIAL_KEY' &&
+          subscription.plan.type === 'SERIAL_KEY' &&
+          targetPlan.id === subscription.plan.id
+            ? subscription.submittedSerialKey
             : null,
       },
     })

@@ -65,6 +65,16 @@ export async function runDunning(now = new Date()): Promise<void> {
     const email = subscription.tenant.memberships[0]?.user.email
 
     if (subscription.status === 'PAST_DUE') {
+      if (subscription.currentPeriodEnd > now) {
+        if (email) {
+          await sendNotice(
+            email,
+            'Payment failed',
+            'Your current paid period is still active. Please complete payment before it ends.',
+          )
+        }
+        continue
+      }
       const pastDueDays = wholeDaysUntil(subscription.updatedAt, now) * -1
       if (pastDueDays > PAST_DUE_GRACE_THRESHOLD_DAYS) {
         await enterGracePeriod(subscription.id, GRACE_PERIOD_DAYS, {

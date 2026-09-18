@@ -83,8 +83,12 @@ const en = {
     archive: 'Archive subscription',
     statusWarning:
       'Changing status here is an exceptional operation. Prefer changing it from the tenant panel unless necessary.',
-    statusChangeConfirmation: 'Type the new status in uppercase to confirm',
-    statusChangePlaceholder: 'e.g. ACTIVE',
+    statusChangeConfirmation:
+      'Type the new status in uppercase and replace spaces with underscores',
+    statusChangePlaceholder: 'e.g. DISABLED_AT_PERIOD_END',
+    cancellationWarning:
+      'Cancellation is permanent. It cannot be undone; the subscription can only be archived or deleted afterward.',
+    cancellationRefund: 'Eligible refund',
     serialKey: 'Serial key',
     regenerateKey: 'Regenerate key',
     copyKey: 'Copy key',
@@ -222,6 +226,7 @@ const en = {
     noLifecycleDescription: 'Subscription history will appear here.',
     dialogDisable: 'Disable subscription',
     dialogEnable: 'Re-enable subscription',
+    dialogCancel: 'Cancel subscription',
     dialogDescription:
       'This changes the tenant’s access immediately and records an audit event.',
     reason: 'Reason',
@@ -234,6 +239,7 @@ const en = {
     confirmationRequired: 'Confirmation is required',
     yesEnable: 'Yes, enable',
     yesDisable: 'Yes, disable',
+    yesCancel: 'Yes, cancel subscription',
     on: 'on',
     off: 'off',
   },

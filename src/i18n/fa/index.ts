@@ -83,8 +83,11 @@ const fa = {
     statusWarning:
       'تغییر وضعیت از این بخش یک عملیات استثنایی است. مگر در موارد ضروری، وضعیت را از پنل tenant تغییر دهید.',
     statusChangeConfirmation:
-      'برای تأیید، وضعیت جدید را با حروف بزرگ وارد کنید',
-    statusChangePlaceholder: 'مثلاً ACTIVE',
+      'برای تأیید، وضعیت را با حروف بزرگ و فاصله‌ها را با زیرخط وارد کنید',
+    statusChangePlaceholder: 'مثلاً DISABLED_AT_PERIOD_END',
+    cancellationWarning:
+      'لغو دائمی است و قابل بازگشت نیست؛ پس از آن اشتراک فقط قابل آرشیو یا حذف است.',
+    cancellationRefund: 'مبلغ قابل استرداد',
     serialKey: 'کلید سریال',
     regenerateKey: 'تولید مجدد کلید',
     copyKey: 'کپی کلید',
@@ -223,6 +226,7 @@ const fa = {
     noLifecycleDescription: 'تاریخچه اشتراک اینجا نمایش داده می‌شود.',
     dialogDisable: 'غیرفعال‌کردن اشتراک',
     dialogEnable: 'فعال‌سازی دوباره اشتراک',
+    dialogCancel: 'لغو اشتراک',
     dialogDescription:
       'این کار دسترسی مستأجر را فوراً تغییر می‌دهد و یک رویداد ثبت می‌کند.',
     reason: 'دلیل',
@@ -235,6 +239,7 @@ const fa = {
     confirmationRequired: 'تأیید الزامی است',
     yesEnable: 'بله، فعال‌سازی',
     yesDisable: 'بله، غیرفعال‌سازی',
+    yesCancel: 'بله، لغو اشتراک',
     on: 'روشن',
     off: 'خاموش',
   },

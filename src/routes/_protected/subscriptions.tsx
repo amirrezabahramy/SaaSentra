@@ -25,6 +25,7 @@ import {
 } from '#/lib/ops.functions'
 import { useI18nContext } from '#/i18n/i18n-react'
 import { SerialKey } from '#/components/admin/serial-key'
+import { normalizeStatusConfirmation } from '#/lib/status'
 
 export const Route = createFileRoute('/_protected/subscriptions')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -208,6 +209,16 @@ function Subscriptions() {
                     <SerialKey value={row.serialKey} />
                   </div>
                 ) : null}
+                {row.status === 'CANCELED' &&
+                row.cancellationRefundMinor !== null ? (
+                  <p className="mt-2 text-sm text-(--sea-ink-soft)">
+                    {LL.subscriptions.cancellationRefund()}:{' '}
+                    {formatCurrency(
+                      row.cancellationRefundMinor,
+                      row.plan.currency,
+                    )}
+                  </p>
+                ) : null}
               </div>
               <div className="flex items-center gap-3">
                 <span>
@@ -223,7 +234,7 @@ function Subscriptions() {
                 >
                   {LL.subscriptions.edit()}
                 </button>
-                {row.plan.type === 'SERIAL_KEY' && row.status !== 'ARCHIVED' ? (
+                {row.plan.type === 'SERIAL_KEY' && !row.deletedAt ? (
                   <button
                     type="button"
                     onClick={() => void regenerateMutation.mutateAsync(row.id)}
@@ -233,16 +244,20 @@ function Subscriptions() {
                     {LL.subscriptions.regenerateKey()}
                   </button>
                 ) : null}
-                {row.status === 'ARCHIVED' ? (
+                {row.deletedAt ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => void unarchiveMutation.mutateAsync(row.id)}
-                      disabled={unarchiveMutation.isPending}
-                      className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
-                    >
-                      {LL.crud.restore()}
-                    </button>
+                    {row.status !== 'CANCELED' ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void unarchiveMutation.mutateAsync(row.id)
+                        }
+                        disabled={unarchiveMutation.isPending}
+                        className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
+                      >
+                        {LL.crud.restore()}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => setDeleteId(row.id)}
@@ -256,7 +271,8 @@ function Subscriptions() {
                     type="button"
                     onClick={() => void archiveMutation.mutateAsync(row.id)}
                     disabled={
-                      archiveMutation.isPending || row.status !== 'DISABLED'
+                      archiveMutation.isPending ||
+                      !['DISABLED', 'CANCELED'].includes(row.status)
                     }
                     className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-40"
                   >
@@ -330,7 +346,7 @@ const allowedStatusChanges: Record<
   PAST_DUE: ['GRACE_PERIOD', 'ACTIVE'],
   GRACE_PERIOD: ['DISABLED', 'ACTIVE'],
   DISABLED: ['ACTIVE', 'ARCHIVED'],
-  CANCELED: ['DISABLED_AT_PERIOD_END'],
+  CANCELED: [],
   DISABLED_AT_PERIOD_END: ['DISABLED'],
   ARCHIVED: [],
 }
@@ -377,10 +393,7 @@ function SubscriptionForm({
     validators: {
       onSubmit: ({ value }) => {
         if (!initial || value.status === initial.status) return undefined
-        if (
-          !value.reason.trim() ||
-          value.confirmation.trim() !== value.status
-        ) {
+        if (normalizeStatusConfirmation(value.confirmation) !== value.status) {
           return LL.tenantDetail.confirmationRequired()
         }
         return undefined
@@ -473,6 +486,15 @@ function SubscriptionForm({
               </label>
             )}
           </form.Field>
+          <form.Subscribe selector={(state) => state.values.status}>
+            {(status) =>
+              status === 'CANCELED' ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                  {LL.subscriptions.cancellationWarning()}
+                </p>
+              ) : null
+            }
+          </form.Subscribe>
           <form.Field name="confirmation">
             {(field) => (
               <label className="block text-sm font-semibold">

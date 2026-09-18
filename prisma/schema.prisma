@@ -212,7 +212,10 @@ model Subscription {
   currentPeriodStart     DateTime           @default(now())
   currentPeriodEnd       DateTime
   serialKey              String?            @unique
+  submittedSerialKey     String?
   cancelAt               DateTime?
+  canceledAt             DateTime?
+  cancellationRefundMinor Int?
   graceEndsAt            DateTime?
   disabledAt             DateTime?
   providerCustomerId     String?

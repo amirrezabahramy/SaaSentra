@@ -51,11 +51,39 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             { error: 'Stripe plans must use USD currency' },
             { status: 400 },
           )
-        if (tenant.subscription?.status === 'ARCHIVED')
+        if (
+          tenant.subscription?.deletedAt ||
+          tenant.subscription?.status === 'ARCHIVED'
+        )
           return Response.json(
             { error: 'Archived subscriptions cannot be paid' },
             { status: 409 },
           )
+        if (
+          tenant.subscription?.status === 'DISABLED' &&
+          tenant.subscription.currentPeriodEnd > new Date()
+        ) {
+          return Response.json(
+            {
+              error:
+                'This subscription cannot be reactivated before its period ends',
+            },
+            { status: 409 },
+          )
+        }
+        if (
+          tenant.subscription &&
+          ['DISABLED_AT_PERIOD_END', 'CANCELED', 'ARCHIVED'].includes(
+            tenant.subscription.status,
+          )
+        ) {
+          return Response.json(
+            {
+              error: 'This subscription cannot be reactivated through payment',
+            },
+            { status: 409 },
+          )
+        }
 
         const now = new Date()
         const subscription = tenant.subscription
