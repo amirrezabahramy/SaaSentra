@@ -227,9 +227,11 @@ function TenantDetail() {
               </div>
               {tenant.subscription.status === 'CANCELED' &&
               tenant.subscription.cancellationRefundMinor !== null ? (
-                <div className="flex items-center justify-between text-sm">
-                  <span>{LL.subscriptions.cancellationRefund()}</span>
-                  <strong>
+                <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950">
+                  <span className="block text-xs font-bold uppercase tracking-wide text-amber-800">
+                    {LL.subscriptions.cancellationRefund()}
+                  </span>
+                  <strong className="mt-1 block text-lg">
                     {formatCurrency(
                       tenant.subscription.cancellationRefundMinor,
                       tenant.subscription.planCurrency,

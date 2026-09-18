@@ -211,12 +211,16 @@ function Subscriptions() {
                 ) : null}
                 {row.status === 'CANCELED' &&
                 row.cancellationRefundMinor !== null ? (
-                  <p className="mt-2 text-sm text-(--sea-ink-soft)">
-                    {LL.subscriptions.cancellationRefund()}:{' '}
-                    {formatCurrency(
-                      row.cancellationRefundMinor,
-                      row.plan.currency,
-                    )}
+                  <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
+                    <span className="block text-xs uppercase tracking-wide text-amber-800">
+                      {LL.subscriptions.cancellationRefund()}
+                    </span>
+                    <span className="mt-1 block text-base">
+                      {formatCurrency(
+                        row.cancellationRefundMinor,
+                        row.plan.currency,
+                      )}
+                    </span>
                   </p>
                 ) : null}
               </div>
