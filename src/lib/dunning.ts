@@ -1,7 +1,12 @@
 import cron from 'node-cron'
 import type { ScheduledTask } from 'node-cron'
 import { db } from '../db'
-import { GRACE_NOTICE_DAYS, disable, enterGracePeriod } from './lifecycle'
+import {
+  GRACE_NOTICE_DAYS,
+  disable,
+  enterGracePeriod,
+  transitionSubscription,
+} from './lifecycle'
 
 const PAST_DUE_GRACE_THRESHOLD_DAYS = 3
 const GRACE_PERIOD_DAYS = 7
@@ -22,6 +27,22 @@ function wholeDaysUntil(date: Date, now: Date): number {
 
 /** Process overdue subscriptions and grace-period notices. */
 export async function runDunning(now = new Date()): Promise<void> {
+  const periodEnded = await db.subscription.findMany({
+    where: {
+      status: 'DISABLED_AT_PERIOD_END',
+      currentPeriodEnd: { lte: now },
+      deletedAt: null,
+    },
+    select: { id: true },
+  })
+
+  for (const subscription of periodEnded) {
+    await transitionSubscription(subscription.id, 'DISABLED', {
+      reason: 'period_end_reached',
+      metadata: { source: 'dunning' },
+    })
+  }
+
   const subscriptions = await db.subscription.findMany({
     where: {
       status: { in: ['PAST_DUE', 'GRACE_PERIOD'] },

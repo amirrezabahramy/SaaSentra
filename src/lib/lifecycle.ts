@@ -106,8 +106,22 @@ export function generateSerialKey() {
 
 export async function getEntitlement(
   tenantId: string,
-  options: { validateSerialKey?: boolean; serialKey?: string } = {},
+  options: {
+    validateSerialKey?: boolean
+    serialKey?: string
+    serviceId?: string
+  } = {},
 ) {
+  if (options.serviceId) {
+    const service = await db.service.findUnique({
+      where: { id: options.serviceId },
+      select: { tenantId: true, deletedAt: true },
+    })
+    if (!service || service.deletedAt || service.tenantId !== tenantId) {
+      throw new Error('Service not found')
+    }
+  }
+
   const tenant = await db.tenant.findUniqueOrThrow({
     where: { id: tenantId },
     include: {
@@ -118,38 +132,75 @@ export async function getEntitlement(
 
   const subscription = tenant.subscription
   const now = new Date()
-  if (tenant.deletedAt || subscription?.deletedAt) {
+  if (tenant.deletedAt) {
     return {
       active: false,
       plan: null,
       flags: {},
       periodEnd: null,
+      planType: null,
+      status: subscription?.status ?? null,
+      reason: 'TENANT_ARCHIVED' as const,
+    }
+  }
+  if (!subscription) {
+    return {
+      active: false,
+      plan: null,
+      flags: {},
+      periodEnd: null,
+      planType: null,
+      status: null,
+      reason: 'NO_SUBSCRIPTION' as const,
+    }
+  }
+  if (subscription.deletedAt || subscription.status === 'ARCHIVED') {
+    return {
+      active: false,
+      plan: subscription.plan.slug,
+      flags: {},
+      periodEnd: subscription.plan.isPermanent
+        ? null
+        : subscription.currentPeriodEnd,
+      planType: subscription.plan.type,
+      status: subscription.status,
+      reason: 'SUBSCRIPTION_ARCHIVED' as const,
     }
   }
   const hasValidSerialKey =
     !options.validateSerialKey ||
-    subscription?.plan.type !== 'SERIAL_KEY' ||
+    subscription.plan.type !== 'SERIAL_KEY' ||
     Boolean(options.serialKey && options.serialKey === subscription.serialKey)
   const flags = Object.fromEntries(
     tenant.flags
       .filter((tenantFlag) => !tenantFlag.flag.deletedAt)
       .map((tenantFlag) => [tenantFlag.flag.key, tenantFlag.enabled]),
   )
-  const active = Boolean(
-    subscription &&
-    hasValidSerialKey &&
-    (subscription.plan.isPermanent || now < subscription.currentPeriodEnd) &&
-    (subscription.status === 'ACTIVE' ||
-      subscription.status === 'DISABLED_AT_PERIOD_END'),
-  )
+  const isWithinPeriod =
+    subscription.plan.isPermanent || now < subscription.currentPeriodEnd
+  const isLifecycleActive =
+    subscription.status === 'ACTIVE' ||
+    subscription.status === 'DISABLED_AT_PERIOD_END'
+  const active = hasValidSerialKey && isWithinPeriod && isLifecycleActive
+
+  const reason = !hasValidSerialKey
+    ? ('SERIAL_KEY_INVALID' as const)
+    : !isWithinPeriod
+      ? ('EXPIRED' as const)
+      : !isLifecycleActive
+        ? subscription.status
+        : ('ACTIVE' as const)
 
   return {
     active,
-    plan: subscription?.plan.slug ?? null,
+    plan: subscription.plan.slug,
+    planType: subscription.plan.type,
     flags,
-    periodEnd: subscription?.plan.isPermanent
+    periodEnd: subscription.plan.isPermanent
       ? null
-      : (subscription?.currentPeriodEnd ?? null),
+      : subscription.currentPeriodEnd,
+    status: subscription.status,
+    reason,
   }
 }
 

@@ -36,6 +36,7 @@ type PlanFormValue = {
   currency: 'USD' | 'IRR'
   interval: string
   trialDays: number
+  provider: 'STRIPE' | 'ZIBAL'
   providerPriceId: string
 }
 
@@ -244,6 +245,7 @@ function PlanForm({
     currency: 'USD' | 'IRR'
     interval: string
     trialDays: number
+    provider: 'STRIPE' | 'ZIBAL'
     providerPriceId: string | null
   }
   isPending: boolean
@@ -261,6 +263,7 @@ function PlanForm({
       currency: initial?.currency ?? 'USD',
       interval: initial?.interval ?? 'month',
       trialDays: initial?.trialDays ?? 0,
+      provider: initial?.provider ?? 'STRIPE',
       providerPriceId: initial?.providerPriceId ?? '',
     },
     onSubmit: ({ value }) => onSubmit({ ...value, id: initial?.id }),
@@ -304,6 +307,23 @@ function PlanForm({
           )}
         </form.Field>
       ))}
+      <form.Field name="provider">
+        {(field) => (
+          <label className="block text-sm font-semibold">
+            {LL.plans.provider()}
+            <select
+              value={field.state.value}
+              onChange={(event) =>
+                field.handleChange(event.target.value as 'STRIPE' | 'ZIBAL')
+              }
+              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+            >
+              <option value="STRIPE">{LL.plans.stripe()}</option>
+              <option value="ZIBAL">{LL.plans.zibal()}</option>
+            </select>
+          </label>
+        )}
+      </form.Field>
       <form.Field name="type">
         {(field) => (
           <label className="block text-sm font-semibold">

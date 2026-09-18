@@ -41,6 +41,16 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             { error: 'Checkout resource not found' },
             { status: 404 },
           )
+        if (plan.provider === 'ZIBAL' && plan.currency !== 'IRR')
+          return Response.json(
+            { error: 'Zibal plans must use IRR currency' },
+            { status: 400 },
+          )
+        if (plan.provider === 'STRIPE' && plan.currency !== 'USD')
+          return Response.json(
+            { error: 'Stripe plans must use USD currency' },
+            { status: 400 },
+          )
         if (tenant.subscription?.status === 'ARCHIVED')
           return Response.json(
             { error: 'Archived subscriptions cannot be paid' },
@@ -70,6 +80,14 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             expiresAt: new Date(now.getTime() + 30 * 60 * 1000),
           },
         })
+        const paymentReturnUrl = (status: 'success' | 'canceled') => {
+          if (!returnUrl)
+            return `${baseUrl()}/api/v1/payments/checkouts/${checkout.id}`
+          const url = new URL(returnUrl)
+          url.searchParams.set('checkout', status)
+          url.searchParams.set('checkoutId', checkout.id)
+          return url.toString()
+        }
         try {
           const payment = await resolvePaymentProvider(
             plan.provider,
@@ -82,8 +100,8 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             currency: plan.currency,
             subscriptionId: subscription.id,
             callbackUrl: `${baseUrl()}/api/payments/zibal/callback`,
-            successUrl: `${baseUrl()}/api/v1/payments/checkouts/${checkout.id}`,
-            cancelUrl: `${baseUrl()}/api/v1/payments/checkouts/${checkout.id}`,
+            successUrl: paymentReturnUrl('success'),
+            cancelUrl: paymentReturnUrl('canceled'),
           })
           await db.paymentCheckout.update({
             where: { id: checkout.id },
@@ -92,6 +110,9 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
           return Response.json({
             checkoutId: checkout.id,
             provider: plan.provider,
+            plan: plan.slug,
+            amountMinor: plan.priceMinor,
+            currency: plan.currency,
             url: payment.url,
             expiresAt: checkout.expiresAt.toISOString(),
           })

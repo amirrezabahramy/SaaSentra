@@ -1,4 +1,3 @@
-import { env } from '#/env'
 import { stripeRequest, stringValue } from '#/lib/stripe'
 import type {
   CreatePaymentInput,
@@ -18,8 +17,8 @@ export const stripeProvider: PaymentProviderAdapter = {
       mode: 'subscription',
       'line_items[0][price]': input.providerPriceId,
       'line_items[0][quantity]': '1',
-      success_url: `${env.BETTER_AUTH_URL}/?checkout=success`,
-      cancel_url: `${env.BETTER_AUTH_URL}/?checkout=canceled`,
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
       'metadata[tenantId]': input.tenantId,
       'metadata[planId]': input.planId,
       'subscription_data[metadata][tenantId]': input.tenantId,

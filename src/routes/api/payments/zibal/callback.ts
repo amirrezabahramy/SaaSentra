@@ -8,12 +8,14 @@ import { deliverCheckoutCallback } from '#/lib/payments/headless'
 function redirectToCheckout(
   status: 'success' | 'canceled',
   paymentId?: string,
+  checkoutId?: string,
   returnUrl?: string | null,
 ) {
   const url = new URL(returnUrl ?? env.BETTER_AUTH_URL)
   url.searchParams.set('checkout', status)
   url.searchParams.set('provider', 'zibal')
   if (paymentId) url.searchParams.set('paymentId', paymentId)
+  if (checkoutId) url.searchParams.set('checkoutId', checkoutId)
   return Response.redirect(url)
 }
 
@@ -88,7 +90,12 @@ export const Route = createFileRoute('/api/payments/zibal/callback')({
           const settled = await db.paymentCheckout.findUniqueOrThrow({
             where: { id: checkout.id },
           })
-          return redirectToCheckout('success', trackId, settled.returnUrl)
+          return redirectToCheckout(
+            'success',
+            trackId,
+            checkout.id,
+            settled.returnUrl,
+          )
         } catch {
           return redirectToCheckout('canceled', trackId)
         }

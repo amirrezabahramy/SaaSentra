@@ -29,6 +29,7 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
             await getEntitlement(params.tenantId, {
               validateSerialKey: true,
               serialKey: request.headers.get('x-serial-key') ?? undefined,
+              serviceId: request.headers.get('x-service-id') ?? undefined,
             }),
           )
         } catch {
