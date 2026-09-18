@@ -25,6 +25,7 @@
     "db:reset": "dotenv -e .env.local -- prisma migrate reset",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- prisma db seed",
+    "db:seed:owner": "dotenv -e .env.local -- tsx prisma/owner.seed.ts",
     "typesafe-i18n": "typesafe-i18n"
   },
   "dependencies": {
