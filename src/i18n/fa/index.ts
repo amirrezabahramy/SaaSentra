@@ -204,6 +204,7 @@ const fa = {
     kicker: 'مدیریت',
     title: 'تنظیمات',
     teamMembers: 'اعضای تیم',
+    globalAccount: 'حساب سراسری',
     environment: 'آمادگی محیط',
     environmentDescription:
       'متغیرهای ضروری بدون نمایش مقدارشان نشان داده می‌شوند.',

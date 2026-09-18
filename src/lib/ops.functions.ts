@@ -229,6 +229,13 @@ function initialPeriodForPlan(
 async function actorId(): Promise<string> {
   const session = await auth.api.getSession({ headers: getRequest().headers })
   if (!session || !session.user.id) throw new Error('Authentication required')
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  })
+  if (!user || !['OWNER', 'ADMIN'].includes(user.role)) {
+    throw new Error('Only owner and admin users can perform this action')
+  }
   return session.user.id
 }
 
@@ -389,7 +396,6 @@ export const permanentlyDeleteTenant = createServerFn({ method: 'POST' })
       await tx.payment.deleteMany({ where: { tenantId: tenant.id } })
       await tx.invoice.deleteMany({ where: { tenantId: tenant.id } })
       await tx.serviceAction.deleteMany({ where: { tenantId: tenant.id } })
-      await tx.membership.deleteMany({ where: { tenantId: tenant.id } })
       await tx.tenantFlag.deleteMany({ where: { tenantId: tenant.id } })
       await tx.service.deleteMany({ where: { tenantId: tenant.id } })
       await tx.subscription.deleteMany({ where: { tenantId: tenant.id } })
@@ -1117,20 +1123,19 @@ export const getAudit = createServerFn({ method: 'GET' })
 
 export const getSettings = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const members = await db.membership.findMany({
+    const users = await db.user.findMany({
       where: { deletedAt: null },
       include: {
-        user: { select: { name: true, email: true } },
         tenant: { select: { name: true } },
       },
       orderBy: { createdAt: 'asc' },
     })
     return {
-      members: members.map((member) => ({
-        id: member.id,
-        role: member.role,
-        user: member.user,
-        tenant: member.tenant,
+      members: users.map((user) => ({
+        id: user.id,
+        role: user.role,
+        user: { name: user.name, email: user.email },
+        tenant: user.tenant,
       })),
       env: [
         'DATABASE_URL',
@@ -1170,14 +1175,6 @@ export const cancelSubscription = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const actor = await actorId()
-    const subscription = await db.subscription.findUniqueOrThrow({
-      where: { id: data.subscriptionId, deletedAt: null },
-      include: { tenant: { include: { memberships: true } }, plan: true },
-    })
-    const member = subscription.tenant.memberships.find(
-      (membership) => membership.userId === actor && !membership.deletedAt,
-    )
-    if (!member) throw new Error('Only the tenant owner or an admin can cancel')
     return transitionSubscription(data.subscriptionId, 'CANCELED', {
       actorId: actor,
       reason: data.reason ?? 'Subscription canceled by tenant operator',

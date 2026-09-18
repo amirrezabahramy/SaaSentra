@@ -726,6 +726,10 @@ type RootTranslation = {
 		 */
 		teamMembers: string
 		/**
+		 * G​l​o​b​a​l​ ​a​c​c​o​u​n​t
+		 */
+		globalAccount: string
+		/**
 		 * E​n​v​i​r​o​n​m​e​n​t​ ​r​e​a​d​i​n​e​s​s
 		 */
 		environment: string
@@ -1642,6 +1646,10 @@ export type TranslationFunctions = {
 		 * Team members
 		 */
 		teamMembers: () => LocalizedString
+		/**
+		 * Global account
+		 */
+		globalAccount: () => LocalizedString
 		/**
 		 * Environment readiness
 		 */

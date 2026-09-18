@@ -21,6 +21,9 @@ export const Route = createFileRoute('/_protected')({
     if (!context.auth) {
       throw redirect({ to: '/login' })
     }
+    if (!['OWNER', 'ADMIN'].includes(context.auth.user.role)) {
+      throw redirect({ to: '/login' })
+    }
   },
   component: ProtectedLayout,
 })

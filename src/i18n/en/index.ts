@@ -205,6 +205,7 @@ const en = {
     kicker: 'Administration',
     title: 'Settings',
     teamMembers: 'Team members',
+    globalAccount: 'Global account',
     environment: 'Environment readiness',
     environmentDescription:
       'Required variables are shown without exposing their values.',

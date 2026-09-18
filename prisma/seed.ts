@@ -11,6 +11,8 @@ const ownerEmail = process.env.OWNER_EMAIL ?? 'owner@example.com'
 const ownerPassword = process.env.OWNER_PASSWORD ?? 'Owner123!'
 const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@example.com'
 const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin123!'
+const tenantEmail = process.env.TENANT_EMAIL ?? 'tenant@example.com'
+const tenantPassword = process.env.TENANT_PASSWORD ?? 'Tenant123!'
 const starterStripePriceId = 'price_starter_test'
 const proStripePriceId = 'price_pro_test'
 
@@ -86,13 +88,33 @@ async function main() {
   // --- Demo users: one account for every defined role -------------------
   const owner = await db.user.upsert({
     where: { email: ownerEmail },
-    update: { name: 'Owner', emailVerified: true },
-    create: { email: ownerEmail, name: 'Owner', emailVerified: true },
+    update: {
+      name: 'Owner',
+      emailVerified: true,
+      role: 'OWNER',
+      tenantId: null,
+    },
+    create: {
+      email: ownerEmail,
+      name: 'Owner',
+      emailVerified: true,
+      role: 'OWNER',
+    },
   })
   const admin = await db.user.upsert({
     where: { email: adminEmail },
-    update: { name: 'Admin', emailVerified: true },
-    create: { email: adminEmail, name: 'Admin', emailVerified: true },
+    update: {
+      name: 'Admin',
+      emailVerified: true,
+      role: 'ADMIN',
+      tenantId: null,
+    },
+    create: {
+      email: adminEmail,
+      name: 'Admin',
+      emailVerified: true,
+      role: 'ADMIN',
+    },
   })
 
   await db.account.upsert({
@@ -204,21 +226,43 @@ async function main() {
         },
       })
     }
-
-    await db.membership.upsert({
-      where: { userId_tenantId: { userId: owner.id, tenantId: tenant.id } },
-      update: {},
-      create: { userId: owner.id, tenantId: tenant.id, role: 'OWNER' },
-    })
-    await db.membership.upsert({
-      where: { userId_tenantId: { userId: admin.id, tenantId: tenant.id } },
-      update: { role: 'ADMIN' },
-      create: { userId: admin.id, tenantId: tenant.id, role: 'ADMIN' },
-    })
   }
 
-  // --- Demo service (ENTITLEMENT) ---------------------------------------
+  // --- Demo tenant account ----------------------------------------------
   const acme = await db.tenant.findUniqueOrThrow({ where: { slug: 'acme' } })
+  const tenantUser = await db.user.upsert({
+    where: { email: tenantEmail },
+    update: {
+      name: 'Tenant customer',
+      emailVerified: true,
+      role: 'TENANT',
+      tenantId: acme.id,
+    },
+    create: {
+      email: tenantEmail,
+      name: 'Tenant customer',
+      emailVerified: true,
+      role: 'TENANT',
+      tenantId: acme.id,
+    },
+  })
+  await db.account.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000005' },
+    update: {
+      accountId: tenantUser.id,
+      userId: tenantUser.id,
+      password: await bcrypt.hash(tenantPassword, 12),
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000005',
+      accountId: tenantUser.id,
+      providerId: 'credential',
+      userId: tenantUser.id,
+      password: await bcrypt.hash(tenantPassword, 12),
+    },
+  })
+
+  // --- Demo service (ENTITLEMENT) ---------------------------------------
   await db.service.upsert({
     where: { id: '00000000-0000-4000-8000-000000000001' },
     update: {},
@@ -248,7 +292,7 @@ async function main() {
   })
 
   console.log(
-    'Seed complete: 2 roles, 2 accounts, 2 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log.',
+    'Seed complete: 3 roles, 3 accounts, 3 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log.',
   )
 }
 

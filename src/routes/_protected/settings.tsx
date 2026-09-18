@@ -32,7 +32,8 @@ function Settings() {
                   {member.user.name ?? member.user.email}
                 </p>
                 <p className="text-sm text-(--sea-ink-soft)">
-                  {member.user.email} · {member.role} · {member.tenant.name}
+                  {member.user.email} · {member.role} ·{' '}
+                  {member.tenant?.name ?? LL.settings.globalAccount()}
                 </p>
               </div>
             ))}

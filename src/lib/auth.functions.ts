@@ -5,6 +5,7 @@ import {
   setResponseStatus,
 } from '@tanstack/react-start/server'
 import { z } from 'zod'
+import db from '#/db'
 import { auth } from './auth'
 
 const credentialsSchema = z.object({
@@ -17,10 +18,21 @@ function copyResponseHeaders(response: Response): void {
 }
 
 export const getAuthSession = createServerFn({ method: 'GET' }).handler(
-  async () =>
-    auth.api.getSession({
+  async () => {
+    const session = await auth.api.getSession({
       headers: getRequest().headers,
-    }),
+    })
+    if (!session) return null
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true, tenantId: true },
+    })
+    if (!user) return null
+    return {
+      ...session,
+      user: { ...session.user, role: user.role, tenantId: user.tenantId },
+    }
+  },
 )
 
 export const signIn = createServerFn({ method: 'POST' })

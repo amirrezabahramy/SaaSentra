@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   OWNER
   ADMIN
+  TENANT
 }
 
 enum SubscriptionStatus {
@@ -89,12 +90,15 @@ model User {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   deletedAt     DateTime?
-  memberships   Membership[]
+  role          Role
+  tenantId      String?
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   auditLogs     AuditLog[]
   sessions      Session[]
   accounts      Account[]
 
   @@index([email])
+  @@index([tenantId])
 }
 
 model Tenant {
@@ -105,7 +109,7 @@ model Tenant {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
-  memberships      Membership[]
+  users            User[]
   subscription     Subscription?
   invoices         Invoice[]
   payments         Payment[]
@@ -116,21 +120,6 @@ model Tenant {
   paymentCheckouts PaymentCheckout[]
 
   @@index([slug])
-}
-
-model Membership {
-  id        String    @id @default(uuid())
-  userId    String
-  tenantId  String
-  role      Role
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  user      User      @relation(fields: [userId], references: [id])
-  tenant    Tenant    @relation(fields: [tenantId], references: [id])
-
-  @@unique([userId, tenantId])
-  @@index([tenantId, createdAt])
 }
 
 model Session {
