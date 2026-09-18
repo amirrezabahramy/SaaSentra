@@ -168,11 +168,31 @@ const permanentPeriodEnd = new Date('9999-12-31T23:59:59.999Z')
 
 function periodEndForPlan(start: Date, interval: string, isPermanent: boolean) {
   if (isPermanent) return permanentPeriodEnd
-  const match = interval.match(/^(\d+)\s*days?$/i)
+  const match = interval.match(/^(\d+)?\s*(day|week|month|year)s?$/i)
   if (!match) return null
   const end = new Date(start)
-  end.setDate(end.getDate() + Number(match[1]))
+  const count = Number(match[1] || 1)
+  const unit = match[2].toLowerCase()
+  if (unit === 'day') end.setDate(end.getDate() + count)
+  if (unit === 'week') end.setDate(end.getDate() + count * 7)
+  if (unit === 'month') end.setMonth(end.getMonth() + count)
+  if (unit === 'year') end.setFullYear(end.getFullYear() + count)
   return end
+}
+
+function initialPeriodForPlan(
+  start: Date,
+  plan: { interval: string; isPermanent: boolean; trialDays: number },
+) {
+  if (!plan.isPermanent && plan.trialDays > 0) {
+    const trialEnd = new Date(start)
+    trialEnd.setDate(trialEnd.getDate() + plan.trialDays)
+    return trialEnd
+  }
+  return (
+    periodEndForPlan(start, plan.interval, plan.isPermanent) ??
+    (plan.isPermanent ? permanentPeriodEnd : null)
+  )
 }
 
 async function actorId(): Promise<string> {
@@ -691,9 +711,10 @@ export const createSubscription = createServerFn({ method: 'POST' })
       })
       const periodStart = data.periodStart ?? new Date()
       const periodEnd =
-        periodEndForPlan(periodStart, plan.interval, plan.isPermanent) ??
-        (plan.isPermanent ? permanentPeriodEnd : data.periodEnd)
+        initialPeriodForPlan(periodStart, plan) ?? data.periodEnd
       if (!periodEnd) throw new Error('Period end is required for this plan')
+      const initialStatus =
+        !plan.isPermanent && plan.trialDays > 0 ? 'TRIALING' : 'ACTIVE'
       const existing = await tx.subscription.findUnique({
         where: { tenantId: data.tenantId },
       })
@@ -708,7 +729,7 @@ export const createSubscription = createServerFn({ method: 'POST' })
             currentPeriodStart: periodStart,
             currentPeriodEnd: periodEnd,
             deletedAt: null,
-            status: 'TRIALING',
+            status: initialStatus,
             serialKey: plan.type === 'SERIAL_KEY' ? generateSerialKey() : null,
             submittedSerialKey: null,
           },
@@ -729,6 +750,7 @@ export const createSubscription = createServerFn({ method: 'POST' })
           planId: data.planId,
           currentPeriodStart: periodStart,
           currentPeriodEnd: periodEnd,
+          status: initialStatus,
           serialKey: plan.type === 'SERIAL_KEY' ? generateSerialKey() : null,
           submittedSerialKey: null,
         },

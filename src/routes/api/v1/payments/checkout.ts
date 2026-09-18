@@ -78,13 +78,23 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
         }
         if (
           tenant.subscription &&
-          ['DISABLED_AT_PERIOD_END', 'CANCELED', 'ARCHIVED'].includes(
-            tenant.subscription.status,
-          )
+          ['CANCELED', 'ARCHIVED'].includes(tenant.subscription.status)
         ) {
           return Response.json(
             {
               error: 'This subscription cannot be reactivated through payment',
+            },
+            { status: 409 },
+          )
+        }
+        if (
+          tenant.subscription?.status === 'DISABLED_AT_PERIOD_END' &&
+          tenant.subscription.currentPeriodEnd > new Date()
+        ) {
+          return Response.json(
+            {
+              error:
+                'This subscription cannot be reactivated before its period ends',
             },
             { status: 409 },
           )

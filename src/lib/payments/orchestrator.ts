@@ -48,13 +48,11 @@ export async function settleVerifiedPayment(input: {
       : subscription.plan
     if (subscription.status === 'ARCHIVED' || subscription.deletedAt)
       throw new Error('Archived subscriptions cannot receive payments')
-    if (
-      subscription.status === 'CANCELED' ||
-      subscription.status === 'DISABLED_AT_PERIOD_END'
-    )
+    if (subscription.status === 'CANCELED')
       throw new Error('This subscription cannot receive payments')
     if (
-      subscription.status === 'DISABLED' &&
+      (subscription.status === 'DISABLED' ||
+        subscription.status === 'DISABLED_AT_PERIOD_END') &&
       subscription.currentPeriodEnd > new Date()
     )
       throw new Error(

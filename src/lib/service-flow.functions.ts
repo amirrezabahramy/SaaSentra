@@ -43,9 +43,13 @@ async function readServiceCheck(input: z.infer<typeof serviceInput>) {
 
   const subscription = tenant.subscription
   const now = new Date()
+  const periodExpired =
+    !subscription.plan.isPermanent && subscription.currentPeriodEnd <= now
   const canPay =
-    (subscription.status === 'DISABLED' &&
-      subscription.currentPeriodEnd <= now) ||
+    ((subscription.status === 'DISABLED' ||
+      subscription.status === 'DISABLED_AT_PERIOD_END' ||
+      subscription.status === 'TRIALING') &&
+      periodExpired) ||
     subscription.status === 'GRACE_PERIOD' ||
     subscription.status === 'PAST_DUE'
   const canSubmitSerialKey =

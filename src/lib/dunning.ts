@@ -29,22 +29,25 @@ function wholeDaysUntil(date: Date, now: Date): number {
 export async function runDunning(now = new Date()) {
   let movedToDisabled = 0
   let movedToGrace = 0
+  let movedToPastDue = 0
   let noticesSent = 0
-  const periodEnded = await db.subscription.findMany({
+  const expiredTrialIds = new Set<string>()
+  const expiredTrials = await db.subscription.findMany({
     where: {
-      status: 'DISABLED_AT_PERIOD_END',
+      status: 'TRIALING',
       currentPeriodEnd: { lte: now },
       deletedAt: null,
     },
     select: { id: true },
   })
 
-  for (const subscription of periodEnded) {
-    await transitionSubscription(subscription.id, 'DISABLED', {
-      reason: 'period_end_reached',
+  for (const subscription of expiredTrials) {
+    await transitionSubscription(subscription.id, 'PAST_DUE', {
+      reason: 'trial_period_ended',
       metadata: { source: 'dunning' },
     })
-    movedToDisabled += 1
+    expiredTrialIds.add(subscription.id)
+    movedToPastDue += 1
   }
 
   const subscriptions = await db.subscription.findMany({
@@ -69,6 +72,17 @@ export async function runDunning(now = new Date()) {
     const email = subscription.tenant.memberships[0]?.user.email
 
     if (subscription.status === 'PAST_DUE') {
+      if (expiredTrialIds.has(subscription.id)) {
+        if (email) {
+          await sendNotice(
+            email,
+            'Your trial has ended',
+            'Your trial period has ended. Please complete payment to continue using the service.',
+          )
+          noticesSent += 1
+        }
+        continue
+      }
       if (subscription.currentPeriodEnd > now) {
         if (email) {
           await sendNotice(
@@ -128,7 +142,7 @@ export async function runDunning(now = new Date()) {
     }
   }
 
-  return { movedToDisabled, movedToGrace, noticesSent }
+  return { movedToDisabled, movedToGrace, movedToPastDue, noticesSent }
 }
 
 /** Backward-compatible name for callers from the scaffold. */

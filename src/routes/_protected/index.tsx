@@ -30,7 +30,7 @@ function Overview() {
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['admin'] })
       setDunningMessage(
-        `${LL.overview.dunningComplete()} (${result.movedToGrace} grace, ${result.movedToDisabled} disabled)`,
+        `${LL.overview.dunningComplete()} (${result.movedToPastDue} past due, ${result.movedToGrace} grace, ${result.movedToDisabled} disabled)`,
       )
     },
   })
