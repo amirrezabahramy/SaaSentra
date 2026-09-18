@@ -1,10 +1,6 @@
 import { env } from '#/env'
 import bcrypt from 'bcryptjs'
-import {
-  PrismaClient,
-  ServiceControlType,
-  ServiceDeployStatus,
-} from '#/generated/prisma/client'
+import { PrismaClient, ServiceDeployStatus } from '#/generated/prisma/client'
 
 import { PrismaPg } from '@prisma/adapter-pg'
 
@@ -131,18 +127,21 @@ async function main() {
     {
       name: 'Acme Inc',
       slug: 'acme',
+      billingEmail: 'billing-acme@example.com',
       plan: pro,
       enabled: ['flag.sso', 'flag.webhooks', 'allow_api_access'],
     },
     {
       name: 'Globex Corp',
       slug: 'globex',
+      billingEmail: 'billing-globex@example.com',
       plan: starter,
       enabled: ['flag.advanced-analytics'],
     },
     {
       name: 'Initech LLC',
       slug: 'initech',
+      billingEmail: 'billing-initech@example.com',
       plan: starter,
       enabled: ['flag.priority-support'],
     },
@@ -150,12 +149,15 @@ async function main() {
 
   const periodEnd = new Date()
   periodEnd.setDate(periodEnd.getDate() + 30)
-
   for (const t of tenants) {
     const tenant = await db.tenant.upsert({
       where: { slug: t.slug },
-      update: {},
-      create: { name: t.name, slug: t.slug },
+      update: { billingEmail: t.billingEmail },
+      create: {
+        name: t.name,
+        slug: t.slug,
+        billingEmail: t.billingEmail,
+      },
     })
 
     const subscription = await db.subscription.upsert({
@@ -224,8 +226,6 @@ async function main() {
       id: '00000000-0000-4000-8000-000000000001',
       tenantId: acme.id,
       name: 'demo-web-app',
-      controlType: ServiceControlType.ENTITLEMENT,
-      endpointUrl: null,
       deployStatus: ServiceDeployStatus.HEALTHY,
       paymentDeliveryMode: 'CALLBACK',
       paymentCallbackUrl: null,

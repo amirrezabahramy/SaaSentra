@@ -54,13 +54,6 @@ enum PaymentStatus {
   REFUNDED
 }
 
-enum ServiceControlType {
-  ENTITLEMENT
-  TOKEN
-  WEBHOOK
-  INFRA
-}
-
 enum ServiceDeployStatus {
   HEALTHY
   DEGRADED
@@ -108,6 +101,7 @@ model Tenant {
   id               String            @id @default(uuid())
   name             String
   slug             String            @unique
+  billingEmail     String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
@@ -274,8 +268,6 @@ model Service {
   id                    String              @id @default(uuid())
   tenantId              String
   name                  String
-  controlType           ServiceControlType  @default(ENTITLEMENT)
-  endpointUrl           String?
   deployStatus          ServiceDeployStatus @default(HEALTHY)
   paymentCallbackUrl    String?
   paymentCallbackSecret String?

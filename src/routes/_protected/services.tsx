@@ -163,7 +163,7 @@ function Services() {
                 )}
               </div>
               <p className="mt-2 text-sm text-(--sea-ink-soft)">
-                {row.tenantName} · {row.controlType}
+                {row.tenantName}
               </p>
               <div className="mt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-(--sea-ink-soft)">
@@ -239,6 +239,9 @@ function Services() {
         >
           <ServiceForm
             tenants={tenants}
+            emailDeliveryAvailable={rows.some(
+              (row) => row.emailDeliveryAvailable,
+            )}
             initial={editing ?? undefined}
             isPending={createMutation.isPending || updateMutation.isPending}
             onSubmit={(value) => {
@@ -266,8 +269,6 @@ function Services() {
 type ServiceFormValue = {
   tenantId: string
   name: string
-  controlType: 'ENTITLEMENT' | 'TOKEN' | 'WEBHOOK' | 'INFRA'
-  endpointUrl?: string | null
   deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE'
   paymentCallbackUrl?: string | null
   paymentCallbackSecret?: string | null
@@ -276,31 +277,43 @@ type ServiceFormValue = {
 
 function ServiceForm({
   tenants,
+  emailDeliveryAvailable,
   initial,
   isPending,
   onSubmit,
 }: {
-  tenants: Array<{ id: string; name: string }>
+  tenants: Array<{
+    id: string
+    name: string
+    billingEmail: string | null
+  }>
+  emailDeliveryAvailable: boolean
   initial?: Partial<ServiceFormValue> & { id?: string }
   isPending: boolean
   onSubmit: (value: ServiceFormValue) => void
 }) {
   const { LL } = useI18nContext()
+  const selectedTenantHasEmail = (tenantId: string) =>
+    Boolean(tenants.find((tenant) => tenant.id === tenantId)?.billingEmail)
+  const initialPaymentDeliveryMode =
+    initial?.paymentDeliveryMode === 'CALLBACK' ||
+    (emailDeliveryAvailable &&
+      selectedTenantHasEmail(initial?.tenantId || tenants[0]?.id || '') &&
+      initial?.paymentDeliveryMode)
+      ? initial.paymentDeliveryMode
+      : 'CALLBACK'
   const form = useForm({
     defaultValues: {
       tenantId: initial?.tenantId || tenants[0]?.id || '',
       name: initial?.name ?? '',
-      controlType: initial?.controlType ?? 'ENTITLEMENT',
-      endpointUrl: initial?.endpointUrl ?? '',
       deployStatus: initial?.deployStatus ?? 'HEALTHY',
       paymentCallbackUrl: initial?.paymentCallbackUrl ?? '',
       paymentCallbackSecret: '',
-      paymentDeliveryMode: initial?.paymentDeliveryMode ?? 'CALLBACK',
+      paymentDeliveryMode: initialPaymentDeliveryMode,
     },
     onSubmit: ({ value }) =>
       onSubmit({
         ...value,
-        endpointUrl: value.endpointUrl.trim() || null,
         paymentCallbackUrl: value.paymentCallbackUrl.trim() || null,
         paymentCallbackSecret: value.paymentCallbackSecret.trim() || null,
       }),
@@ -317,8 +330,6 @@ function ServiceForm({
         [
           ['tenantId', LL.crud.tenant(), 'select'],
           ['name', LL.crud.name(), 'input'],
-          ['controlType', LL.crud.controlType(), 'select'],
-          ['endpointUrl', LL.crud.endpointUrl(), 'input'],
           ['deployStatus', LL.crud.deployStatus(), 'select'],
           ['paymentCallbackUrl', LL.services.paymentCallbackUrl(), 'input'],
           [
@@ -326,7 +337,6 @@ function ServiceForm({
             LL.services.paymentCallbackSecret(),
             'input',
           ],
-          ['paymentDeliveryMode', LL.services.paymentDeliveryMode(), 'select'],
         ] as const
       ).map(([name, label, kind]) => (
         <form.Field key={name} name={name}>
@@ -336,16 +346,21 @@ function ServiceForm({
               {kind === 'select' ? (
                 <select
                   value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
+                  onChange={(event) => {
+                    field.handleChange(event.target.value)
+                    if (
+                      name === 'tenantId' &&
+                      (!emailDeliveryAvailable ||
+                        !selectedTenantHasEmail(event.target.value))
+                    ) {
+                      form.setFieldValue('paymentDeliveryMode', 'CALLBACK')
+                    }
+                  }}
                   className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
                 >
                   {(name === 'tenantId'
                     ? tenants
-                    : name === 'controlType'
-                      ? ['ENTITLEMENT', 'TOKEN', 'WEBHOOK', 'INFRA']
-                      : name === 'deployStatus'
-                        ? ['HEALTHY', 'DEGRADED', 'OFFLINE']
-                        : ['CALLBACK', 'EMAIL', 'CALLBACK_AND_EMAIL']
+                    : ['HEALTHY', 'DEGRADED', 'OFFLINE']
                   ).map((option) => {
                     const value =
                       typeof option === 'string' ? option : option.id
@@ -369,6 +384,41 @@ function ServiceForm({
           )}
         </form.Field>
       ))}
+      <form.Subscribe selector={(state) => state.values.tenantId}>
+        {(tenantId) => {
+          const emailAvailable =
+            emailDeliveryAvailable && selectedTenantHasEmail(tenantId)
+          return (
+            <form.Field name="paymentDeliveryMode">
+              {(field) => (
+                <label className="block text-sm font-semibold">
+                  {LL.services.paymentDeliveryMode()}
+                  <select
+                    value={field.state.value}
+                    onChange={(event) =>
+                      field.handleChange(
+                        event.target
+                          .value as ServiceFormValue['paymentDeliveryMode'],
+                      )
+                    }
+                    className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                  >
+                    <option value="CALLBACK">CALLBACK</option>
+                    {emailAvailable ? (
+                      <>
+                        <option value="EMAIL">EMAIL</option>
+                        <option value="CALLBACK_AND_EMAIL">
+                          CALLBACK_AND_EMAIL
+                        </option>
+                      </>
+                    ) : null}
+                  </select>
+                </label>
+              )}
+            </form.Field>
+          )
+        }}
+      </form.Subscribe>
       <button
         type="submit"
         disabled={isPending}

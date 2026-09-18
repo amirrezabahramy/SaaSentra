@@ -87,8 +87,11 @@ function TenantDetail() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
   const tenantMutation = useMutation({
-    mutationFn: (value: { name: string; slug: string }) =>
-      update({ data: { id, ...value } }),
+    mutationFn: (value: {
+      name: string
+      slug: string
+      billingEmail: string | null
+    }) => update({ data: { id, ...value } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin'] })
       setTenantDialog(null)
@@ -169,6 +172,11 @@ function TenantDetail() {
         </p>
         <h1 className="mt-2 font-serif text-4xl font-bold">{tenant.name}</h1>
         <p className="mt-2 text-(--sea-ink-soft)">{tenant.slug}</p>
+        {tenant.billingEmail ? (
+          <p className="mt-2 text-sm text-(--sea-ink-soft)">
+            {tenant.billingEmail}
+          </p>
+        ) : null}
         <p className="mt-2 text-sm text-(--sea-ink-soft)">
           {LL.audit.tenantId()}:{' '}
           <CopyableValue
@@ -494,7 +502,11 @@ function TenantDetail() {
           onClose={() => setTenantDialog(null)}
         >
           <TenantEditForm
-            initial={{ name: tenant.name, slug: tenant.slug }}
+            initial={{
+              name: tenant.name,
+              slug: tenant.slug,
+              billingEmail: tenant.billingEmail ?? '',
+            }}
             isPending={tenantMutation.isPending}
             onSubmit={(value) => void tenantMutation.mutateAsync(value)}
           />
@@ -527,14 +539,22 @@ function TenantEditForm({
   isPending,
   onSubmit,
 }: {
-  initial: { name: string; slug: string }
+  initial: { name: string; slug: string; billingEmail: string }
   isPending: boolean
-  onSubmit: (value: { name: string; slug: string }) => void
+  onSubmit: (value: {
+    name: string
+    slug: string
+    billingEmail: string | null
+  }) => void
 }) {
   const { LL } = useI18nContext()
   const form = useForm({
     defaultValues: initial,
-    onSubmit: ({ value }) => onSubmit(value),
+    onSubmit: ({ value }) =>
+      onSubmit({
+        ...value,
+        billingEmail: value.billingEmail.trim() || null,
+      }),
   })
   return (
     <form
@@ -559,6 +579,19 @@ function TenantEditForm({
           )}
         </form.Field>
       ))}
+      <form.Field name="billingEmail">
+        {(field) => (
+          <label className="block text-sm font-semibold">
+            {LL.tenants.billingEmail()}
+            <input
+              type="email"
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+            />
+          </label>
+        )}
+      </form.Field>
       <button
         type="submit"
         disabled={isPending}

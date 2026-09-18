@@ -73,14 +73,7 @@ export const getTenants = createServerFn({ method: 'GET' })
               OR: [
                 { name: { contains: search, mode: 'insensitive' } },
                 {
-                  memberships: {
-                    some: {
-                      user: {
-                        email: { contains: search, mode: 'insensitive' },
-                      },
-                      deletedAt: null,
-                    },
-                  },
+                  billingEmail: { contains: search, mode: 'insensitive' },
                 },
               ],
             }
@@ -89,11 +82,6 @@ export const getTenants = createServerFn({ method: 'GET' })
       orderBy: { name: 'asc' },
       include: {
         subscription: { include: { plan: true } },
-        memberships: {
-          where: { role: 'OWNER', deletedAt: null },
-          include: { user: { select: { email: true } } },
-          take: 1,
-        },
       },
     })
 
@@ -101,7 +89,7 @@ export const getTenants = createServerFn({ method: 'GET' })
       id: tenant.id,
       name: tenant.name,
       slug: tenant.slug,
-      ownerEmail: tenant.memberships[0]?.user.email ?? null,
+      billingEmail: tenant.billingEmail,
       status: tenant.subscription?.status ?? null,
       archived: Boolean(tenant.deletedAt),
       subscriptionId: tenant.subscription?.id ?? null,
@@ -140,6 +128,7 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
       id: tenant.id,
       name: tenant.name,
       slug: tenant.slug,
+      billingEmail: tenant.billingEmail,
       subscription: tenant.subscription
         ? {
             id: tenant.subscription.id,
@@ -166,7 +155,6 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
       services: tenant.services.map((service) => ({
         id: service.id,
         name: service.name,
-        controlType: service.controlType,
         deployStatus: service.deployStatus,
       })),
       invoices: tenant.invoices.map((invoice) => ({

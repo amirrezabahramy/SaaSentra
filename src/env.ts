@@ -13,7 +13,12 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),
     ZIBAL_MERCHANT: z.string().optional(),
-    EMAIL_TRANSPORT_URL: z.string().url().optional(),
+    SMTP_HOST: z.string().min(1).optional(),
+    SMTP_PORT: z.coerce.number().int().positive().optional(),
+    SMTP_SECURE: z.enum(['true', 'false']).optional(),
+    SMTP_USER: z.string().min(1).optional(),
+    SMTP_PASSWORD: z.string().min(1).optional(),
+    SMTP_FROM: z.string().min(1).optional(),
   },
 
   /**

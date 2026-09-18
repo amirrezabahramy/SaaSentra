@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db } from '#/db'
-import { env } from '#/env'
+import { isEmailConfigured, sendPaymentEmail } from '#/lib/email'
 
 export function signPaymentEvent(secret: string, payload: string) {
   return createHmac('sha256', secret).update(payload).digest('hex')
@@ -41,15 +41,7 @@ export async function deliverCheckoutCallback(checkoutId: string) {
     include: {
       service: true,
       subscription: { include: { plan: true } },
-      tenant: {
-        include: {
-          memberships: {
-            where: { role: 'OWNER', deletedAt: null },
-            include: { user: true },
-            take: 1,
-          },
-        },
-      },
+      tenant: true,
     },
   })
   const delivery = await db.paymentDelivery.upsert({
@@ -61,24 +53,14 @@ export async function deliverCheckoutCallback(checkoutId: string) {
   const mode = checkout.service.paymentDeliveryMode
   const wantsCallback = mode === 'CALLBACK' || mode === 'CALLBACK_AND_EMAIL'
   const wantsEmail = mode === 'EMAIL' || mode === 'CALLBACK_AND_EMAIL'
-  if (
-    (wantsCallback &&
-      (!checkout.service.paymentCallbackUrl ||
-        !checkout.service.paymentCallbackSecret)) ||
-    (wantsEmail &&
-      (!env.EMAIL_TRANSPORT_URL || !checkout.tenant.memberships[0]?.user.email))
-  ) {
-    return db.paymentDelivery.update({
-      where: { checkoutId },
-      data: { status: 'NOT_CONFIGURED', attempts: { increment: 1 } },
-    })
-  }
   const payload = {
     event: 'payment.succeeded',
     checkoutId: checkout.id,
     tenantId: checkout.tenantId,
+    tenantName: checkout.tenant.name,
     subscriptionId: checkout.subscription?.id,
     plan: checkout.subscription?.plan.slug,
+    planName: checkout.subscription?.plan.name,
     serialKey: checkout.subscription?.serialKey,
     periodEnd: checkout.subscription?.plan.isPermanent
       ? null
@@ -86,35 +68,99 @@ export async function deliverCheckoutCallback(checkoutId: string) {
     paymentId: checkout.providerPaymentId,
   }
   try {
+    const errors: string[] = []
+    let deliveredCount = 0
+    let emailQueued = false
     if (wantsCallback) {
-      await deliverPaymentCallback({
-        url: checkout.service.paymentCallbackUrl,
-        secret: checkout.service.paymentCallbackSecret,
-        payload,
-      })
+      if (
+        !checkout.service.paymentCallbackUrl ||
+        !checkout.service.paymentCallbackSecret
+      ) {
+        errors.push('Payment callback is not configured')
+      } else {
+        try {
+          await deliverPaymentCallback({
+            url: checkout.service.paymentCallbackUrl,
+            secret: checkout.service.paymentCallbackSecret,
+            payload,
+          })
+          deliveredCount += 1
+        } catch (error) {
+          errors.push(
+            error instanceof Error
+              ? error.message
+              : 'Payment callback delivery failed',
+          )
+        }
+      }
     }
     if (wantsEmail) {
-      const response = await fetch(env.EMAIL_TRANSPORT_URL as string, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          to: checkout.tenant.memberships[0]?.user.email,
-          subject: 'Payment completed',
-          template: 'payment.succeeded',
-          data: payload,
-        }),
-        signal: AbortSignal.timeout(10_000),
+      if (!isEmailConfigured()) {
+        errors.push('SMTP email delivery is not configured')
+      } else if (!checkout.tenant.billingEmail) {
+        errors.push('Tenant billing email is not configured')
+      } else {
+        const emailErrors = errors.slice()
+        void sendPaymentEmail({
+          to: checkout.tenant.billingEmail,
+          payload,
+        })
+          .then(() =>
+            db.paymentDelivery.update({
+              where: { checkoutId },
+              data: {
+                status: emailErrors.length === 0 ? 'SUCCEEDED' : 'FAILED',
+                lastError:
+                  emailErrors.length > 0 ? emailErrors.join('; ') : null,
+                deliveredAt: emailErrors.length === 0 ? new Date() : null,
+              },
+            }),
+          )
+          .catch((error: unknown) =>
+            db.paymentDelivery.update({
+              where: { checkoutId },
+              data: {
+                status: 'FAILED',
+                lastError: [
+                  ...emailErrors,
+                  error instanceof Error
+                    ? error.message
+                    : 'Payment email failed',
+                ].join('; '),
+              },
+            }),
+          )
+        emailQueued = true
+        deliveredCount += 1
+      }
+    }
+    if (emailQueued) {
+      return db.paymentDelivery.update({
+        where: { checkoutId },
+        data: {
+          status: 'PENDING',
+          attempts: { increment: 1 },
+          lastError: errors.length > 0 ? errors.join('; ') : null,
+        },
       })
-      if (!response.ok)
-        throw new Error(`Email delivery failed: ${response.status}`)
+    }
+    if (deliveredCount === 0) {
+      return db.paymentDelivery.update({
+        where: { checkoutId },
+        data: {
+          status: 'NOT_CONFIGURED',
+          attempts: { increment: 1 },
+          lastError: errors.join('; '),
+        },
+      })
     }
     return db.paymentDelivery.update({
       where: { checkoutId },
       data: {
-        status: 'SUCCEEDED',
+        status: errors.length === 0 ? 'SUCCEEDED' : 'FAILED',
         attempts: { increment: 1 },
-        lastError: null,
-        deliveredAt: new Date(),
+        lastError: errors.length > 0 ? errors.join('; ') : null,
+        deliveredAt: errors.length === 0 ? new Date() : null,
       },
     })
   } catch (error) {

@@ -71,6 +71,7 @@ const fa = {
     edit: 'ویرایش مستأجر',
     archive: 'آرشیو مستأجر',
     archivedDescription: 'این مستأجر از عملیات فعال پنهان می‌شود.',
+    billingEmail: 'ایمیل صورتحساب',
   },
   subscriptions: {
     kicker: 'عملیات صورتحساب',
@@ -172,8 +173,6 @@ const fa = {
     plan: 'پلن',
     periodEnd: 'پایان دوره',
     service: 'سرویس',
-    controlType: 'نوع کنترل',
-    endpointUrl: 'آدرس endpoint',
     deployStatus: 'وضعیت استقرار',
     status: 'وضعیت',
     noPlans: 'پلنی موجود نیست',

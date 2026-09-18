@@ -255,6 +255,10 @@ type RootTranslation = {
 		 * T​h​i​s​ ​t​e​n​a​n​t​ ​w​i​l​l​ ​b​e​ ​h​i​d​d​e​n​ ​f​r​o​m​ ​a​c​t​i​v​e​ ​o​p​e​r​a​t​i​o​n​s​.
 		 */
 		archivedDescription: string
+		/**
+		 * B​i​l​l​i​n​g​ ​e​m​a​i​l
+		 */
+		billingEmail: string
 	}
 	subscriptions: {
 		/**
@@ -613,14 +617,6 @@ type RootTranslation = {
 		 * S​e​r​v​i​c​e
 		 */
 		service: string
-		/**
-		 * C​o​n​t​r​o​l​ ​t​y​p​e
-		 */
-		controlType: string
-		/**
-		 * E​n​d​p​o​i​n​t​ ​U​R​L
-		 */
-		endpointUrl: string
 		/**
 		 * D​e​p​l​o​y​ ​s​t​a​t​u​s
 		 */
@@ -1176,6 +1172,10 @@ export type TranslationFunctions = {
 		 * This tenant will be hidden from active operations.
 		 */
 		archivedDescription: () => LocalizedString
+		/**
+		 * Billing email
+		 */
+		billingEmail: () => LocalizedString
 	}
 	subscriptions: {
 		/**
@@ -1534,14 +1534,6 @@ export type TranslationFunctions = {
 		 * Service
 		 */
 		service: () => LocalizedString
-		/**
-		 * Control type
-		 */
-		controlType: () => LocalizedString
-		/**
-		 * Endpoint URL
-		 */
-		endpointUrl: () => LocalizedString
 		/**
 		 * Deploy status
 		 */

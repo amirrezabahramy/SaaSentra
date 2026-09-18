@@ -72,6 +72,7 @@ const en = {
     edit: 'Edit tenant',
     archive: 'Archive tenant',
     archivedDescription: 'This tenant will be hidden from active operations.',
+    billingEmail: 'Billing email',
   },
   subscriptions: {
     kicker: 'Billing operations',
@@ -173,8 +174,6 @@ const en = {
     plan: 'Plan',
     periodEnd: 'Period end',
     service: 'Service',
-    controlType: 'Control type',
-    endpointUrl: 'Endpoint URL',
     deployStatus: 'Deploy status',
     status: 'Status',
     noPlans: 'No plans available',

@@ -10,6 +10,7 @@ import {
   getEntitlement,
   transitionSubscription,
 } from './lifecycle'
+import { isEmailConfigured } from './email'
 
 const reasonSchema = z.object({
   subscriptionId: z.string().uuid(),
@@ -38,6 +39,10 @@ const auditSchema = z.object({
   tenantId: z.string().trim().max(100).optional(),
   action: z.string().max(120).optional(),
 })
+const optionalEmailSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+  z.string().trim().email().max(320).nullable().optional(),
+)
 const tenantCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   slug: z
@@ -46,6 +51,7 @@ const tenantCreateSchema = z.object({
     .min(1)
     .max(80)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  billingEmail: optionalEmailSchema,
 })
 const tenantUpdateSchema = tenantCreateSchema.extend({ id: z.string().uuid() })
 const tenantArchiveSchema = z.object({
@@ -56,8 +62,6 @@ const restoreSchema = z.object({ id: z.string().uuid() })
 const serviceSchema = z.object({
   tenantId: z.string().uuid(),
   name: z.string().trim().min(1).max(120),
-  controlType: z.enum(['ENTITLEMENT', 'TOKEN', 'WEBHOOK', 'INFRA']),
-  endpointUrl: z.string().trim().url().nullable().optional(),
   deployStatus: z.enum(['HEALTHY', 'DEGRADED', 'OFFLINE']),
   paymentCallbackUrl: z.string().trim().url().nullable().optional(),
   paymentCallbackSecret: z
@@ -74,6 +78,33 @@ const serviceArchiveSchema = z.object({
   id: z.string().uuid(),
   reason: z.string().trim().min(1).max(500),
 })
+
+function assertPaymentDeliveryModeConfigured(
+  mode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL',
+) {
+  if (mode !== 'CALLBACK' && !isEmailConfigured()) {
+    throw new Error('SMTP email delivery is not configured')
+  }
+}
+
+async function assertServiceDeliveryConfigured(
+  mode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL',
+  tenantId: string,
+) {
+  assertPaymentDeliveryModeConfigured(mode)
+  if (mode !== 'CALLBACK') {
+    const tenant = await db.tenant.findUnique({
+      where: { id: tenantId, deletedAt: null },
+      select: {
+        billingEmail: true,
+      },
+    })
+    if (!tenant?.billingEmail) {
+      throw new Error('Tenant billing email is not configured')
+    }
+  }
+}
+
 const flagDefinitionSchema = z.object({
   key: z
     .string()
@@ -277,7 +308,11 @@ export const updateTenant = createServerFn({ method: 'POST' })
     return db.$transaction(async (tx) => {
       const tenant = await tx.tenant.update({
         where: { id: data.id, deletedAt: null },
-        data: { name: data.name, slug: data.slug },
+        data: {
+          name: data.name,
+          slug: data.slug,
+          billingEmail: data.billingEmail,
+        },
       })
       await createAudit(tx, {
         tenantId: tenant.id,
@@ -367,11 +402,14 @@ export const createService = createServerFn({ method: 'POST' })
   .validator((data: unknown) => serviceSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
+    await assertServiceDeliveryConfigured(
+      data.paymentDeliveryMode,
+      data.tenantId,
+    )
     return db.$transaction(async (tx) => {
       const service = await tx.service.create({
         data: {
           ...data,
-          endpointUrl: data.endpointUrl ?? null,
           paymentCallbackUrl: data.paymentCallbackUrl ?? null,
           paymentCallbackSecret: data.paymentCallbackSecret ?? null,
           paymentDeliveryMode: data.paymentDeliveryMode,
@@ -393,14 +431,16 @@ export const updateService = createServerFn({ method: 'POST' })
   .validator((data: unknown) => serviceUpdateSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
+    await assertServiceDeliveryConfigured(
+      data.paymentDeliveryMode,
+      data.tenantId,
+    )
     return db.$transaction(async (tx) => {
       const service = await tx.service.update({
         where: { id: data.id, deletedAt: null },
         data: {
           tenantId: data.tenantId,
           name: data.name,
-          controlType: data.controlType,
-          endpointUrl: data.endpointUrl ?? null,
           deployStatus: data.deployStatus,
           paymentCallbackUrl: data.paymentCallbackUrl ?? null,
           ...(data.paymentCallbackSecret
@@ -994,10 +1034,10 @@ export const getServices = createServerFn({ method: 'GET' })
       services.map(async (service) => ({
         id: service.id,
         name: service.name,
-        controlType: service.controlType,
         deployStatus: service.deployStatus,
         paymentCallbackUrl: service.paymentCallbackUrl,
         paymentDeliveryMode: service.paymentDeliveryMode,
+        emailDeliveryAvailable: isEmailConfigured(),
         paymentDelivery: service.paymentCheckouts[0]?.delivery
           ? {
               status: service.paymentCheckouts[0].delivery.status,

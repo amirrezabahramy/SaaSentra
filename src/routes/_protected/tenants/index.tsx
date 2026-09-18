@@ -45,8 +45,11 @@ function Tenants() {
   const create = useServerFn(createTenant)
   const [showCreate, setShowCreate] = useState(false)
   const createMutation = useMutation({
-    mutationFn: (value: { name: string; slug: string }) =>
-      create({ data: value }),
+    mutationFn: (value: {
+      name: string
+      slug: string
+      billingEmail: string | null
+    }) => create({ data: value }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] })
       setShowCreate(false)
@@ -150,7 +153,7 @@ function Tenants() {
                     ) : null}
                   </p>
                   <p className="text-sm text-(--sea-ink-soft)">
-                    {tenant.ownerEmail || tenant.slug}
+                    {tenant.billingEmail || tenant.slug}
                   </p>
                 </div>
               )
@@ -238,11 +241,19 @@ function TenantForm({
 }: {
   submitLabel: string
   isPending: boolean
-  onSubmit: (value: { name: string; slug: string }) => void
+  onSubmit: (value: {
+    name: string
+    slug: string
+    billingEmail: string | null
+  }) => void
 }) {
   const form = useForm({
-    defaultValues: { name: '', slug: '' },
-    onSubmit: ({ value }) => onSubmit(value),
+    defaultValues: { name: '', slug: '', billingEmail: '' },
+    onSubmit: ({ value }) =>
+      onSubmit({
+        ...value,
+        billingEmail: value.billingEmail.trim() || null,
+      }),
   })
   const { LL } = useI18nContext()
   return (
@@ -275,6 +286,19 @@ function TenantForm({
               onChange={(event) => field.handleChange(event.target.value)}
               className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
               required
+            />
+          </label>
+        )}
+      </form.Field>
+      <form.Field name="billingEmail">
+        {(field) => (
+          <label className="block text-sm font-semibold">
+            {LL.tenants.billingEmail()}
+            <input
+              type="email"
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             />
           </label>
         )}

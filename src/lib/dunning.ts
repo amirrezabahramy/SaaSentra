@@ -56,20 +56,12 @@ export async function runDunning(now = new Date()) {
       deletedAt: null,
     },
     include: {
-      tenant: {
-        include: {
-          memberships: {
-            where: { role: 'OWNER', deletedAt: null },
-            include: { user: true },
-            take: 1,
-          },
-        },
-      },
+      tenant: true,
     },
   })
 
   for (const subscription of subscriptions) {
-    const email = subscription.tenant.memberships[0]?.user.email
+    const email = subscription.tenant.billingEmail
 
     if (subscription.status === 'PAST_DUE') {
       if (expiredTrialIds.has(subscription.id)) {
