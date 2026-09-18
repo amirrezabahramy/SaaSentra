@@ -26,7 +26,10 @@ function wholeDaysUntil(date: Date, now: Date): number {
 }
 
 /** Process overdue subscriptions and grace-period notices. */
-export async function runDunning(now = new Date()): Promise<void> {
+export async function runDunning(now = new Date()) {
+  let movedToDisabled = 0
+  let movedToGrace = 0
+  let noticesSent = 0
   const periodEnded = await db.subscription.findMany({
     where: {
       status: 'DISABLED_AT_PERIOD_END',
@@ -41,6 +44,7 @@ export async function runDunning(now = new Date()): Promise<void> {
       reason: 'period_end_reached',
       metadata: { source: 'dunning' },
     })
+    movedToDisabled += 1
   }
 
   const subscriptions = await db.subscription.findMany({
@@ -72,6 +76,7 @@ export async function runDunning(now = new Date()): Promise<void> {
             'Payment failed',
             'Your current paid period is still active. Please complete payment before it ends.',
           )
+          noticesSent += 1
         }
         continue
       }
@@ -80,6 +85,7 @@ export async function runDunning(now = new Date()): Promise<void> {
         await enterGracePeriod(subscription.id, GRACE_PERIOD_DAYS, {
           reason: 'past_due_grace_threshold_reached',
         })
+        movedToGrace += 1
       }
 
       if (email) {
@@ -88,6 +94,7 @@ export async function runDunning(now = new Date()): Promise<void> {
           'Payment failed',
           'We could not charge your card. Please update your payment method.',
         )
+        noticesSent += 1
       }
       continue
     }
@@ -99,12 +106,14 @@ export async function runDunning(now = new Date()): Promise<void> {
     const remainingDays = wholeDaysUntil(subscription.graceEndsAt, now)
     if (remainingDays < 0) {
       await disable(subscription.id, 'grace_period_expired')
+      movedToDisabled += 1
       if (email) {
         await sendNotice(
           email,
           'Your account has been disabled',
           'Your grace period has ended.',
         )
+        noticesSent += 1
       }
       continue
     }
@@ -115,8 +124,11 @@ export async function runDunning(now = new Date()): Promise<void> {
         `Action required: ${remainingDays} day(s) until suspension`,
         `Your account will be disabled in ${remainingDays} day(s). Please update your payment method.`,
       )
+      noticesSent += 1
     }
   }
+
+  return { movedToDisabled, movedToGrace, noticesSent }
 }
 
 /** Backward-compatible name for callers from the scaffold. */

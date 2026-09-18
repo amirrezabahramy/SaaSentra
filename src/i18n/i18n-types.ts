@@ -136,6 +136,14 @@ type RootTranslation = {
 		 */
 		runDunning: string
 		/**
+		 * D​u​n​n​i​n​g​ ​s​c​a​n​ ​c​o​m​p​l​e​t​e​d
+		 */
+		dunningComplete: string
+		/**
+		 * D​u​n​n​i​n​g​ ​s​c​a​n​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​c​o​m​p​l​e​t​e​d
+		 */
+		dunningError: string
+		/**
 		 * R​e​c​e​n​t​ ​a​u​d​i​t​ ​a​c​t​i​v​i​t​y
 		 */
 		recentAudit: string
@@ -162,10 +170,6 @@ type RootTranslation = {
 	}
 	metrics: {
 		/**
-		 * M​o​n​t​h​l​y​ ​r​e​c​u​r​r​i​n​g​ ​r​e​v​e​n​u​e
-		 */
-		mrr: string
-		/**
 		 * A​c​t​i​v​e​ ​s​u​b​s​c​r​i​p​t​i​o​n​s
 		 */
 		activeSubscriptions: string
@@ -173,6 +177,14 @@ type RootTranslation = {
 		 * D​u​n​n​i​n​g​ ​q​u​e​u​e
 		 */
 		dunningQueue: string
+		/**
+		 * E​s​t​i​m​a​t​e​d​ ​r​e​c​u​r​r​i​n​g​ ​r​e​v​e​n​u​e​ ​/​ ​3​0​ ​d​a​y​s
+		 */
+		recurringRevenue: string
+		/**
+		 * A​c​t​i​v​e​ ​p​e​r​m​a​n​e​n​t​-​p​l​a​n​ ​v​a​l​u​e
+		 */
+		nonRecurringValue: string
 	}
 	tenants: {
 		/**
@@ -1045,6 +1057,14 @@ export type TranslationFunctions = {
 		 */
 		runDunning: () => LocalizedString
 		/**
+		 * Dunning scan completed
+		 */
+		dunningComplete: () => LocalizedString
+		/**
+		 * Dunning scan could not be completed
+		 */
+		dunningError: () => LocalizedString
+		/**
 		 * Recent audit activity
 		 */
 		recentAudit: () => LocalizedString
@@ -1071,10 +1091,6 @@ export type TranslationFunctions = {
 	}
 	metrics: {
 		/**
-		 * Monthly recurring revenue
-		 */
-		mrr: () => LocalizedString
-		/**
 		 * Active subscriptions
 		 */
 		activeSubscriptions: () => LocalizedString
@@ -1082,6 +1098,14 @@ export type TranslationFunctions = {
 		 * Dunning queue
 		 */
 		dunningQueue: () => LocalizedString
+		/**
+		 * Estimated recurring revenue / 30 days
+		 */
+		recurringRevenue: () => LocalizedString
+		/**
+		 * Active permanent-plan value
+		 */
+		nonRecurringValue: () => LocalizedString
 	}
 	tenants: {
 		/**

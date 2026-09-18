@@ -36,6 +36,8 @@ const fa = {
     dunningQueue: 'صف پیگیری پرداخت',
     tenants: 'مستأجر',
     runDunning: 'اجرای پیگیری پرداخت',
+    dunningComplete: 'اسکن پیگیری پرداخت انجام شد',
+    dunningError: 'اسکن پیگیری پرداخت انجام نشد',
     recentAudit: 'آخرین فعالیت‌های ثبت‌شده',
     noAudit: 'فعالیتی ثبت نشده است',
     noAuditDescription:
@@ -45,9 +47,10 @@ const fa = {
     unableToLoad: 'بارگذاری نمای کلی ممکن نیست',
   },
   metrics: {
-    mrr: 'درآمد تکرارشونده ماهانه',
     activeSubscriptions: 'اشتراک‌های فعال',
     dunningQueue: 'صف پیگیری پرداخت',
+    recurringRevenue: 'برآورد درآمد دوره‌ای / ۳۰ روز',
+    nonRecurringValue: 'ارزش فعال پلن‌های دائمی',
   },
   tenants: {
     kicker: 'حساب‌ها',

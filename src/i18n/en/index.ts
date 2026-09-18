@@ -38,6 +38,8 @@ const en = {
     dunningQueue: 'Dunning queue',
     tenants: 'tenant(s)',
     runDunning: 'Run dunning now',
+    dunningComplete: 'Dunning scan completed',
+    dunningError: 'Dunning scan could not be completed',
     recentAudit: 'Recent audit activity',
     noAudit: 'No audit activity',
     noAuditDescription: 'Lifecycle and operational events will appear here.',
@@ -46,9 +48,10 @@ const en = {
     unableToLoad: 'Unable to load overview',
   },
   metrics: {
-    mrr: 'Monthly recurring revenue',
     activeSubscriptions: 'Active subscriptions',
     dunningQueue: 'Dunning queue',
+    recurringRevenue: 'Estimated recurring revenue / 30 days',
+    nonRecurringValue: 'Active permanent-plan value',
   },
   tenants: {
     kicker: 'Accounts',

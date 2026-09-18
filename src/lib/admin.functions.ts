@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { db } from '#/db'
-import { calculateMrr, isRevenueActive } from './metrics'
+import { calculateRevenueSummary, isRevenueActive } from './metrics'
 
 const searchSchema = z.object({
   search: z.string().max(100).optional(),
@@ -30,7 +30,7 @@ export const getOverview = createServerFn({ method: 'GET' }).handler(
     const actorById = new Map(actors.map((actor) => [actor.id, actor]))
 
     return {
-      mrrCents: calculateMrr(subscriptions, now),
+      revenue: calculateRevenueSummary(subscriptions, now),
       activeSubscriptions: subscriptions.filter((subscription) =>
         isRevenueActive(
           subscription.status,

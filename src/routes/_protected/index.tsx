@@ -10,6 +10,7 @@ import { formatCurrency, formatDate } from '#/lib/format'
 import { runDunningNow } from '#/lib/dunning.functions'
 import { overviewQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
+import { useState } from 'react'
 
 export const Route = createFileRoute('/_protected/')({
   loader: ({ context }) => context.queryClient.query(overviewQuery()),
@@ -23,9 +24,15 @@ function Overview() {
   const { data } = useSuspenseQuery(overviewQuery())
   const queryClient = useQueryClient()
   const runNow = useServerFn(runDunningNow)
+  const [dunningMessage, setDunningMessage] = useState<string | null>(null)
   const dunningMutation = useMutation({
     mutationFn: () => runNow(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin'] })
+      setDunningMessage(
+        `${LL.overview.dunningComplete()} (${result.movedToGrace} grace, ${result.movedToDisabled} disabled)`,
+      )
+    },
   })
   return (
     <div className="mx-auto max-w-6xl">
@@ -54,11 +61,16 @@ function Overview() {
           {LL.overview.runDunning()}
         </button>
       </div>
+      {dunningMutation.error ? (
+        <p className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          {LL.overview.dunningError()}
+        </p>
+      ) : dunningMessage ? (
+        <p className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          {dunningMessage}
+        </p>
+      ) : null}
       <section className="grid gap-4 md:grid-cols-3">
-        <Metric
-          label={LL.metrics.mrr()}
-          value={formatCurrency(data.mrrCents)}
-        />
         <Metric
           label={LL.metrics.activeSubscriptions()}
           value={String(data.activeSubscriptions)}
@@ -66,6 +78,14 @@ function Overview() {
         <Metric
           label={LL.metrics.dunningQueue()}
           value={String(data.dunningQueue)}
+        />
+        <Metric
+          label={LL.metrics.recurringRevenue()}
+          value={formatRevenue(data.revenue.recurring)}
+        />
+        <Metric
+          label={LL.metrics.nonRecurringValue()}
+          value={formatRevenue(data.revenue.nonRecurring)}
         />
       </section>
       <section className="mt-8 rounded-2xl border border-(--line) bg-(--surface) p-6 shadow-sm">
@@ -107,6 +127,14 @@ function Overview() {
       </section>
     </div>
   )
+}
+
+function formatRevenue(revenue: { USD: number; IRR: number }): string {
+  const values = [
+    revenue.USD ? formatCurrency(revenue.USD, 'USD') : null,
+    revenue.IRR ? formatCurrency(revenue.IRR, 'IRR') : null,
+  ].filter((value): value is string => Boolean(value))
+  return values.length > 0 ? values.join(' · ') : '—'
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

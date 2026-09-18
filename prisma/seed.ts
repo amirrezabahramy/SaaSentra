@@ -158,7 +158,7 @@ async function main() {
       create: { name: t.name, slug: t.slug },
     })
 
-    await db.subscription.upsert({
+    const subscription = await db.subscription.upsert({
       where: { tenantId: tenant.id },
       update: {},
       create: {
@@ -167,6 +167,27 @@ async function main() {
         status: 'ACTIVE',
         currentPeriodStart: new Date(),
         currentPeriodEnd: periodEnd,
+      },
+    })
+
+    await db.invoice.upsert({
+      where: { number: `seed:${t.slug}:initial` },
+      update: {
+        tenantId: tenant.id,
+        subscriptionId: subscription.id,
+        amountMinor: t.plan.priceMinor,
+        currency: t.plan.currency,
+        status: 'PAID',
+        paidAt: new Date(),
+      },
+      create: {
+        tenantId: tenant.id,
+        subscriptionId: subscription.id,
+        number: `seed:${t.slug}:initial`,
+        amountMinor: t.plan.priceMinor,
+        currency: t.plan.currency,
+        status: 'PAID',
+        paidAt: new Date(),
       },
     })
 
