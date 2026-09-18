@@ -35,7 +35,7 @@ const flagSchema = z.object({
   enabled: z.boolean(),
 })
 const auditSchema = z.object({
-  tenantId: z.string().uuid().optional(),
+  tenantId: z.string().trim().max(100).optional(),
   action: z.string().max(120).optional(),
 })
 const tenantCreateSchema = z.object({
@@ -85,27 +85,62 @@ const flagDefinitionSchema = z.object({
 })
 const flagUpdateSchema = flagDefinitionSchema.extend({ id: z.string().uuid() })
 const flagArchiveSchema = z.object({ id: z.string().uuid() })
-const planSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  slug: z
-    .string()
-    .trim()
-    .min(1)
-    .max(80)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  type: z.enum(['SUBSCRIPTION', 'SERIAL_KEY']),
-  isPermanent: z.boolean(),
-  priceMinor: z.coerce.number().int().nonnegative(),
-  currency: z.enum(['USD', 'IRR']),
-  interval: z.string().trim().min(1).max(20),
-  trialDays: z.coerce.number().int().nonnegative(),
-  provider: z.enum(['STRIPE', 'ZIBAL']),
-  providerPriceId: z.string().trim().max(120).nullable().optional(),
-})
+const planSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    slug: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    type: z.enum(['SUBSCRIPTION', 'SERIAL_KEY']),
+    isPermanent: z.boolean(),
+    priceMinor: z.coerce.number().int().nonnegative(),
+    currency: z.enum(['USD', 'IRR']),
+    interval: z
+      .string()
+      .trim()
+      .regex(/^(?:\d+\s*days?|permanent|lifetime)$/i),
+    trialDays: z.coerce.number().int().nonnegative(),
+    provider: z.enum(['STRIPE', 'ZIBAL']),
+    providerPriceId: z.string().trim().max(120).nullable().optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.provider === 'ZIBAL' && value.currency !== 'IRR') {
+      context.addIssue({
+        code: 'custom',
+        path: ['currency'],
+        message: 'Zibal plans must use IRR currency',
+      })
+    }
+    if (value.provider === 'STRIPE' && value.currency !== 'USD') {
+      context.addIssue({
+        code: 'custom',
+        path: ['currency'],
+        message: 'Stripe plans must use USD currency',
+      })
+    }
+    if (value.provider === 'ZIBAL' && value.providerPriceId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['providerPriceId'],
+        message: 'Zibal plans do not use a provider price ID',
+      })
+    }
+    if (value.provider === 'STRIPE' && !value.providerPriceId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['providerPriceId'],
+        message: 'Stripe plans require a provider price ID',
+      })
+    }
+  })
 const planUpdateSchema = planSchema.extend({ id: z.string().uuid() })
 const subscriptionCreateSchema = z.object({
   tenantId: z.string().uuid(),
   planId: z.string().uuid(),
+  periodStart: z.coerce.date().optional(),
   periodEnd: z.coerce.date().nullable().optional(),
 })
 const subscriptionUpdateSchema = subscriptionCreateSchema.extend({
@@ -128,6 +163,17 @@ const subscriptionArchiveSchema = z.object({
   id: z.string().uuid(),
   reason: z.string().trim().min(1).max(500),
 })
+
+const permanentPeriodEnd = new Date('9999-12-31T23:59:59.999Z')
+
+function periodEndForPlan(start: Date, interval: string, isPermanent: boolean) {
+  if (isPermanent) return permanentPeriodEnd
+  const match = interval.match(/^(\d+)\s*days?$/i)
+  if (!match) return null
+  const end = new Date(start)
+  end.setDate(end.getDate() + Number(match[1]))
+  return end
+}
 
 async function actorId(): Promise<string> {
   const session = await auth.api.getSession({ headers: getRequest().headers })
@@ -643,9 +689,10 @@ export const createSubscription = createServerFn({ method: 'POST' })
       const plan = await tx.plan.findUniqueOrThrow({
         where: { id: data.planId },
       })
-      const periodEnd = plan.isPermanent
-        ? new Date('9999-12-31T23:59:59.999Z')
-        : data.periodEnd
+      const periodStart = data.periodStart ?? new Date()
+      const periodEnd =
+        periodEndForPlan(periodStart, plan.interval, plan.isPermanent) ??
+        (plan.isPermanent ? permanentPeriodEnd : data.periodEnd)
       if (!periodEnd) throw new Error('Period end is required for this plan')
       const existing = await tx.subscription.findUnique({
         where: { tenantId: data.tenantId },
@@ -658,6 +705,7 @@ export const createSubscription = createServerFn({ method: 'POST' })
           where: { id: existing.id },
           data: {
             planId: data.planId,
+            currentPeriodStart: periodStart,
             currentPeriodEnd: periodEnd,
             deletedAt: null,
             status: 'TRIALING',
@@ -679,6 +727,7 @@ export const createSubscription = createServerFn({ method: 'POST' })
         data: {
           tenantId: data.tenantId,
           planId: data.planId,
+          currentPeriodStart: periodStart,
           currentPeriodEnd: periodEnd,
           serialKey: plan.type === 'SERIAL_KEY' ? generateSerialKey() : null,
           submittedSerialKey: null,
@@ -730,15 +779,17 @@ export const updateSubscription = createServerFn({ method: 'POST' })
     }
     return db.$transaction(async (tx) => {
       const plan = targetPlan
-      const periodEnd = plan.isPermanent
-        ? new Date('9999-12-31T23:59:59.999Z')
-        : data.periodEnd
+      const periodStart = data.periodStart ?? current.currentPeriodStart
+      const periodEnd =
+        periodEndForPlan(periodStart, plan.interval, plan.isPermanent) ??
+        (plan.isPermanent ? permanentPeriodEnd : data.periodEnd)
       if (!periodEnd) throw new Error('Period end is required for this plan')
       const subscription = await tx.subscription.update({
         where: { id: data.id, deletedAt: null },
         data: {
           tenantId: data.tenantId,
           planId: data.planId,
+          currentPeriodStart: periodStart,
           currentPeriodEnd: periodEnd,
           serialKey:
             plan.type === 'SERIAL_KEY'
@@ -978,20 +1029,28 @@ export const getFlags = createServerFn({ method: 'GET' })
 export const getAudit = createServerFn({ method: 'GET' })
   .validator((data: unknown) => auditSchema.parse(data))
   .handler(async ({ data }) =>
-    db.auditLog.findMany({
-      where: {
-        ...(data.tenantId ? { tenantId: data.tenantId } : {}),
-        ...(data.action
-          ? { action: { contains: data.action, mode: 'insensitive' } }
-          : {}),
-      },
-      include: {
-        tenant: { select: { id: true, name: true } },
-        actor: { select: { name: true, email: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    }),
+    (async () => {
+      if (
+        data.tenantId &&
+        !z.string().uuid().safeParse(data.tenantId).success
+      ) {
+        return []
+      }
+      return db.auditLog.findMany({
+        where: {
+          ...(data.tenantId ? { tenantId: data.tenantId } : {}),
+          ...(data.action
+            ? { action: { contains: data.action, mode: 'insensitive' } }
+            : {}),
+        },
+        include: {
+          tenant: { select: { id: true, name: true } },
+          actor: { select: { name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      })
+    })(),
   )
 
 export const getSettings = createServerFn({ method: 'GET' }).handler(

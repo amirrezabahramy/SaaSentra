@@ -116,6 +116,9 @@ const en = {
     subscriptionType: 'Subscription',
     serialKeyType: 'Serial key',
     permanent: 'Permanent / timeless',
+    nonPermanent: 'Fixed duration',
+    durationDays: 'Duration (days)',
+    periodStart: 'Period start',
     inUse: 'This plan is in use and cannot be archived.',
   },
   services: {

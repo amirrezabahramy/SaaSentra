@@ -404,6 +404,18 @@ type RootTranslation = {
 		 */
 		permanent: string
 		/**
+		 * F​i​x​e​d​ ​d​u​r​a​t​i​o​n
+		 */
+		nonPermanent: string
+		/**
+		 * D​u​r​a​t​i​o​n​ ​(​d​a​y​s​)
+		 */
+		durationDays: string
+		/**
+		 * P​e​r​i​o​d​ ​s​t​a​r​t
+		 */
+		periodStart: string
+		/**
 		 * T​h​i​s​ ​p​l​a​n​ ​i​s​ ​i​n​ ​u​s​e​ ​a​n​d​ ​c​a​n​n​o​t​ ​b​e​ ​a​r​c​h​i​v​e​d​.
 		 */
 		inUse: string
@@ -1300,6 +1312,18 @@ export type TranslationFunctions = {
 		 * Permanent / timeless
 		 */
 		permanent: () => LocalizedString
+		/**
+		 * Fixed duration
+		 */
+		nonPermanent: () => LocalizedString
+		/**
+		 * Duration (days)
+		 */
+		durationDays: () => LocalizedString
+		/**
+		 * Period start
+		 */
+		periodStart: () => LocalizedString
 		/**
 		 * This plan is in use and cannot be archived.
 		 */

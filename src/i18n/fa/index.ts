@@ -115,6 +115,9 @@ const fa = {
     subscriptionType: 'اشتراکی',
     serialKeyType: 'کلید سریال',
     permanent: 'دائمی / بدون انقضا',
+    nonPermanent: 'مدت‌دار',
+    durationDays: 'مدت (روز)',
+    periodStart: 'شروع دوره',
     inUse: 'این پلن در حال استفاده است و قابل آرشیو نیست.',
   },
   services: {

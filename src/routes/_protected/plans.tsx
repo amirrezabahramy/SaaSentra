@@ -148,7 +148,8 @@ function Plans() {
               </div>
               <p className="mt-4 text-sm text-(--sea-ink-soft)">
                 {formatCurrency(plan.priceMinor, plan.currency)} ·{' '}
-                {plan.interval} · {plan.trialDays} {LL.plans.trialDays()}
+                {plan.isPermanent ? LL.plans.permanent() : plan.interval} ·{' '}
+                {plan.trialDays} {LL.plans.trialDays()}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {plan.deletedAt ? (
@@ -262,7 +263,12 @@ function PlanForm({
       isPermanent: initial?.isPermanent ?? false,
       priceMinor: initial?.priceMinor ?? 0,
       currency: initial?.currency ?? 'USD',
-      interval: initial?.interval ?? 'month',
+      interval:
+        initial?.isPermanent || initial?.interval.toLowerCase() === 'lifetime'
+          ? 'lifetime'
+          : /^\d+\s*days?$/i.test(initial?.interval ?? '')
+            ? (initial?.interval ?? '30 days')
+            : '30 days',
       trialDays: initial?.trialDays ?? 0,
       provider: initial?.provider ?? 'STRIPE',
       providerPriceId: initial?.providerPriceId ?? '',
@@ -273,10 +279,7 @@ function PlanForm({
     ['name', LL.crud.name(), 'text'],
     ['slug', LL.crud.slug(), 'text'],
     ['priceMinor', LL.plans.price(), 'number'],
-    ['currency', LL.plans.currency(), 'text'],
-    ['interval', LL.plans.interval(), 'text'],
     ['trialDays', LL.plans.trialDays(), 'number'],
-    ['providerPriceId', LL.plans.providerPriceId(), 'text'],
   ] as const
   return (
     <form
@@ -305,24 +308,28 @@ function PlanForm({
                   )
                 }
                 className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-                required={name !== 'providerPriceId'}
+                required
               />
             </label>
           )}
         </form.Field>
       ))}
-      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 sm:col-span-2">
-        {LL.plans.gatewayDetailsWarning()}
-      </p>
       <form.Field name="provider">
         {(field) => (
           <label className="block text-sm font-semibold">
             {LL.plans.provider()}
             <select
               value={field.state.value}
-              onChange={(event) =>
-                field.handleChange(event.target.value as 'STRIPE' | 'ZIBAL')
-              }
+              onChange={(event) => {
+                const provider = event.target.value as 'STRIPE' | 'ZIBAL'
+                field.handleChange(provider)
+                form.setFieldValue(
+                  'currency',
+                  provider === 'ZIBAL' ? 'IRR' : 'USD',
+                )
+                if (provider === 'ZIBAL')
+                  form.setFieldValue('providerPriceId', '')
+              }}
               className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
             >
               <option value="STRIPE">{LL.plans.stripe()}</option>
@@ -331,6 +338,52 @@ function PlanForm({
           </label>
         )}
       </form.Field>
+      <form.Subscribe selector={(state) => state.values.provider}>
+        {(provider) => (
+          <>
+            <form.Field name="currency">
+              {(field) => (
+                <label className="block text-sm font-semibold">
+                  {LL.plans.currency()}
+                  <select
+                    value={field.state.value}
+                    onChange={(event) =>
+                      field.handleChange(event.target.value as 'USD' | 'IRR')
+                    }
+                    className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                  >
+                    {provider === 'ZIBAL' ? (
+                      <option value="IRR">IRR</option>
+                    ) : (
+                      <option value="USD">USD</option>
+                    )}
+                  </select>
+                </label>
+              )}
+            </form.Field>
+            {provider === 'STRIPE' ? (
+              <form.Field name="providerPriceId">
+                {(field) => (
+                  <label className="block text-sm font-semibold">
+                    {LL.plans.providerPriceId()}
+                    <input
+                      value={field.state.value}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                      required
+                    />
+                  </label>
+                )}
+              </form.Field>
+            ) : null}
+          </>
+        )}
+      </form.Subscribe>
+      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 sm:col-span-2">
+        {LL.plans.gatewayDetailsWarning()}
+      </p>
       <form.Field name="type">
         {(field) => (
           <label className="block text-sm font-semibold">
@@ -354,17 +407,49 @@ function PlanForm({
       </form.Field>
       <form.Field name="isPermanent">
         {(field) => (
-          <label className="flex items-center gap-3 text-sm font-semibold">
-            <input
-              type="checkbox"
-              checked={field.state.value}
-              onChange={(event) => field.handleChange(event.target.checked)}
-              className="size-4"
-            />
-            {LL.plans.permanent()}
+          <label className="block text-sm font-semibold">
+            {LL.plans.interval()}
+            <select
+              value={field.state.value ? 'permanent' : 'fixed'}
+              onChange={(event) => {
+                const permanent = event.target.value === 'permanent'
+                field.handleChange(permanent)
+                if (permanent) form.setFieldValue('interval', 'lifetime')
+                else if (form.state.values.interval === 'lifetime')
+                  form.setFieldValue('interval', '30 days')
+              }}
+              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+            >
+              <option value="permanent">{LL.plans.permanent()}</option>
+              <option value="fixed">{LL.plans.nonPermanent()}</option>
+            </select>
           </label>
         )}
       </form.Field>
+      <form.Subscribe selector={(state) => state.values.isPermanent}>
+        {(isPermanent) =>
+          !isPermanent ? (
+            <form.Field name="interval">
+              {(field) => (
+                <label className="block text-sm font-semibold">
+                  {LL.plans.durationDays()}
+                  <select
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                  >
+                    {[7, 14, 30, 60, 90, 180, 365].map((days) => (
+                      <option key={days} value={`${days} days`}>
+                        {days} days
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </form.Field>
+          ) : null
+        }
+      </form.Subscribe>
       <form.Subscribe
         selector={(state) => [state.canSubmit, state.isSubmitting]}
       >

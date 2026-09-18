@@ -12,6 +12,9 @@ function nextPeriodEnd(
   if (isPermanent) return permanentPeriodEnd
   const base = new Date(Math.max(Date.now(), currentPeriodEnd.getTime()))
   const match = interval.match(/^(\d+)?\s*(day|week|month|year)s?$/i)
+  const dayMatch = interval.match(/^(\d+)\s*days?$/i)
+  if (dayMatch) base.setDate(base.getDate() + Number(dayMatch[1]))
+  if (dayMatch) return base
   const count = Number(match?.[1] ?? 1)
   const unit = match?.[2]?.toLowerCase() ?? 'month'
   if (unit === 'day') base.setDate(base.getDate() + count)

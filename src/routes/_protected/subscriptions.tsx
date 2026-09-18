@@ -70,6 +70,9 @@ function Subscriptions() {
         ? update({
             data: {
               ...value,
+              periodStart: value.periodStart
+                ? new Date(value.periodStart)
+                : undefined,
               periodEnd: value.periodEnd ? new Date(value.periodEnd) : null,
               reason:
                 value.reason?.trim() ||
@@ -80,6 +83,9 @@ function Subscriptions() {
             data: {
               tenantId: value.tenantId,
               planId: value.planId,
+              periodStart: value.periodStart
+                ? new Date(value.periodStart)
+                : undefined,
               periodEnd: value.periodEnd ? new Date(value.periodEnd) : null,
             },
           }),
@@ -311,6 +317,7 @@ function Subscriptions() {
                     id: dialog.id,
                     tenantId: dialog.tenantId,
                     planName: dialog.plan.name,
+                    currentPeriodStart: dialog.currentPeriodStart.toISOString(),
                     currentPeriodEnd: dialog.currentPeriodEnd.toISOString(),
                     status: dialog.status,
                   }
@@ -336,6 +343,7 @@ type SubscriptionFormValue = {
   id?: string
   tenantId: string
   planId: string
+  periodStart: string
   periodEnd: string
   status?: (typeof statuses)[number]
   reason?: string
@@ -360,6 +368,7 @@ function SubscriptionForm({
     id: string
     tenantId: string
     planName: string
+    currentPeriodStart: string
     currentPeriodEnd: string
     status: (typeof statuses)[number] | 'TRIALING'
   }
@@ -375,6 +384,9 @@ function SubscriptionForm({
         plans.find((plan) => plan.name === initial?.planName)?.id ||
         plans[0]?.id ||
         '',
+      periodStart:
+        initial?.currentPeriodStart.slice(0, 16) ||
+        new Date().toISOString().slice(0, 16),
       periodEnd: initial?.currentPeriodEnd.slice(0, 10) || '',
       status: initial?.status,
       reason: '',
@@ -445,12 +457,15 @@ function SubscriptionForm({
                       )
                     }
                     className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                    disabled={initial.status === 'CANCELED'}
                   >
                     {statuses.map((status) => (
                       <option
                         key={status}
                         value={status}
-                        disabled={status === 'ARCHIVED'}
+                        disabled={
+                          status === 'ARCHIVED' || initial.status === 'CANCELED'
+                        }
                       >
                         {LL.status[status]()}
                       </option>
@@ -500,26 +515,22 @@ function SubscriptionForm({
       <form.Subscribe selector={(state) => state.values.planId}>
         {(planId) => {
           const selectedPlan = plans.find((plan) => plan.id === planId)
-          return (
-            <form.Field name="periodEnd">
+          return selectedPlan?.isPermanent ? (
+            <p className="text-sm font-semibold text-(--sea-ink-soft)">
+              {LL.plans.permanent()}
+            </p>
+          ) : (
+            <form.Field name="periodStart">
               {(field) => (
                 <label className="block text-sm font-semibold">
-                  {LL.crud.periodEnd()}
-                  {selectedPlan?.isPermanent ? (
-                    <p className="mt-2 text-sm font-normal text-(--sea-ink-soft)">
-                      {LL.plans.permanent()}
-                    </p>
-                  ) : (
-                    <input
-                      type="date"
-                      value={field.state.value}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-                      required
-                    />
-                  )}
+                  {LL.plans.periodStart()}
+                  <input
+                    type="datetime-local"
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                    required
+                  />
                 </label>
               )}
             </form.Field>
