@@ -11,15 +11,12 @@ export function isEmailConfigured(): boolean {
   )
 }
 
-export async function sendPaymentEmail(input: {
-  to: string
-  payload: Record<string, unknown>
-}) {
+function createTransporter() {
   if (!isEmailConfigured()) {
     throw new Error('SMTP email delivery is not configured')
   }
 
-  const transporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     secure: env.SMTP_SECURE === 'true',
@@ -28,6 +25,28 @@ export async function sendPaymentEmail(input: {
         ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD }
         : undefined,
   })
+}
+
+export async function sendEmail(input: {
+  to: string
+  subject: string
+  text: string
+  html: string
+}) {
+  const transporter = createTransporter()
+  await transporter.sendMail({
+    from: env.SMTP_FROM ?? env.SMTP_USER,
+    to: input.to,
+    subject: input.subject,
+    text: input.text,
+    html: input.html,
+  })
+}
+
+export async function sendPaymentEmail(input: {
+  to: string
+  payload: Record<string, unknown>
+}) {
   const planName = String(input.payload.planName ?? '—')
   const tenantName = String(input.payload.tenantName ?? '—')
   const serialKey = input.payload.serialKey
@@ -83,11 +102,52 @@ export async function sendPaymentEmail(input: {
       </div>
     </div>`
 
-  await transporter.sendMail({
-    from: env.SMTP_FROM ?? env.SMTP_USER,
+  await sendEmail({
     to: input.to,
     subject: 'Payment completed',
     text: textLines.join('\n'),
+    html,
+  })
+}
+
+export async function sendDunningEmail(input: {
+  to: string
+  tenantName: string
+  subject: string
+  message: string
+}) {
+  const safe = (value: string) =>
+    value.replace(
+      /[&<>'"]|\\u2028|\\u2029/g,
+      (character) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;',
+          '\\u2028': '&#8232;',
+          '\\u2029': '&#8233;',
+        })[character] ?? character,
+    )
+  const html = `
+    <div style="margin:0;background:#f8fafc;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+      <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;">
+        <div style="background:#0f3d4c;padding:28px 32px;color:#ffffff;">
+          <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:.75;">SaaS Management</div>
+          <h1 style="margin:10px 0 0;font-size:24px;line-height:1.3;">Payment attention required</h1>
+        </div>
+        <div style="padding:28px 32px;">
+          <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Tenant: <strong>${safe(input.tenantName)}</strong></p>
+          <p style="margin:0;color:#475569;font-size:15px;line-height:1.6;">${safe(input.message)}</p>
+        </div>
+      </div>
+    </div>`
+
+  await sendEmail({
+    to: input.to,
+    subject: input.subject,
+    text: `Tenant: ${input.tenantName}\n\n${input.message}`,
     html,
   })
 }

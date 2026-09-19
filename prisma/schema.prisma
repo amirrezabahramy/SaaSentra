@@ -81,18 +81,26 @@ enum PaymentDeliveryStatus {
   NOT_CONFIGURED
 }
 
+enum DunningNoticeStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  NOT_CONFIGURED
+}
+
 model User {
-  id            String       @id @default(uuid())
-  email         String       @unique
+  id            String     @id @default(uuid())
+  email         String     @unique
   name          String?
-  emailVerified Boolean      @default(false)
+  emailVerified Boolean    @default(false)
   image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
   role          Role
   tenantId      String?
-  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   auditLogs     AuditLog[]
   sessions      Session[]
   accounts      Account[]
@@ -118,6 +126,7 @@ model Tenant {
   auditLogs        AuditLog[]
   serviceActions   ServiceAction[]
   paymentCheckouts PaymentCheckout[]
+  dunningNotices   DunningNotice[]
 
   @@index([slug])
 }
@@ -197,31 +206,54 @@ model Plan {
 }
 
 model Subscription {
-  id                     String             @id @default(uuid())
-  tenantId               String             @unique
-  planId                 String
-  status                 SubscriptionStatus @default(TRIALING)
-  currentPeriodStart     DateTime           @default(now())
-  currentPeriodEnd       DateTime
-  serialKey              String?            @unique
-  submittedSerialKey     String?
-  cancelAt               DateTime?
-  canceledAt             DateTime?
+  id                      String             @id @default(uuid())
+  tenantId                String             @unique
+  planId                  String
+  status                  SubscriptionStatus @default(TRIALING)
+  currentPeriodStart      DateTime           @default(now())
+  currentPeriodEnd        DateTime
+  serialKey               String?            @unique
+  submittedSerialKey      String?
+  cancelAt                DateTime?
+  canceledAt              DateTime?
   cancellationRefundMinor Int?
-  graceEndsAt            DateTime?
-  disabledAt             DateTime?
-  providerCustomerId     String?
-  providerSubscriptionId String?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-  deletedAt              DateTime?
-  tenant                 Tenant             @relation(fields: [tenantId], references: [id])
-  plan                   Plan               @relation(fields: [planId], references: [id])
-  invoices               Invoice[]
-  paymentCheckouts       PaymentCheckout[]
+  graceEndsAt             DateTime?
+  disabledAt              DateTime?
+  providerCustomerId      String?
+  providerSubscriptionId  String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  deletedAt               DateTime?
+  tenant                  Tenant             @relation(fields: [tenantId], references: [id])
+  plan                    Plan               @relation(fields: [planId], references: [id])
+  invoices                Invoice[]
+  paymentCheckouts        PaymentCheckout[]
+  dunningNotices          DunningNotice[]
 
   @@index([tenantId, createdAt])
   @@index([status])
+}
+
+model DunningNotice {
+  id             String              @id @default(uuid())
+  subscriptionId String
+  tenantId       String
+  noticeType     String
+  periodKey      String
+  toEmail        String?
+  status         DunningNoticeStatus @default(PENDING)
+  attempts       Int                 @default(0)
+  lastError      String?
+  nextAttemptAt  DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  subscription   Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, noticeType, periodKey])
+  @@index([status, createdAt])
+  @@index([tenantId, createdAt])
 }
 
 model Invoice {
@@ -263,44 +295,44 @@ model Payment {
 }
 
 model Service {
-  id                    String              @id @default(uuid())
-  tenantId              String
-  name                  String
-  serviceApiKeyHash     String?
-  serviceApiKeyLastFour String?
+  id                     String                     @id @default(uuid())
+  tenantId               String
+  name                   String
+  serviceApiKeyHash      String?
+  serviceApiKeyLastFour  String?
   serviceApiKeyCreatedAt DateTime?
   serviceApiKeyRevokedAt DateTime?
-  deployStatus          ServiceDeployStatus @default(HEALTHY)
-  paymentCallbackUrl    String?
-  paymentCallbackSecret String?
-  paymentDeliveryMode   ServicePaymentDeliveryMode @default(CALLBACK)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  deletedAt             DateTime?
-  tenant                Tenant              @relation(fields: [tenantId], references: [id])
-  actions               ServiceAction[]
-  paymentCheckouts      PaymentCheckout[]
+  deployStatus           ServiceDeployStatus        @default(HEALTHY)
+  paymentCallbackUrl     String?
+  paymentCallbackSecret  String?
+  paymentDeliveryMode    ServicePaymentDeliveryMode @default(CALLBACK)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  deletedAt              DateTime?
+  tenant                 Tenant                     @relation(fields: [tenantId], references: [id])
+  actions                ServiceAction[]
+  paymentCheckouts       PaymentCheckout[]
 
   @@index([tenantId, createdAt])
 }
 
 model PaymentCheckout {
-  id                String          @id @default(uuid())
+  id                String           @id @default(uuid())
   tenantId          String
   serviceId         String
   subscriptionId    String?
   planId            String
   provider          PaymentProvider
-  providerPaymentId String?         @unique
-  status            CheckoutStatus  @default(PENDING)
+  providerPaymentId String?          @unique
+  status            CheckoutStatus   @default(PENDING)
   returnUrl         String?
   expiresAt         DateTime
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  tenant            Tenant          @relation(fields: [tenantId], references: [id])
-  service           Service         @relation(fields: [serviceId], references: [id])
-  subscription      Subscription?   @relation(fields: [subscriptionId], references: [id])
-  plan              Plan            @relation(fields: [planId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  service           Service          @relation(fields: [serviceId], references: [id])
+  subscription      Subscription?    @relation(fields: [subscriptionId], references: [id])
+  plan              Plan             @relation(fields: [planId], references: [id])
   delivery          PaymentDelivery?
 
   @@index([tenantId, createdAt])
@@ -308,15 +340,15 @@ model PaymentCheckout {
 }
 
 model PaymentDelivery {
-  id          String                 @id @default(uuid())
-  checkoutId  String                 @unique
-  status      PaymentDeliveryStatus  @default(PENDING)
-  attempts    Int                    @default(0)
+  id          String                @id @default(uuid())
+  checkoutId  String                @unique
+  status      PaymentDeliveryStatus @default(PENDING)
+  attempts    Int                   @default(0)
   lastError   String?
   deliveredAt DateTime?
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  checkout    PaymentCheckout        @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  checkout    PaymentCheckout       @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
 }
 
 model WebhookEvent {

@@ -73,25 +73,25 @@ Acceptance criteria:
 
 ## Medium priority
 
-### 4. Move dunning notices to a real delivery system
+### 4. Move dunning notices to a real delivery system — implemented September 19, 2026
 
-Current state: dunning notices are logged as queued notices and are not yet sent through the configured email provider.
+Current state: dunning notices are persisted and sent through the configured Nodemailer/SMTP provider. Each notice has a unique subscription/type/period key, delivery status, attempt count, safe error text, and retry timestamp.
 
 Risk: customers may not receive payment-failure, grace-period, or suspension notices.
 
 Recommended fix:
 
-- Send notices through the existing Nodemailer/SMTP abstraction or a transactional email provider.
-- Add a delivery record with status, attempts, timestamps, and safe error information.
-- Retry transient failures with backoff.
-- Prevent duplicate notices for the same subscription, notice type, and period.
+- [x] Send notices through the existing Nodemailer/SMTP abstraction or a transactional email provider.
+- [x] Add a delivery record with status, attempts, timestamps, and safe error information.
+- [x] Retry transient failures with bounded exponential backoff.
+- [x] Prevent duplicate notices for the same subscription, notice type, and period.
 
 Acceptance criteria:
 
-- Every required notice is either delivered or recorded as failed.
-- Failed delivery does not crash the dunning scan.
-- Re-running dunning does not send duplicate notices.
-- Email content does not contain secrets or unnecessary internal IDs.
+- [x] Every required notice is either delivered or recorded as failed/not configured.
+- [x] Failed delivery does not crash the dunning scan.
+- [x] Re-running dunning does not send duplicate notices.
+- [x] Email content does not contain secrets or unnecessary internal IDs.
 
 ### 5. Add outbound network controls for callbacks
 

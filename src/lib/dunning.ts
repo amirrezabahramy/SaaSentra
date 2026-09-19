@@ -1,6 +1,7 @@
 import cron from 'node-cron'
 import type { ScheduledTask } from 'node-cron'
 import { db } from '../db'
+import { sendDunningEmail, isEmailConfigured } from './email'
 import {
   GRACE_NOTICE_DAYS,
   disable,
@@ -10,19 +11,120 @@ import {
 
 const PAST_DUE_GRACE_THRESHOLD_DAYS = 3
 const GRACE_PERIOD_DAYS = 7
+const MAX_NOTICE_ATTEMPTS = 3
 const DAY_MS = 86_400_000
-
-async function sendNotice(
-  _email: string,
-  _subject: string,
-  _body: string,
-): Promise<void> {
-  // Placeholder for Resend/Postmark/SES integration in a later phase.
-  console.info('[dunning] notice queued')
-}
 
 function wholeDaysUntil(date: Date, now: Date): number {
   return Math.floor((date.getTime() - now.getTime()) / DAY_MS)
+}
+
+async function sendNotice(input: {
+  subscriptionId: string
+  tenantId: string
+  tenantName: string
+  email: string | null
+  noticeType: string
+  periodKey: string
+  subject: string
+  message: string
+}): Promise<boolean> {
+  const notice = await db.dunningNotice.upsert({
+    where: {
+      subscriptionId_noticeType_periodKey: {
+        subscriptionId: input.subscriptionId,
+        noticeType: input.noticeType,
+        periodKey: input.periodKey,
+      },
+    },
+    create: {
+      subscriptionId: input.subscriptionId,
+      tenantId: input.tenantId,
+      noticeType: input.noticeType,
+      periodKey: input.periodKey,
+      toEmail: input.email,
+    },
+    update: { toEmail: input.email },
+    select: { id: true, status: true, attempts: true, nextAttemptAt: true },
+  })
+
+  if (notice.status === 'SENT') {
+    return false
+  }
+
+  if (!input.email || !isEmailConfigured()) {
+    await db.dunningNotice.update({
+      where: { id: notice.id },
+      data: {
+        status: 'NOT_CONFIGURED',
+        nextAttemptAt: null,
+        lastError: input.email
+          ? 'SMTP email delivery is not configured'
+          : 'Tenant billing email is not configured',
+      },
+    })
+    return false
+  }
+
+  if (notice.attempts >= MAX_NOTICE_ATTEMPTS) {
+    return false
+  }
+
+  const retryAt = notice.nextAttemptAt as Date | null
+  if (retryAt !== null && retryAt > new Date()) {
+    return false
+  }
+
+  const claimed = await db.dunningNotice.updateMany({
+    where: {
+      id: notice.id,
+      status: { in: ['PENDING', 'FAILED', 'NOT_CONFIGURED'] },
+      attempts: { lt: MAX_NOTICE_ATTEMPTS },
+    },
+    data: {
+      status: 'SENDING',
+      attempts: { increment: 1 },
+      lastError: null,
+      nextAttemptAt: null,
+    },
+  })
+
+  if (claimed.count !== 1) {
+    return false
+  }
+
+  try {
+    await sendDunningEmail({
+      to: input.email,
+      tenantName: input.tenantName,
+      subject: input.subject,
+      message: input.message,
+    })
+    await db.dunningNotice.update({
+      where: { id: notice.id },
+      data: {
+        status: 'SENT',
+        sentAt: new Date(),
+        lastError: null,
+        nextAttemptAt: null,
+      },
+    })
+    return true
+  } catch (error) {
+    await db.dunningNotice.update({
+      where: { id: notice.id },
+      data: {
+        status: 'FAILED',
+        nextAttemptAt: new Date(
+          Date.now() + Math.min(60, 2 ** Math.max(0, notice.attempts)) * 60_000,
+        ),
+        lastError:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : 'Email delivery failed',
+      },
+    })
+    return false
+  }
 }
 
 /** Process overdue subscriptions and grace-period notices. */
@@ -55,37 +157,51 @@ export async function runDunning(now = new Date()) {
       status: { in: ['PAST_DUE', 'GRACE_PERIOD'] },
       deletedAt: null,
     },
-    include: {
-      tenant: true,
-    },
+    include: { tenant: true },
   })
 
   for (const subscription of subscriptions) {
-    const email = subscription.tenant.billingEmail
+    const periodKey = subscription.currentPeriodEnd.toISOString()
 
     if (subscription.status === 'PAST_DUE') {
       if (expiredTrialIds.has(subscription.id)) {
-        if (email) {
-          await sendNotice(
-            email,
-            'Your trial has ended',
-            'Your trial period has ended. Please complete payment to continue using the service.',
-          )
+        if (
+          await sendNotice({
+            subscriptionId: subscription.id,
+            tenantId: subscription.tenantId,
+            tenantName: subscription.tenant.name,
+            email: subscription.tenant.billingEmail,
+            noticeType: 'TRIAL_ENDED',
+            periodKey,
+            subject: 'Your trial has ended',
+            message:
+              'Your trial period has ended. Please complete payment to continue using the service.',
+          })
+        ) {
           noticesSent += 1
         }
         continue
       }
+
       if (subscription.currentPeriodEnd > now) {
-        if (email) {
-          await sendNotice(
-            email,
-            'Payment failed',
-            'Your current paid period is still active. Please complete payment before it ends.',
-          )
+        if (
+          await sendNotice({
+            subscriptionId: subscription.id,
+            tenantId: subscription.tenantId,
+            tenantName: subscription.tenant.name,
+            email: subscription.tenant.billingEmail,
+            noticeType: 'PAYMENT_FAILED_ACTIVE_PERIOD',
+            periodKey,
+            subject: 'Payment failed',
+            message:
+              'Your current paid period is still active. Please complete payment before it ends.',
+          })
+        ) {
           noticesSent += 1
         }
         continue
       }
+
       const pastDueDays = wholeDaysUntil(subscription.updatedAt, now) * -1
       if (pastDueDays > PAST_DUE_GRACE_THRESHOLD_DAYS) {
         await enterGracePeriod(subscription.id, GRACE_PERIOD_DAYS, {
@@ -94,12 +210,19 @@ export async function runDunning(now = new Date()) {
         movedToGrace += 1
       }
 
-      if (email) {
-        await sendNotice(
-          email,
-          'Payment failed',
-          'We could not charge your card. Please update your payment method.',
-        )
+      if (
+        await sendNotice({
+          subscriptionId: subscription.id,
+          tenantId: subscription.tenantId,
+          tenantName: subscription.tenant.name,
+          email: subscription.tenant.billingEmail,
+          noticeType: 'PAYMENT_FAILED',
+          periodKey,
+          subject: 'Payment failed',
+          message:
+            'We could not charge your payment method. Please complete payment to continue using the service.',
+        })
+      ) {
         noticesSent += 1
       }
       continue
@@ -110,27 +233,43 @@ export async function runDunning(now = new Date()) {
     }
 
     const remainingDays = wholeDaysUntil(subscription.graceEndsAt, now)
+    const gracePeriodKey = subscription.graceEndsAt.toISOString()
     if (remainingDays < 0) {
       await disable(subscription.id, 'grace_period_expired')
       movedToDisabled += 1
-      if (email) {
-        await sendNotice(
-          email,
-          'Your account has been disabled',
-          'Your grace period has ended.',
-        )
+      if (
+        await sendNotice({
+          subscriptionId: subscription.id,
+          tenantId: subscription.tenantId,
+          tenantName: subscription.tenant.name,
+          email: subscription.tenant.billingEmail,
+          noticeType: 'ACCOUNT_DISABLED',
+          periodKey: gracePeriodKey,
+          subject: 'Your account has been disabled',
+          message:
+            'Your grace period has ended. Complete payment and contact the service administrator to restore access.',
+        })
+      ) {
         noticesSent += 1
       }
       continue
     }
 
-    if (email && GRACE_NOTICE_DAYS.includes(remainingDays as 7 | 3 | 1)) {
-      await sendNotice(
-        email,
-        `Action required: ${remainingDays} day(s) until suspension`,
-        `Your account will be disabled in ${remainingDays} day(s). Please update your payment method.`,
-      )
-      noticesSent += 1
+    if (GRACE_NOTICE_DAYS.includes(remainingDays as 7 | 3 | 1)) {
+      if (
+        await sendNotice({
+          subscriptionId: subscription.id,
+          tenantId: subscription.tenantId,
+          tenantName: subscription.tenant.name,
+          email: subscription.tenant.billingEmail,
+          noticeType: `GRACE_${remainingDays}_DAYS`,
+          periodKey: gracePeriodKey,
+          subject: `Action required: ${remainingDays} day(s) until suspension`,
+          message: `Your account will be disabled in ${remainingDays} day(s). Please complete payment before the grace period ends.`,
+        })
+      ) {
+        noticesSent += 1
+      }
     }
   }
 
