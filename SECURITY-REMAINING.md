@@ -114,21 +114,21 @@ Acceptance criteria:
 - Redirects are rejected.
 - Large or slow callback responses do not exhaust resources.
 
-### 6. Add complete automated security and integration coverage
+### 6. Add complete automated security and integration coverage — partially implemented September 19, 2026
 
-Current state: focused security regression tests exist, but there is no complete provider and browser-level security suite.
+Current state: 17 automated security tests now cover service credential isolation and revocation, archived tenant/subscription behavior, serial-key persistence and leakage prevention, callback controls, rate limits, provider adapters, and Stripe signature/replay handling. Direct server-function CSRF testing, full HTTP route integration, delivery-mode integration, and clean-database migration tests remain open.
 
 Required coverage:
 
-- Owner/Admin/Tenant authorization boundaries.
-- Cross-tenant and cross-service IDOR attempts.
-- Archived-record behavior.
-- CSRF protection for server functions.
-- Authentication throttling.
-- Serial-key persistence and leakage prevention.
-- Stripe and Zibal success, failure, tampering, and replay.
-- Email, callback, and callback-plus-email delivery.
-- Production-like migration and clean-database startup.
+- [ ] Owner/Admin/Tenant authorization boundaries through server functions.
+- [x] Cross-tenant and cross-service IDOR attempts.
+- [x] Archived-record behavior.
+- [ ] CSRF protection for server functions through an HTTP integration test.
+- [x] Authentication and API throttling primitives.
+- [x] Serial-key persistence and leakage prevention.
+- [x] Stripe and Zibal adapter success/failure plus callback tampering and replay.
+- [ ] Email, callback, and callback-plus-email delivery end-to-end.
+- [ ] Production-like migration and clean-database startup.
 
 Acceptance criteria:
 
