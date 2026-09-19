@@ -53,15 +53,22 @@ function Settings() {
                 className="flex justify-between rounded-xl bg-white/50 px-4 py-2 text-sm"
               >
                 <code>{item.name}</code>
-                <span
-                  className={
-                    item.configured ? 'text-emerald-700' : 'text-amber-700'
-                  }
-                >
-                  {item.configured
-                    ? LL.settings.configured()
-                    : LL.settings.missing()}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-(--sea-ink-soft)">
+                    {item.required
+                      ? LL.settings.required()
+                      : LL.settings.optional()}
+                  </span>
+                  <span
+                    className={
+                      item.configured ? 'text-emerald-700' : 'text-amber-700'
+                    }
+                  >
+                    {item.configured
+                      ? LL.settings.configured()
+                      : LL.settings.missing()}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

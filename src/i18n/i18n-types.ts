@@ -766,7 +766,7 @@ type RootTranslation = {
 		 */
 		environment: string
 		/**
-		 * R​e​q​u​i​r​e​d​ ​v​a​r​i​a​b​l​e​s​ ​a​r​e​ ​s​h​o​w​n​ ​w​i​t​h​o​u​t​ ​e​x​p​o​s​i​n​g​ ​t​h​e​i​r​ ​v​a​l​u​e​s​.
+		 * C​u​r​r​e​n​t​ ​e​n​v​i​r​o​n​m​e​n​t​ ​v​a​r​i​a​b​l​e​s​ ​a​r​e​ ​s​h​o​w​n​ ​w​i​t​h​o​u​t​ ​e​x​p​o​s​i​n​g​ ​t​h​e​i​r​ ​v​a​l​u​e​s​.​ ​O​p​t​i​o​n​a​l​ ​e​n​t​r​i​e​s​ ​a​r​e​ ​u​s​e​d​ ​b​y​ ​s​p​e​c​i​f​i​c​ ​f​e​a​t​u​r​e​s​.
 		 */
 		environmentDescription: string
 		/**
@@ -777,6 +777,14 @@ type RootTranslation = {
 		 * M​i​s​s​i​n​g
 		 */
 		missing: string
+		/**
+		 * R​e​q​u​i​r​e​d
+		 */
+		required: string
+		/**
+		 * O​p​t​i​o​n​a​l
+		 */
+		optional: string
 	}
 	tenantDetail: {
 		/**
@@ -1719,7 +1727,7 @@ export type TranslationFunctions = {
 		 */
 		environment: () => LocalizedString
 		/**
-		 * Required variables are shown without exposing their values.
+		 * Current environment variables are shown without exposing their values. Optional entries are used by specific features.
 		 */
 		environmentDescription: () => LocalizedString
 		/**
@@ -1730,6 +1738,14 @@ export type TranslationFunctions = {
 		 * Missing
 		 */
 		missing: () => LocalizedString
+		/**
+		 * Required
+		 */
+		required: () => LocalizedString
+		/**
+		 * Optional
+		 */
+		optional: () => LocalizedString
 	}
 	tenantDetail: {
 		/**
