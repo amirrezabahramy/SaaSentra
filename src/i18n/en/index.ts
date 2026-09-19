@@ -30,6 +30,8 @@ const en = {
     invalidCredentials: 'Invalid email or password',
     signingIn: 'Signing in…',
     requiredFields: 'Email and password are required',
+    owner: 'Owner',
+    admin: 'Administrator',
   },
   overview: {
     kicker: 'Console overview',

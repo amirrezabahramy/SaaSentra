@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { LanguageSwitcher } from '#/components/language-switcher'
 import { useI18nContext } from '#/i18n/i18n-react'
 import BetterAuthHeader from '#/integrations/better-auth/header-user'
+import type { OperatorIdentity } from '#/integrations/better-auth/header-user'
 import { SIDEBAR_STORAGE_KEY } from '#/lib/i18n'
 
 /**
@@ -30,6 +31,8 @@ export const Route = createFileRoute('/_protected')({
 
 function ProtectedLayout() {
   const { LL } = useI18nContext()
+  const { auth } = Route.useRouteContext()
+  if (!auth) return null
   const location = useLocation()
   const [isMobileViewport, setIsMobileViewport] = useState(
     () =>
@@ -110,7 +113,7 @@ function ProtectedLayout() {
         className={`dashboard-sidebar-drawer ${isSidebarOpen ? 'is-open' : ''}`}
         aria-hidden={!isSidebarOpen}
       >
-        <SidebarContent links={links} />
+        <SidebarContent links={links} user={auth.user} />
       </aside>
 
       <main className="dashboard-content h-dvh min-h-0 min-w-0 overflow-y-auto">
@@ -135,14 +138,16 @@ function ProtectedLayout() {
 
 type SidebarLink = readonly [label: string, href: string]
 
-function SidebarContent({ links }: { links: readonly SidebarLink[] }) {
-  const { LL } = useI18nContext()
-
+function SidebarContent({
+  links,
+  user,
+}: {
+  links: readonly SidebarLink[]
+  user: OperatorIdentity
+}) {
   return (
     <>
-      <Link to="/" className="font-serif text-2xl font-bold text-(--sea-ink)">
-        {LL.app.name()}
-      </Link>
+      <BetterAuthHeader user={user} />
       <div className="mt-4">
         <LanguageSwitcher />
       </div>
@@ -157,9 +162,6 @@ function SidebarContent({ links }: { links: readonly SidebarLink[] }) {
           </Link>
         ))}
       </nav>
-      <div className="mt-8">
-        <BetterAuthHeader />
-      </div>
     </>
   )
 }

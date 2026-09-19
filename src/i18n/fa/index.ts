@@ -28,6 +28,8 @@ const fa = {
     invalidCredentials: 'ایمیل یا رمز عبور نامعتبر است',
     signingIn: 'در حال ورود…',
     requiredFields: 'ایمیل و رمز عبور الزامی هستند',
+    owner: 'مالک',
+    admin: 'مدیر',
   },
   overview: {
     kicker: 'نمای کلی کنسول',

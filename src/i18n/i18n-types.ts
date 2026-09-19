@@ -109,6 +109,14 @@ type RootTranslation = {
 		 * E​m​a​i​l​ ​a​n​d​ ​p​a​s​s​w​o​r​d​ ​a​r​e​ ​r​e​q​u​i​r​e​d
 		 */
 		requiredFields: string
+		/**
+		 * O​w​n​e​r
+		 */
+		owner: string
+		/**
+		 * A​d​m​i​n​i​s​t​r​a​t​o​r
+		 */
+		admin: string
 	}
 	overview: {
 		/**
@@ -1054,6 +1062,14 @@ export type TranslationFunctions = {
 		 * Email and password are required
 		 */
 		requiredFields: () => LocalizedString
+		/**
+		 * Owner
+		 */
+		owner: () => LocalizedString
+		/**
+		 * Administrator
+		 */
+		admin: () => LocalizedString
 	}
 	overview: {
 		/**
