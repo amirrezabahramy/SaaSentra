@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { db } from '#/db'
 import { calculateRevenueSummary, isRevenueActive } from './metrics'
+import { isEmailConfigured } from './email'
 
 const searchSchema = z.object({
   search: z.string().max(100).optional(),
@@ -90,6 +91,7 @@ export const getTenants = createServerFn({ method: 'GET' })
       name: tenant.name,
       slug: tenant.slug,
       billingEmail: tenant.billingEmail,
+      emailDeliveryAvailable: isEmailConfigured(),
       status: tenant.subscription?.status ?? null,
       archived: Boolean(tenant.deletedAt),
       subscriptionId: tenant.subscription?.id ?? null,

@@ -239,8 +239,8 @@ function Services() {
         >
           <ServiceForm
             tenants={tenants}
-            emailDeliveryAvailable={rows.some(
-              (row) => row.emailDeliveryAvailable,
+            emailDeliveryAvailable={tenants.some(
+              (tenant) => tenant.emailDeliveryAvailable,
             )}
             initial={editing ?? undefined}
             isPending={createMutation.isPending || updateMutation.isPending}
@@ -286,6 +286,7 @@ function ServiceForm({
     id: string
     name: string
     billingEmail: string | null
+    emailDeliveryAvailable: boolean
   }>
   emailDeliveryAvailable: boolean
   initial?: Partial<ServiceFormValue> & { id?: string }
