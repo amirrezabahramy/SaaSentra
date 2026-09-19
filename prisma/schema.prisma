@@ -59,6 +59,7 @@ enum ServiceDeployStatus {
   HEALTHY
   DEGRADED
   OFFLINE
+  MAINTENANCE
 }
 
 enum ServicePaymentDeliveryMode {

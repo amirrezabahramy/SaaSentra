@@ -227,7 +227,8 @@ configuration.
 ### Service deployment status
 
 Each tenant-service assignment has an operational status of `HEALTHY`,
-`DEGRADED`, or `OFFLINE`. These values are dashboard labels and are not
+`DEGRADED`, `OFFLINE`, or `MAINTENANCE`. `MAINTENANCE` indicates scheduled or
+planned temporary unavailability. These values are dashboard labels and are not
 currently included in the entitlement response. Entitlement `active` describes
 subscription authorization, not application uptime.
 

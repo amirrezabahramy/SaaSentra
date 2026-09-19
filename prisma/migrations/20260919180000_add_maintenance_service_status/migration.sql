@@ -1,0 +1,1 @@
+ALTER TYPE "ServiceDeployStatus" ADD VALUE 'MAINTENANCE';

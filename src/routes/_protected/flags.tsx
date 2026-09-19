@@ -235,7 +235,7 @@ function Flags() {
 
 type ServiceAssignmentInput = { serviceId: string; tenantId: string }
 type TenantServiceConfig = ServiceAssignmentInput & {
-  deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE'
+  deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE' | 'MAINTENANCE'
   paymentCallbackUrl: string | null
   paymentCallbackSecret: string | null
   paymentDeliveryMode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL'
@@ -301,6 +301,7 @@ function AssignmentConfig({
                 <option value="HEALTHY">HEALTHY</option>
                 <option value="DEGRADED">DEGRADED</option>
                 <option value="OFFLINE">OFFLINE</option>
+                <option value="MAINTENANCE">MAINTENANCE</option>
               </select>
             </label>
           )}

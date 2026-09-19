@@ -85,7 +85,7 @@ const serviceUpdateSchema = serviceSchema.extend({ id: z.string().uuid() })
 const tenantServiceConfigSchema = z.object({
   serviceId: z.string().uuid(),
   tenantId: z.string().uuid(),
-  deployStatus: z.enum(['HEALTHY', 'DEGRADED', 'OFFLINE']),
+  deployStatus: z.enum(['HEALTHY', 'DEGRADED', 'OFFLINE', 'MAINTENANCE']),
   paymentCallbackUrl: z.string().trim().url().nullable().optional(),
   paymentCallbackSecret: z
     .string()
