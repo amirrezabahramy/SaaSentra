@@ -48,6 +48,21 @@ export async function settleVerifiedPayment(input: {
       const targetPlan = input.planId
         ? await tx.plan.findUniqueOrThrow({ where: { id: input.planId } })
         : subscription.plan
+      if (input.checkoutId) {
+        const checkout = await tx.paymentCheckout.findUnique({
+          where: { id: input.checkoutId },
+        })
+        if (
+          !checkout ||
+          checkout.status !== 'PENDING' ||
+          checkout.provider !== input.provider ||
+          checkout.subscriptionId !== subscription.id ||
+          checkout.tenantId !== subscription.tenantId ||
+          checkout.planId !== targetPlan.id
+        ) {
+          throw new Error('Payment checkout does not match the subscription')
+        }
+      }
       if (subscription.status === 'ARCHIVED' || subscription.deletedAt)
         throw new Error('Archived subscriptions cannot receive payments')
       if (subscription.status === 'CANCELED')
@@ -60,19 +75,15 @@ export async function settleVerifiedPayment(input: {
         throw new Error(
           'This subscription cannot be reactivated before its period ends',
         )
-      if (
-        input.verified.amountMinor !== null &&
-        input.verified.amountMinor !== targetPlan.priceMinor
-      )
+      const verifiedAmount = input.verified.amountMinor
+      const verifiedCurrency = input.verified.currency
+      if (verifiedAmount === null || verifiedAmount !== targetPlan.priceMinor)
         throw new Error('Payment amount does not match the plan price')
-      if (
-        input.verified.currency !== null &&
-        input.verified.currency !== targetPlan.currency
-      )
+      if (verifiedCurrency === null || verifiedCurrency !== targetPlan.currency)
         throw new Error('Payment currency does not match the plan currency')
 
-      const amountMinor = input.verified.amountMinor ?? targetPlan.priceMinor
-      const currency = input.verified.currency ?? targetPlan.currency
+      const amountMinor = verifiedAmount
+      const currency = verifiedCurrency
       const invoiceNumber = `${input.provider.toLowerCase()}:${input.verified.providerPaymentId}`
       const now = new Date()
       const invoice = await tx.invoice.create({

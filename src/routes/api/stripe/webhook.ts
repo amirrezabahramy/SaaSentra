@@ -68,7 +68,21 @@ async function findSubscription(object: Record<string, unknown>) {
         ...(customer ? [{ providerCustomerId: customer }] : []),
       ],
     },
+    include: { plan: true },
   })
+}
+
+function metadataMatchesSubscription(
+  object: Record<string, unknown>,
+  subscription: Awaited<ReturnType<typeof findSubscription>>,
+): boolean {
+  if (!subscription) return true
+  const meta = metadata(object.metadata)
+  return (
+    (!meta.subscriptionId || meta.subscriptionId === subscription.id) &&
+    (!meta.tenantId || meta.tenantId === subscription.tenantId) &&
+    (!meta.planId || meta.planId === subscription.planId)
+  )
 }
 
 async function transitionIfAllowed(
@@ -96,13 +110,19 @@ async function mirrorInvoice(
   const stripeInvoiceId = stringValue(object.id)
   if (!stripeInvoiceId) return
   const subscription = subscriptionId
-    ? await db.subscription.findUnique({ where: { id: subscriptionId } })
+    ? await db.subscription.findUnique({
+        where: { id: subscriptionId },
+        include: { plan: true },
+      })
     : null
   if (!subscription) return
   const amount =
     numberValue(object.amount_due) ?? numberValue(object.amount_paid) ?? 0
   const currency = currencyValue(stringValue(object.currency))
-  if (!currency) return
+  if (!currency || amount <= 0 || amount !== subscription.plan.priceMinor)
+    throw new Error('Stripe invoice does not match the plan price')
+  if (currency !== subscription.plan.currency)
+    throw new Error('Stripe invoice does not match the plan currency')
   const status = invoiceStatus(stringValue(object.status))
   const invoice = await db.invoice.upsert({
     where: { number: `stripe:${stripeInvoiceId}` },
@@ -172,7 +192,14 @@ async function handleEvent(
         where: { id: checkoutId },
         include: { plan: true, service: true },
       })
-      if (checkout && checkout.status === 'PENDING') {
+      if (
+        checkout &&
+        checkout.status === 'PENDING' &&
+        checkout.subscriptionId === subscriptionId &&
+        checkout.tenantId === subscription?.tenantId &&
+        numberValue(object.amount_total) !== null &&
+        currencyValue(stringValue(object.currency)) !== null
+      ) {
         const settled = await settleVerifiedPayment({
           provider: 'STRIPE',
           subscriptionId,
@@ -189,12 +216,7 @@ async function handleEvent(
           await deliverCheckoutCallback(checkout.id)
         }
       }
-    } else if (subscriptionId)
-      await transitionIfAllowed(
-        subscriptionId,
-        'ACTIVE',
-        'Stripe checkout completed',
-      )
+    }
   } else if (
     type === 'customer.subscription.created' ||
     type === 'customer.subscription.updated'
@@ -215,11 +237,19 @@ async function handleEvent(
             : {}),
         },
       })
-      await transitionIfAllowed(
-        subscription.id,
-        'ACTIVE',
-        `Stripe subscription ${type}`,
-      )
+      const stripeStatus = stringValue(object.status)
+      if (stripeStatus === 'active' || stripeStatus === 'trialing')
+        await transitionIfAllowed(
+          subscription.id,
+          'ACTIVE',
+          `Stripe subscription ${type}`,
+        )
+      else if (stripeStatus === 'past_due')
+        await transitionIfAllowed(
+          subscription.id,
+          'PAST_DUE',
+          `Stripe subscription ${type}`,
+        )
     }
   } else if (type === 'invoice.payment_failed') {
     if (subscription)
@@ -237,7 +267,15 @@ async function handleEvent(
         'Stripe subscription deleted',
       )
   } else if (type === 'invoice.paid' || type === 'invoice.finalized') {
-    if (subscription) await mirrorInvoice(object, subscription.id)
+    if (subscription) {
+      await mirrorInvoice(object, subscription.id)
+      if (type === 'invoice.paid')
+        await transitionIfAllowed(
+          subscription.id,
+          'ACTIVE',
+          'Stripe invoice paid',
+        )
+    }
   }
 }
 
@@ -273,6 +311,8 @@ export const Route = createFileRoute('/api/stripe/webhook')({
         }
         const object = eventObject(event)
         const relatedSubscription = await findSubscription(object)
+        if (!metadataMatchesSubscription(object, relatedSubscription))
+          return Response.json({ received: true, ignored: true })
         const candidateTenantId =
           relatedSubscription?.tenantId ?? metadata(object.metadata).tenantId
         const relatedTenant = candidateTenantId
