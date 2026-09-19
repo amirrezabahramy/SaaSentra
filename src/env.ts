@@ -18,6 +18,7 @@ export const env = createEnv({
     SMTP_USER: z.string().min(1).optional(),
     SMTP_PASSWORD: z.string().min(1).optional(),
     SMTP_FROM: z.string().min(1).optional(),
+    DUNNING_SCHEDULER_ENABLED: z.enum(['true', 'false']).optional(),
   },
 
   /**

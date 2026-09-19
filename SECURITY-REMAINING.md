@@ -116,7 +116,7 @@ Acceptance criteria:
 
 ### 6. Add complete automated security and integration coverage — partially implemented September 19, 2026
 
-Current state: 17 automated security tests now cover service credential isolation and revocation, archived tenant/subscription behavior, serial-key persistence and leakage prevention, callback controls, rate limits, provider adapters, and Stripe signature/replay handling. Direct server-function CSRF testing, full HTTP route integration, delivery-mode integration, and clean-database migration tests remain open.
+Current state: 18 automated security tests now cover service credential isolation and revocation, archived tenant/subscription behavior, serial-key persistence and leakage prevention, callback controls, rate limits, provider adapters, and Stripe signature/replay handling. Direct server-function CSRF testing, full HTTP route integration, delivery-mode integration, and clean-database migration tests remain open.
 
 Required coverage:
 
@@ -137,6 +137,16 @@ Acceptance criteria:
 - Provider tests use test-mode credentials only.
 
 ## Operational requirements
+
+### Production-readiness automation — in progress September 19, 2026
+
+Implemented application checks:
+
+- `/api/health` now checks database connectivity and returns `503` when the database is unavailable.
+- `npm run production:check` validates public HTTPS auth configuration, secret shape, database connectivity, dunning scheduling, active Stripe configuration, and required SMTP configuration without printing secret values.
+- `DUNNING_SCHEDULER_ENABLED=false` can disable the in-process scheduler when an external job runner is used.
+
+The check intentionally reports local/test configuration as not ready for production. The remaining items below require deployment or infrastructure work.
 
 These are not application-code fixes, but they are required before production:
 
@@ -177,4 +187,5 @@ npm run lint
 npm run build
 npm run test:security
 npm run db:status
+npm run production:check
 ```
