@@ -21,33 +21,34 @@ npm install @prisma/client prisma node-cron
 npm install -D @types/node-cron tsx
 ```
 
-### 2. Run Postgres via docker compose
+### 2. Run the app and Postgres with Docker Compose
 
-`docker-compose.yml`:
-
-```yaml
-services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: saas
-      POSTGRES_PASSWORD: saas
-      POSTGRES_DB: saas
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-volumes:
-  pgdata:
-```
+This repository includes a production-oriented `Dockerfile` and
+`docker-compose.yml`. Postgres is private to the Compose network; only the app
+port is published to the host.
 
 ```bash
-docker compose up -d
+cp .env.docker.example .env.docker
+# Edit .env.docker and replace every placeholder secret.
+docker compose --env-file .env.docker up --build -d
+docker compose --env-file .env.docker logs -f app
+```
+
+The app container waits for Postgres, runs `prisma migrate deploy`, and starts
+the built TanStack Start server. The first database initialization also creates
+the Prisma shadow database. Use `docker compose --env-file .env.docker down` to stop the stack; add
+`--volumes` only when you intentionally want to delete the PostgreSQL data.
+
+To load the demo data after the first startup:
+
+```bash
+docker compose --env-file .env.docker exec app npx prisma db seed
 ```
 
 ### 3. Environment
 
-Copy `.env.example` to `.env` and fill in:
+For local development, copy `.env.example` to `.env.local`. For Docker, copy
+`.env.docker.example` to `.env.docker` and fill in:
 
 - `DATABASE_URL` — Postgres connection string
 - Each service has its own generated API key. Store it in the connected service and send it as the `x-service-secret` header for checkout and payment-delivery APIs.
@@ -132,7 +133,7 @@ curl -sS http://localhost:3000/api/health
 Expected response:
 
 ```json
-{ "ok": true }
+{ "ok": true, "database": "ok" }
 ```
 
 ## Architecture notes

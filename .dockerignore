@@ -1,0 +1,11 @@
+node_modules
+.output
+.git
+.gitignore
+.env
+.env.*
+!.env.docker.example
+*.log
+coverage
+dist
+tmp
