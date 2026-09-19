@@ -26,23 +26,34 @@ allow, limit, or block that customer’s access in its own UI.
   and uses this dashboard to manage customer access.
 - **Tenant** — a customer organization or account whose access is managed by
   the operator.
-- **Service** — one of the operator’s connected products, such as a café,
-  sports, or clothing website. Each registered service receives its own API
-  credential and is identified by `serviceId`.
+- **Service** — one of the operator’s reusable connected products, such as a
+  café, sports, or clothing website. A service owns its name and shared flag
+  definitions and is identified by `serviceId`; the same service can be
+  assigned to multiple tenants.
+- **TenantService assignment** — the tenant-specific connection between a
+  tenant and a service. It owns that connection’s API key, deploy status,
+  payment delivery mode, callback URL/secret, and enabled flags.
 - **Plan** — a reusable commercial definition: price, currency, provider, plan
   type, and duration.
 - **Subscription** — the tenant’s assignment to a plan. It owns the lifecycle
   status, period dates, serial key, cancellation state, and payment history.
-- **Flag** — a tenant feature entitlement, such as `advanced_reports` or
-  `team_members`.
+- **Flag** — a feature definition belonging to a service, such as
+  `advanced_reports` or `team_members`. Each tenant can independently enable
+  or disable that service’s flags.
 - **Entitlement** — the server-to-server result that tells a service whether
   access is active and which flags it may enable.
 - **Invoice and payment** — financial records created after verified provider
   settlement. A browser redirect alone never activates a subscription.
 
 The current data model gives each tenant one subscription relation at a time.
+Services are reusable product definitions. A `TenantService` assignment grants
+a tenant access to a service and stores the tenant-specific integration
+configuration. Its related flag assignments control which service features
+that tenant can use.
 The entitlement request is scoped by both `tenantId` and `serviceId`, so one
 website cannot use another website’s service credential or entitlement scope.
+Feature flags are also scoped to the requested service, so two services
+belonging to the same tenant may receive different flags.
 The subscription status itself is currently tenant-level: changing the
 subscription status affects the tenant’s connected services. A future
 per-service subscription model would require a schema change.
@@ -55,8 +66,8 @@ per-service subscription model would require a schema change.
 | Tenants       | Create and manage customer organizations, billing email, status, subscriptions, and tenant details. |
 | Plans         | Define subscription or serial-key plans, pricing, currency, provider, and duration.                 |
 | Subscriptions | Inspect and manage plan assignments, lifecycle status, periods, serial keys, and payments.          |
-| Services      | Register the operator’s products, rotate service credentials, and configure payment delivery.       |
-| Flags         | Define feature flags and enable or disable them per tenant.                                         |
+| Services      | Register reusable products and define their shared service flags.                                   |
+| Flags         | Assign services to tenants, configure each assignment, rotate its credential, and toggle its flags. |
 | Audit         | Review lifecycle, payment, credential, and administrative activity.                                 |
 | Settings      | Review application-level operational settings and configuration information.                        |
 
@@ -85,17 +96,20 @@ message or deciding whether to show a payment action.
 
 1. Register each owned product in **Services**. For example, register the café,
    sports, and clothing websites as separate services.
-2. Give each service’s developer its `serviceId` and generated service API key.
-   The key is shown only when it is created or regenerated.
-3. Create plans in **Plans** and configure their provider-specific details.
-4. Create customer tenants in **Tenants** and assign their subscriptions.
-5. Integrate the entitlement check into each website’s server-side request flow.
-6. Use the returned `active`, `status`, `reason`, and `flags` values to enforce
+2. Use **Flags** to assign each service to the tenants that may use it. Configure
+   delivery mode, callback settings, deploy status, and the tenant-service API
+   key for each assignment. The key is shown only when created or regenerated.
+3. Give the connected website developer that assignment’s `serviceId` and API
+   key. A shared service may therefore have a different key for every tenant.
+4. Create plans in **Plans** and configure their provider-specific details.
+5. Create customer tenants in **Tenants** and assign their subscriptions.
+6. Integrate the entitlement check into each website’s server-side request flow.
+7. Use the returned `active`, `status`, `reason`, and `flags` values to enforce
    access and feature limits in that website’s own design.
-7. Manage access from this dashboard. For example, disabling a tenant’s
+8. Manage access from this dashboard. For example, disabling a tenant’s
    subscription makes the entitlement response inactive for the connected
    service.
-8. Optionally use the headless checkout flow when customers need to pay or
+9. Optionally use the headless checkout flow when customers need to pay or
    renew from the connected website.
 
 Keep all shared secrets and service credentials on the server. Do not expose
@@ -114,6 +128,7 @@ Required headers:
 ```text
 x-entitlement-secret: <shared entitlement secret>
 x-service-id: <registered service id>
+x-service-secret: <tenant-service API key>
 ```
 
 For serial-key plans, the service may also send:
@@ -172,7 +187,7 @@ Headers:
 
 ```text
 x-service-id: <registered service id>
-x-service-secret: <service-specific API key>
+x-service-secret: <tenant-service API key>
 ```
 
 Request body:
@@ -204,15 +219,15 @@ configured callback delivery through:
 POST /api/v1/payments/checkouts/:checkoutId/deliver
 ```
 
-The service’s configured payment delivery mode controls whether the result is
-delivered by callback, email, or both. Provider webhooks must be publicly
+The tenant-service assignment’s configured payment delivery mode controls
+whether the result is delivered by callback, email, or both. Provider webhooks must be publicly
 reachable in deployment and must use the correct signing or verification
 configuration.
 
 ### Service deployment status
 
-Services have dashboard metadata for `HEALTHY`, `DEGRADED`, and `OFFLINE`.
-Those values are operational labels for the registered service and are not
+Each tenant-service assignment has an operational status of `HEALTHY`,
+`DEGRADED`, or `OFFLINE`. These values are dashboard labels and are not
 currently included in the entitlement response. Entitlement `active` describes
 subscription authorization, not application uptime.
 
@@ -312,8 +327,9 @@ For local development, copy `.env.example` to `.env.local`. For Docker, copy
 `.env.docker.example` to `.env.docker` and fill in:
 
 - `DATABASE_URL` — Postgres connection string
-- Each service has its own generated API key. Store it in the connected service and send it as the `x-service-secret` header for checkout and payment-delivery APIs.
-- For local seed testing, optionally set `DEMO_SERVICE_API_KEY`; otherwise rotate the demo service key from the Services page.
+- Each tenant-service assignment has its own generated API key. Store the key in that tenant's connected service and send it as the `x-service-secret` header for entitlement, checkout, and payment-delivery APIs.
+- Configure delivery mode, callback URL/secret, deploy status, and key rotation from the tenant assignment on the Flags page.
+- For local seed testing, optionally set `DEMO_SERVICE_API_KEY`; the seed copies it to each demo tenant assignment.
 - `STRIPE_SECRET_KEY` — Stripe API key for billing
 - `STRIPE_WEBHOOK_SECRET` — signing secret for Stripe webhooks
 
@@ -338,6 +354,8 @@ npm run dev
 ```bash
 curl -sS \
   -H "x-entitlement-secret: $ENTITLEMENT_SHARED_SECRET" \
+  -H "x-service-id: $SERVICE_ID" \
+  -H "x-service-secret: $TENANT_SERVICE_API_KEY" \
   "http://localhost:3000/api/v1/entitlements/$TENANT_ID"
 ```
 

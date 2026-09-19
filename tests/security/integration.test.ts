@@ -39,14 +39,24 @@ test('service credentials cannot cross service boundaries or survive revocation'
     data: [
       {
         id: serviceAId,
-        tenantId,
         name: 'Credential test service A',
-        serviceApiKeyHash: await hashServiceApiKey(apiKey),
       },
       {
         id: serviceBId,
-        tenantId,
         name: 'Credential test service B',
+      },
+    ],
+  })
+  await db.tenantService.createMany({
+    data: [
+      {
+        tenantId,
+        serviceId: serviceAId,
+        serviceApiKeyHash: await hashServiceApiKey(apiKey),
+      },
+      {
+        tenantId,
+        serviceId: serviceBId,
         serviceApiKeyHash: await hashServiceApiKey(generateServiceApiKey()),
       },
     ],
@@ -54,20 +64,29 @@ test('service credentials cannot cross service boundaries or survive revocation'
 
   try {
     assert.equal(
-      await authenticateServiceRequest(requestWithKey(apiKey), serviceAId),
+      await authenticateServiceRequest(requestWithKey(apiKey), {
+        serviceId: serviceAId,
+        tenantId,
+      }),
       true,
     )
     assert.equal(
-      await authenticateServiceRequest(requestWithKey(apiKey), serviceBId),
+      await authenticateServiceRequest(requestWithKey(apiKey), {
+        serviceId: serviceBId,
+        tenantId,
+      }),
       false,
     )
 
-    await db.service.update({
-      where: { id: serviceAId },
+    await db.tenantService.update({
+      where: { tenantId_serviceId: { tenantId, serviceId: serviceAId } },
       data: { serviceApiKeyRevokedAt: new Date() },
     })
     assert.equal(
-      await authenticateServiceRequest(requestWithKey(apiKey), serviceAId),
+      await authenticateServiceRequest(requestWithKey(apiKey), {
+        serviceId: serviceAId,
+        tenantId,
+      }),
       false,
     )
   } finally {
@@ -103,12 +122,17 @@ test('archived tenant and subscription entitlements are inactive and cross-servi
   })
   await db.service.createMany({
     data: [
-      { id: serviceId, tenantId, name: 'Archive test service' },
+      { id: serviceId, name: 'Archive test service' },
       {
         id: otherServiceId,
-        tenantId: otherTenantId,
         name: 'Other test service',
       },
+    ],
+  })
+  await db.tenantService.createMany({
+    data: [
+      { tenantId, serviceId },
+      { tenantId: otherTenantId, serviceId: otherServiceId },
     ],
   })
   await db.subscription.create({

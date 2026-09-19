@@ -110,8 +110,23 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
       where: { id: data.id, deletedAt: null },
       include: {
         subscription: { include: { plan: true } },
-        flags: { include: { flag: true }, orderBy: { flag: { key: 'asc' } } },
-        services: { orderBy: { name: 'asc' } },
+        serviceAssignments: {
+          where: { service: { deletedAt: null } },
+          orderBy: { service: { name: 'asc' } },
+          include: {
+            service: {
+              include: {
+                flagDefinitions: {
+                  where: { deletedAt: null },
+                  orderBy: { key: 'asc' },
+                },
+              },
+            },
+            flags: {
+              orderBy: { serviceFlag: { key: 'asc' } },
+            },
+          },
+        },
         invoices: { orderBy: { createdAt: 'desc' }, take: 20 },
         auditLogs: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
@@ -154,14 +169,16 @@ export const getTenantDetail = createServerFn({ method: 'GET' })
             disabledAt: tenant.subscription.disabledAt?.toISOString() ?? null,
           }
         : null,
-      flags: tenant.flags.map((flag) => ({
-        key: flag.flag.key,
-        enabled: flag.enabled,
-      })),
-      services: tenant.services.map((service) => ({
-        id: service.id,
-        name: service.name,
-        deployStatus: service.deployStatus,
+      services: tenant.serviceAssignments.map((assignment) => ({
+        id: assignment.service.id,
+        name: assignment.service.name,
+        deployStatus: assignment.deployStatus,
+        flags: assignment.service.flagDefinitions.map((flag) => ({
+          key: flag.key,
+          enabled:
+            assignment.flags.find((item) => item.serviceFlagId === flag.id)
+              ?.enabled ?? false,
+        })),
       })),
       invoices: tenant.invoices.map((invoice) => ({
         id: invoice.id,

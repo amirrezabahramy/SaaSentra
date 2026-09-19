@@ -92,13 +92,21 @@ export async function deliverCheckoutCallback(checkoutId: string) {
       tenant: true,
     },
   })
+  const assignment = await db.tenantService.findUniqueOrThrow({
+    where: {
+      tenantId_serviceId: {
+        tenantId: checkout.tenantId,
+        serviceId: checkout.serviceId,
+      },
+    },
+  })
   const delivery = await db.paymentDelivery.upsert({
     where: { checkoutId },
     create: { checkoutId },
     update: {},
   })
   if (delivery.status === 'SUCCEEDED') return delivery
-  const mode = checkout.service.paymentDeliveryMode
+  const mode = assignment.paymentDeliveryMode
   const wantsCallback = mode === 'CALLBACK' || mode === 'CALLBACK_AND_EMAIL'
   const wantsEmail = mode === 'EMAIL' || mode === 'CALLBACK_AND_EMAIL'
   const payload = {
@@ -120,16 +128,13 @@ export async function deliverCheckoutCallback(checkoutId: string) {
     let deliveredCount = 0
     let emailQueued = false
     if (wantsCallback) {
-      if (
-        !checkout.service.paymentCallbackUrl ||
-        !checkout.service.paymentCallbackSecret
-      ) {
+      if (!assignment.paymentCallbackUrl || !assignment.paymentCallbackSecret) {
         errors.push('Payment callback is not configured')
       } else {
         try {
           await deliverPaymentCallback({
-            url: checkout.service.paymentCallbackUrl,
-            secret: checkout.service.paymentCallbackSecret,
+            url: assignment.paymentCallbackUrl,
+            secret: assignment.paymentCallbackSecret,
             payload,
           })
           deliveredCount += 1

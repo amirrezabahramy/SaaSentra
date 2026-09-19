@@ -33,7 +33,9 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
           )
 
         const { tenantId, serviceId, planId, returnUrl } = parsed.data
-        if (!(await authenticateServiceRequest(request, serviceId)))
+        if (
+          !(await authenticateServiceRequest(request, { serviceId, tenantId }))
+        )
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         if (
           !(await consumeRateLimit(
@@ -50,12 +52,20 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
           db.service.findUnique({ where: { id: serviceId, deletedAt: null } }),
           db.plan.findUnique({ where: { id: planId, deletedAt: null } }),
         ])
-        if (!tenant || !service || service.tenantId !== tenantId || !plan)
+        const assignment =
+          tenant && service
+            ? await db.tenantService.findUnique({
+                where: {
+                  tenantId_serviceId: { tenantId, serviceId },
+                },
+              })
+            : null
+        if (!tenant || !service || !assignment || !plan)
           return Response.json(
             { error: 'Checkout resource not found' },
             { status: 404 },
           )
-        if (returnUrl && !service.paymentCallbackUrl) {
+        if (returnUrl && !assignment.paymentCallbackUrl) {
           return Response.json(
             { error: 'This service does not allow an external return URL' },
             { status: 400 },
@@ -64,10 +74,10 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
         let safeReturnUrl: URL | undefined
         try {
           safeReturnUrl =
-            returnUrl && service.paymentCallbackUrl
+            returnUrl && assignment.paymentCallbackUrl
               ? await assertMatchingExternalOrigin(
                   returnUrl,
-                  service.paymentCallbackUrl,
+                  assignment.paymentCallbackUrl,
                 )
               : undefined
         } catch {

@@ -69,7 +69,7 @@ async function sendNotice(input: {
     return false
   }
 
-  const retryAt = notice.nextAttemptAt as Date | null
+  const retryAt = notice.nextAttemptAt
   if (retryAt !== null && retryAt > new Date()) {
     return false
   }

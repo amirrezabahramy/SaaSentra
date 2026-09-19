@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '#/db'
 import { env } from '#/env'
 import { getEntitlement } from '#/lib/lifecycle'
+import { authenticateServiceRequest } from '#/lib/service-credentials'
 import {
   consumeRateLimit,
   getRequestIp,
@@ -37,13 +38,28 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
         if (secret !== env.ENTITLEMENT_SHARED_SECRET) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
+        const serviceId = request.headers.get('x-service-id')?.trim()
+        if (!serviceId) {
+          return Response.json(
+            { error: 'x-service-id header is required' },
+            { status: 400 },
+          )
+        }
+        if (
+          !(await authenticateServiceRequest(request, {
+            serviceId,
+            tenantId: params.tenantId,
+          }))
+        ) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
 
         try {
           return Response.json(
             await getEntitlement(params.tenantId, {
               validateSerialKey: true,
               serialKey: request.headers.get('x-serial-key') ?? undefined,
-              serviceId: request.headers.get('x-service-id') ?? undefined,
+              serviceId,
             }),
           )
         } catch {
@@ -64,6 +80,21 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
         ) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
+        const serviceId = request.headers.get('x-service-id')?.trim()
+        if (!serviceId) {
+          return Response.json(
+            { error: 'x-service-id header is required' },
+            { status: 400 },
+          )
+        }
+        if (
+          !(await authenticateServiceRequest(request, {
+            serviceId,
+            tenantId: params.tenantId,
+          }))
+        ) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
 
         const body = await request.json().catch(() => null)
         const parsed = z
@@ -76,7 +107,6 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
           )
         }
 
-        const serviceId = request.headers.get('x-service-id')
         const tenant = await db.tenant.findUnique({
           where: { id: params.tenantId, deletedAt: null },
           include: { subscription: { include: { plan: true } } },
@@ -92,17 +122,16 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
             { status: 404 },
           )
         }
-        if (serviceId) {
-          const service = await db.service.findUnique({
-            where: { id: serviceId, deletedAt: null },
-            select: { tenantId: true },
-          })
-          if (!service || service.tenantId !== tenant.id) {
-            return Response.json(
-              { error: 'Service not found' },
-              { status: 404 },
-            )
-          }
+        const assignment = await db.tenantService.findUnique({
+          where: {
+            tenantId_serviceId: {
+              tenantId: tenant.id,
+              serviceId,
+            },
+          },
+        })
+        if (!assignment) {
+          return Response.json({ error: 'Service not found' }, { status: 404 })
         }
         if (tenant.subscription.plan.type !== 'SERIAL_KEY') {
           return Response.json(
@@ -122,7 +151,7 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
           await getEntitlement(params.tenantId, {
             validateSerialKey: true,
             serialKey: parsed.data.serialKey,
-            serviceId: serviceId ?? undefined,
+            serviceId,
           }),
         )
       },

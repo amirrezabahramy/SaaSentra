@@ -320,19 +320,38 @@ function TenantDetail() {
           </h2>
           <p className="mt-4 text-sm">
             {tenant.services.length} {LL.tenantDetail.services()} ·{' '}
-            {tenant.flags.filter((flag) => flag.enabled).length}{' '}
+            {tenant.services.reduce(
+              (count, service) =>
+                count + service.flags.filter((flag) => flag.enabled).length,
+              0,
+            )}{' '}
             {LL.tenantDetail.enabledFlags()}
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {tenant.flags.length ? (
-              tenant.flags.map((flag) => (
-                <span
-                  key={flag.key}
-                  className="rounded-full bg-(--chip-bg) px-3 py-1 text-sm"
-                >
-                  {flag.key}:{' '}
-                  {flag.enabled ? LL.tenantDetail.on() : LL.tenantDetail.off()}
-                </span>
+          <div className="mt-4 space-y-4">
+            {tenant.services.length ? (
+              tenant.services.map((service) => (
+                <div key={service.id}>
+                  <h3 className="text-sm font-bold">{service.name}</h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {service.flags.length ? (
+                      service.flags.map((flag) => (
+                        <span
+                          key={flag.key}
+                          className="rounded-full bg-(--chip-bg) px-3 py-1 text-sm"
+                        >
+                          {flag.key}:{' '}
+                          {flag.enabled
+                            ? LL.tenantDetail.on()
+                            : LL.tenantDetail.off()}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-(--sea-ink-soft)">
+                        {LL.tenantDetail.noFlags()}
+                      </span>
+                    )}
+                  </div>
+                </div>
               ))
             ) : (
               <span className="text-sm text-(--sea-ink-soft)">

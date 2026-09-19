@@ -17,11 +17,10 @@ import {
   archiveService,
   createService,
   permanentlyDeleteService,
-  rotateServiceApiKey,
   unarchiveService,
   updateService,
 } from '#/lib/ops.functions'
-import { servicesQuery, tenantsQuery } from '#/lib/queries'
+import { servicesQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
 
 export const Route = createFileRoute('/_protected/services')({
@@ -32,22 +31,18 @@ function Services() {
   const { LL } = useI18nContext()
   const [includeArchived, setIncludeArchived] = useState(false)
   const { data: rows } = useSuspenseQuery(servicesQuery(includeArchived))
-  const { data: tenants } = useSuspenseQuery(tenantsQuery())
   const queryClient = useQueryClient()
   const create = useServerFn(createService)
   const update = useServerFn(updateService)
-  const rotateKey = useServerFn(rotateServiceApiKey)
   const archive = useServerFn(archiveService)
   const unarchive = useServerFn(unarchiveService)
   const [editing, setEditing] = useState<(typeof rows)[number] | null>(null)
   const [creating, setCreating] = useState(false)
-  const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null)
   const createMutation = useMutation({
     mutationFn: (data: ServiceFormValue) => create({ data }),
-    onSuccess: async (result) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'services'] })
       setCreating(false)
-      setGeneratedApiKey(result.apiKey)
     },
   })
   const updateMutation = useMutation({
@@ -55,13 +50,6 @@ function Services() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'services'] })
       setEditing(null)
-    },
-  })
-  const rotateKeyMutation = useMutation({
-    mutationFn: (id: string) => rotateKey({ data: { id } }),
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'services'] })
-      setGeneratedApiKey(result.apiKey)
     },
   })
   const archiveMutation = useMutation({
@@ -122,17 +110,6 @@ function Services() {
             >
               <div className="flex justify-between gap-3">
                 <h2 className="font-serif text-2xl font-bold">{row.name}</h2>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    row.deployStatus === 'HEALTHY'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : row.deployStatus === 'DEGRADED'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {row.deployStatus}
-                </span>
               </div>
               <div className="mt-4 flex gap-2">
                 {row.archived ? (
@@ -170,20 +147,9 @@ function Services() {
                     >
                       {LL.services.archive()}
                     </button>
-                    <button
-                      type="button"
-                      disabled={rotateKeyMutation.isPending}
-                      onClick={() => void rotateKeyMutation.mutateAsync(row.id)}
-                      className="rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-800 disabled:opacity-40"
-                    >
-                      {LL.services.rotateApiKey()}
-                    </button>
                   </>
                 )}
               </div>
-              <p className="mt-2 text-sm text-(--sea-ink-soft)">
-                {row.tenantName}
-              </p>
               <div className="mt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-(--sea-ink-soft)">
                   {LL.services.serviceId()}
@@ -194,24 +160,16 @@ function Services() {
                   copiedLabel={LL.crud.copied()}
                 />
               </div>
-              {row.serviceApiKeyLastFour ? (
-                <p className="mt-3 text-xs text-(--sea-ink-soft)">
-                  {LL.services.apiKeyLastFour()}: ****
-                  {row.serviceApiKeyLastFour}
-                </p>
-              ) : null}
               <div className="mt-5 rounded-xl bg-white/50 p-4 text-sm">
                 <p className="font-semibold">
-                  {LL.services.entitlement()}:{' '}
-                  {row.entitlement.active
-                    ? LL.services.active()
-                    : LL.services.inactive()}
+                  {LL.services.flags()}: {row.flags.length}
                 </p>
                 <p className="mt-1 text-(--sea-ink-soft)">
-                  {LL.services.plan()}:{' '}
-                  {row.entitlement.plan ?? LL.services.none()} ·{' '}
-                  {Object.keys(row.entitlement.flags).length}{' '}
-                  {LL.services.flags()}
+                  {row.flags.map((flag) => flag.key).join(', ') ||
+                    LL.services.none()}
+                </p>
+                <p className="mt-1 text-(--sea-ink-soft)">
+                  {LL.crud.tenant()}: {row.assignments.length}
                 </p>
               </div>
               <div className="mt-3 rounded-xl border border-(--line) bg-white/40 p-4 text-sm">
@@ -263,10 +221,6 @@ function Services() {
           }}
         >
           <ServiceForm
-            tenants={tenants}
-            emailDeliveryAvailable={tenants.some(
-              (tenant) => tenant.emailDeliveryAvailable,
-            )}
             initial={editing ?? undefined}
             isPending={createMutation.isPending || updateMutation.isPending}
             onSubmit={(value) => {
@@ -287,77 +241,34 @@ function Services() {
           onConfirm={() => void deleteMutation.mutateAsync(deleteId)}
         />
       ) : null}
-      {generatedApiKey ? (
-        <CrudDialog
-          title={LL.services.apiKeyGenerated()}
-          onClose={() => setGeneratedApiKey(null)}
-        >
-          <p className="text-sm text-(--sea-ink-soft)">
-            {LL.services.apiKeyDescription()}
-          </p>
-          <CopyableValue
-            value={generatedApiKey}
-            label={LL.services.copyApiKey()}
-            copiedLabel={LL.crud.copied()}
-          />
-        </CrudDialog>
-      ) : null}
     </div>
   )
 }
 
 type ServiceFormValue = {
-  tenantId: string
   name: string
-  deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE'
-  paymentCallbackUrl?: string | null
-  paymentCallbackSecret?: string | null
-  paymentDeliveryMode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL'
+  flags: Array<{ key: string; description: string | null }>
 }
 
 function ServiceForm({
-  tenants,
-  emailDeliveryAvailable,
   initial,
   isPending,
   onSubmit,
 }: {
-  tenants: Array<{
-    id: string
-    name: string
-    billingEmail: string | null
-    emailDeliveryAvailable: boolean
-  }>
-  emailDeliveryAvailable: boolean
-  initial?: Partial<ServiceFormValue> & { id?: string }
+  initial?: Partial<ServiceFormValue> & {
+    id?: string
+    flags?: Array<{ key: string; description: string | null }>
+  }
   isPending: boolean
   onSubmit: (value: ServiceFormValue) => void
 }) {
   const { LL } = useI18nContext()
-  const selectedTenantHasEmail = (tenantId: string) =>
-    Boolean(tenants.find((tenant) => tenant.id === tenantId)?.billingEmail)
-  const initialPaymentDeliveryMode =
-    initial?.paymentDeliveryMode === 'CALLBACK' ||
-    (emailDeliveryAvailable &&
-      selectedTenantHasEmail(initial?.tenantId || tenants[0]?.id || '') &&
-      initial?.paymentDeliveryMode)
-      ? initial.paymentDeliveryMode
-      : 'CALLBACK'
   const form = useForm({
     defaultValues: {
-      tenantId: initial?.tenantId || tenants[0]?.id || '',
       name: initial?.name ?? '',
-      deployStatus: initial?.deployStatus ?? 'HEALTHY',
-      paymentCallbackUrl: initial?.paymentCallbackUrl ?? '',
-      paymentCallbackSecret: '',
-      paymentDeliveryMode: initialPaymentDeliveryMode,
+      flags: initial?.flags ?? [],
     },
-    onSubmit: ({ value }) =>
-      onSubmit({
-        ...value,
-        paymentCallbackUrl: value.paymentCallbackUrl.trim() || null,
-        paymentCallbackSecret: value.paymentCallbackSecret.trim() || null,
-      }),
+    onSubmit: ({ value }) => onSubmit(value),
   })
   return (
     <form
@@ -367,99 +278,73 @@ function ServiceForm({
         void form.handleSubmit()
       }}
     >
-      {(
-        [
-          ['tenantId', LL.crud.tenant(), 'select'],
-          ['name', LL.crud.name(), 'input'],
-          ['deployStatus', LL.crud.deployStatus(), 'select'],
-          ['paymentCallbackUrl', LL.services.paymentCallbackUrl(), 'input'],
-          [
-            'paymentCallbackSecret',
-            LL.services.paymentCallbackSecret(),
-            'input',
-          ],
-        ] as const
-      ).map(([name, label, kind]) => (
+      {([['name', LL.crud.name()]] as const).map(([name, label]) => (
         <form.Field key={name} name={name}>
           {(field) => (
             <label className="block text-sm font-semibold">
               {label}
-              {kind === 'select' ? (
-                <select
-                  value={field.state.value}
-                  onChange={(event) => {
-                    field.handleChange(event.target.value)
-                    if (
-                      name === 'tenantId' &&
-                      (!emailDeliveryAvailable ||
-                        !selectedTenantHasEmail(event.target.value))
-                    ) {
-                      form.setFieldValue('paymentDeliveryMode', 'CALLBACK')
-                    }
-                  }}
-                  className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-                >
-                  {(name === 'tenantId'
-                    ? tenants
-                    : ['HEALTHY', 'DEGRADED', 'OFFLINE']
-                  ).map((option) => {
-                    const value =
-                      typeof option === 'string' ? option : option.id
-                    const text =
-                      typeof option === 'string' ? option : option.name
-                    return (
-                      <option key={value} value={value}>
-                        {text}
-                      </option>
-                    )
-                  })}
-                </select>
-              ) : (
-                <input
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-                />
-              )}
+              <input
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+              />
             </label>
           )}
         </form.Field>
       ))}
-      <form.Subscribe selector={(state) => state.values.tenantId}>
-        {(tenantId) => {
-          const emailAvailable =
-            emailDeliveryAvailable && selectedTenantHasEmail(tenantId)
-          return (
-            <form.Field name="paymentDeliveryMode">
-              {(field) => (
-                <label className="block text-sm font-semibold">
-                  {LL.services.paymentDeliveryMode()}
-                  <select
-                    value={field.state.value}
+      <form.Field name="flags">
+        {(field) => (
+          <div className="space-y-3 rounded-xl border border-(--line) p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold">
+                {LL.services.flags()}
+              </span>
+              <button
+                type="button"
+                onClick={() => field.pushValue({ key: '', description: null })}
+                className="rounded-lg border border-(--line) px-3 py-2 text-xs font-semibold"
+              >
+                {LL.flags.create()}
+              </button>
+            </div>
+            {field.state.value.map((flag, index) => (
+              <div key={`service-flag-${index}`} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    value={flag.key}
                     onChange={(event) =>
-                      field.handleChange(
-                        event.target
-                          .value as ServiceFormValue['paymentDeliveryMode'],
+                      form.setFieldValue(
+                        `flags[${index}].key`,
+                        event.target.value,
                       )
                     }
-                    className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
+                    placeholder={LL.flags.key()}
+                    className="min-w-0 flex-1 rounded-xl border border-(--line) bg-white/70 px-4 py-3 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => field.removeValue(index)}
+                    className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700"
                   >
-                    <option value="CALLBACK">CALLBACK</option>
-                    {emailAvailable ? (
-                      <>
-                        <option value="EMAIL">EMAIL</option>
-                        <option value="CALLBACK_AND_EMAIL">
-                          CALLBACK_AND_EMAIL
-                        </option>
-                      </>
-                    ) : null}
-                  </select>
-                </label>
-              )}
-            </form.Field>
-          )
-        }}
-      </form.Subscribe>
+                    {LL.crud.deletePermanently()}
+                  </button>
+                </div>
+                <input
+                  value={flag.description ?? ''}
+                  onChange={(event) =>
+                    form.setFieldValue(
+                      `flags[${index}].description`,
+                      event.target.value || null,
+                    )
+                  }
+                  placeholder={LL.flags.description()}
+                  className="w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3 text-sm"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </form.Field>
       <button
         type="submit"
         disabled={isPending}

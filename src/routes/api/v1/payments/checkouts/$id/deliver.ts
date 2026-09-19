@@ -12,14 +12,19 @@ export const Route = createFileRoute('/api/v1/payments/checkouts/$id/deliver')({
         if (!serviceId || !z.string().uuid().safeParse(serviceId).success) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
-        if (!(await authenticateServiceRequest(request, serviceId)))
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const checkout = await db.paymentCheckout.findUnique({
           where: { id: params.id },
-          select: { id: true, serviceId: true, status: true },
+          select: { id: true, serviceId: true, tenantId: true, status: true },
         })
         if (!checkout || checkout.serviceId !== serviceId)
           return Response.json({ error: 'Checkout not found' }, { status: 404 })
+        if (
+          !(await authenticateServiceRequest(request, {
+            serviceId,
+            tenantId: checkout.tenantId,
+          }))
+        )
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
         if (checkout.status !== 'SUCCEEDED')
           return Response.json(
             { error: 'Only successful checkouts can be delivered' },

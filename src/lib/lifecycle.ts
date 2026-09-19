@@ -131,12 +131,32 @@ export async function getEntitlement(
     serviceId?: string
   } = {},
 ) {
+  let service: {
+    deletedAt: Date | null
+    tenantAssignments: Array<{
+      flags: Array<{
+        enabled: boolean
+        serviceFlag: { key: string; deletedAt: Date | null }
+      }>
+    }>
+  } | null = null
   if (options.serviceId) {
-    const service = await db.service.findUnique({
+    service = await db.service.findUnique({
       where: { id: options.serviceId },
-      select: { tenantId: true, deletedAt: true },
+      include: {
+        tenantAssignments: {
+          where: { tenantId },
+          include: {
+            flags: { include: { serviceFlag: true } },
+          },
+        },
+      },
     })
-    if (!service || service.deletedAt || service.tenantId !== tenantId) {
+    if (
+      !service ||
+      service.deletedAt ||
+      service.tenantAssignments.length === 0
+    ) {
       throw new Error('Service not found')
     }
   }
@@ -145,7 +165,6 @@ export async function getEntitlement(
     where: { id: tenantId },
     include: {
       subscription: { include: { plan: true } },
-      flags: { include: { flag: true } },
     },
   })
 
@@ -205,9 +224,9 @@ export async function getEntitlement(
     subscription.plan.type !== 'SERIAL_KEY' ||
     serialKeyMatches
   const flags = Object.fromEntries(
-    tenant.flags
-      .filter((tenantFlag) => !tenantFlag.flag.deletedAt)
-      .map((tenantFlag) => [tenantFlag.flag.key, tenantFlag.enabled]),
+    (service?.tenantAssignments[0]?.flags ?? [])
+      .filter((assignment) => !assignment.serviceFlag.deletedAt)
+      .map((assignment) => [assignment.serviceFlag.key, assignment.enabled]),
   )
   const isWithinPeriod =
     subscription.plan.isPermanent || now < subscription.currentPeriodEnd

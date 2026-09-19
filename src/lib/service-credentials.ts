@@ -14,22 +14,29 @@ export async function hashServiceApiKey(apiKey: string): Promise<string> {
 
 export async function authenticateServiceRequest(
   request: Request,
-  serviceId: string,
+  input: { serviceId: string; tenantId: string },
 ): Promise<boolean> {
   const apiKey = request.headers.get('x-service-secret')
   if (!apiKey) return false
 
-  const service = await db.service.findUnique({
-    where: { id: serviceId, deletedAt: null },
+  const assignment = await db.tenantService.findUnique({
+    where: {
+      tenantId_serviceId: {
+        tenantId: input.tenantId,
+        serviceId: input.serviceId,
+      },
+    },
     select: {
       serviceApiKeyHash: true,
       serviceApiKeyRevokedAt: true,
+      service: { select: { deletedAt: true } },
     },
   })
   if (
-    !service?.serviceApiKeyHash ||
-    service.serviceApiKeyRevokedAt ||
-    !(await bcrypt.compare(apiKey, service.serviceApiKeyHash))
+    !assignment?.serviceApiKeyHash ||
+    assignment.serviceApiKeyRevokedAt ||
+    assignment.service.deletedAt ||
+    !(await bcrypt.compare(apiKey, assignment.serviceApiKeyHash))
   ) {
     return false
   }

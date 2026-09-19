@@ -1,6 +1,6 @@
 import { env } from '#/env'
 import bcrypt from 'bcryptjs'
-import { PrismaClient, ServiceDeployStatus } from '#/generated/prisma/client'
+import { PrismaClient } from '#/generated/prisma/client'
 
 import { PrismaPg } from '@prisma/adapter-pg'
 
@@ -68,7 +68,7 @@ async function main() {
     },
   })
 
-  // --- Feature flags -----------------------------------------------------
+  // --- Reusable service flag definitions --------------------------------
   const flagKeys = [
     'flag.advanced-analytics',
     'flag.sso',
@@ -76,15 +76,6 @@ async function main() {
     'allow_api_access',
     'flag.priority-support',
   ]
-  const flags = []
-  for (const key of flagKeys) {
-    const flag = await db.featureFlag.upsert({
-      where: { key },
-      update: {},
-      create: { key, description: `Seeded flag: ${key}` },
-    })
-    flags.push(flag)
-  }
 
   // --- Demo users: one account for every defined role -------------------
   const owner = await db.user.upsert({
@@ -145,7 +136,7 @@ async function main() {
     },
   })
 
-  // --- Tenants + subscriptions + flags ----------------------------------
+  // --- Tenants + subscriptions ------------------------------------------
   const tenants = [
     {
       name: 'Acme Inc',
@@ -215,18 +206,6 @@ async function main() {
         paidAt: new Date(),
       },
     })
-
-    for (const flag of flags) {
-      await db.tenantFlag.upsert({
-        where: { tenantId_flagId: { tenantId: tenant.id, flagId: flag.id } },
-        update: { enabled: t.enabled.includes(flag.key) },
-        create: {
-          tenantId: tenant.id,
-          flagId: flag.id,
-          enabled: t.enabled.includes(flag.key),
-        },
-      })
-    }
   }
 
   // --- Demo tenant account ----------------------------------------------
@@ -272,20 +251,60 @@ async function main() {
         serviceApiKeyRevokedAt: null,
       }
     : {}
-  await db.service.upsert({
+  const demoService = await db.service.upsert({
     where: { id: '00000000-0000-4000-8000-000000000001' },
-    update: demoServiceCredentials,
+    update: { name: 'demo-web-app' },
     create: {
       id: '00000000-0000-4000-8000-000000000001',
-      tenantId: acme.id,
       name: 'demo-web-app',
-      deployStatus: ServiceDeployStatus.HEALTHY,
-      paymentDeliveryMode: 'CALLBACK',
-      paymentCallbackUrl: null,
-      paymentCallbackSecret: null,
-      ...demoServiceCredentials,
     },
   })
+
+  for (const tenantConfig of tenants) {
+    const tenant = await db.tenant.findUniqueOrThrow({
+      where: { slug: tenantConfig.slug },
+    })
+    const assignment = await db.tenantService.upsert({
+      where: {
+        tenantId_serviceId: { tenantId: tenant.id, serviceId: demoService.id },
+      },
+      update: demoServiceCredentials,
+      create: {
+        tenantId: tenant.id,
+        serviceId: demoService.id,
+        deployStatus: 'HEALTHY',
+        paymentDeliveryMode: 'CALLBACK',
+        paymentCallbackUrl: null,
+        paymentCallbackSecret: null,
+        ...demoServiceCredentials,
+      },
+    })
+    for (const key of flagKeys) {
+      const flag = await db.serviceFlag.upsert({
+        where: { serviceId_key: { serviceId: demoService.id, key } },
+        update: { description: `Seeded flag: ${key}`, deletedAt: null },
+        create: {
+          serviceId: demoService.id,
+          key,
+          description: `Seeded flag: ${key}`,
+        },
+      })
+      await db.tenantServiceFlag.upsert({
+        where: {
+          tenantServiceId_serviceFlagId: {
+            tenantServiceId: assignment.id,
+            serviceFlagId: flag.id,
+          },
+        },
+        update: { enabled: tenantConfig.enabled.includes(key) },
+        create: {
+          tenantServiceId: assignment.id,
+          serviceFlagId: flag.id,
+          enabled: tenantConfig.enabled.includes(key),
+        },
+      })
+    }
+  }
 
   await db.auditLog.upsert({
     where: { id: '00000000-0000-4000-8000-000000000002' },
@@ -302,7 +321,7 @@ async function main() {
   })
 
   console.log(
-    'Seed complete: 3 roles, 3 accounts, 3 plans, 5 flags, 3 tenants, 1 demo service, 1 audit log.',
+    'Seed complete: 3 roles, 3 accounts, 3 plans, 5 service flags, 3 tenants, 1 reusable service, 1 audit log.',
   )
 }
 

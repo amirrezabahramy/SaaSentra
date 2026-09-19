@@ -28,18 +28,18 @@ The founding loop this whole v1 exists to serve:
 
 ## 3. V1 route map (9 routes)
 
-| Route                            | Page          | Purpose                                                             |
-| -------------------------------- | ------------- | ------------------------------------------------------------------- |
-| `/login`                         | Auth          | Email/password session (Better Auth)                                |
-| `/`                              | Overview      | MRR, active subs, dunning queue, recent audit                       |
-| `/tenants`                       | Tenants       | List / search tenants                                               |
-| `/tenants/:id`                   | Tenant detail | Lifecycle timeline, status, disable/re-enable, services, invoices   |
-| `/subscriptions`                 | Subscriptions | All subscriptions, filter by state                                  |
-| `/services`                      | Services      | Controlled services + entitlement status (v1: one — `demo-web-app`) |
-| `/flags`                         | Feature flags | Toggle per-tenant flag overrides                                    |
-| `/audit`                         | Audit         | Every state transition: who / when / why                            |
-| `/settings`                      | Settings      | Team + env hints                                                    |
-| `/api/v1/entitlements/:tenantId` | API (no UI)   | Service-control endpoint (shared secret)                            |
+| Route                            | Page          | Purpose                                                                 |
+| -------------------------------- | ------------- | ----------------------------------------------------------------------- |
+| `/login`                         | Auth          | Email/password session (Better Auth)                                    |
+| `/`                              | Overview      | MRR, active subs, dunning queue, recent audit                           |
+| `/tenants`                       | Tenants       | List / search tenants                                                   |
+| `/tenants/:id`                   | Tenant detail | Lifecycle timeline, status, disable/re-enable, services, invoices       |
+| `/subscriptions`                 | Subscriptions | All subscriptions, filter by state                                      |
+| `/services`                      | Services      | Reusable service definitions and shared flag definitions                |
+| `/flags`                         | Feature flags | Assign services, configure tenant-service connections, and toggle flags |
+| `/audit`                         | Audit         | Every state transition: who / when / why                                |
+| `/settings`                      | Settings      | Team + env hints                                                        |
+| `/api/v1/entitlements/:tenantId` | API (no UI)   | Service-control endpoint (shared secret + tenant-service credential)    |
 
 ## 4. Data model (12 models — exact fields in schema.prisma)
 

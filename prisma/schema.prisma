@@ -121,8 +121,7 @@ model Tenant {
   subscription     Subscription?
   invoices         Invoice[]
   payments         Payment[]
-  services         Service[]
-  flags            TenantFlag[]
+  serviceAssignments TenantService[]
   auditLogs        AuditLog[]
   serviceActions   ServiceAction[]
   paymentCheckouts PaymentCheckout[]
@@ -296,24 +295,14 @@ model Payment {
 
 model Service {
   id                     String                     @id @default(uuid())
-  tenantId               String
   name                   String
-  serviceApiKeyHash      String?
-  serviceApiKeyLastFour  String?
-  serviceApiKeyCreatedAt DateTime?
-  serviceApiKeyRevokedAt DateTime?
-  deployStatus           ServiceDeployStatus        @default(HEALTHY)
-  paymentCallbackUrl     String?
-  paymentCallbackSecret  String?
-  paymentDeliveryMode    ServicePaymentDeliveryMode @default(CALLBACK)
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
   deletedAt              DateTime?
-  tenant                 Tenant                     @relation(fields: [tenantId], references: [id])
+  flagDefinitions        ServiceFlag[]
+  tenantAssignments      TenantService[]
   actions                ServiceAction[]
   paymentCheckouts       PaymentCheckout[]
-
-  @@index([tenantId, createdAt])
 }
 
 model PaymentCheckout {
@@ -376,35 +365,62 @@ model ServiceAction {
   @@index([tenantId, createdAt])
 }
 
-model FeatureFlag {
-  id          String       @id @default(uuid())
-  key         String       @unique
-  description String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  deletedAt   DateTime?
-  tenantFlags TenantFlag[]
+model TenantService {
+  id                     String                     @id @default(uuid())
+  tenantId               String
+  serviceId              String
+  serviceApiKeyHash      String?
+  serviceApiKeyLastFour  String?
+  serviceApiKeyCreatedAt DateTime?
+  serviceApiKeyRevokedAt DateTime?
+  deployStatus           ServiceDeployStatus        @default(HEALTHY)
+  paymentCallbackUrl     String?
+  paymentCallbackSecret  String?
+  paymentDeliveryMode    ServicePaymentDeliveryMode @default(CALLBACK)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  tenant                 Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service                Service                    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  flags                  TenantServiceFlag[]
 
-  @@index([key])
+  @@unique([tenantId, serviceId])
+  @@index([tenantId, createdAt])
+  @@index([serviceId, createdAt])
 }
 
-model TenantFlag {
-  id        String      @id @default(uuid())
-  tenantId  String
-  flagId    String
-  enabled   Boolean     @default(false)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  tenant    Tenant      @relation(fields: [tenantId], references: [id])
-  flag      FeatureFlag @relation(fields: [flagId], references: [id])
+model ServiceFlag {
+  id          String              @id @default(uuid())
+  serviceId   String
+  key         String
+  description String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  deletedAt   DateTime?
+  service     Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  assignments TenantServiceFlag[]
 
-  @@unique([tenantId, flagId])
-  @@index([tenantId, createdAt])
+  @@unique([serviceId, key])
+  @@index([serviceId, createdAt])
+}
+
+model TenantServiceFlag {
+  id            String        @id @default(uuid())
+  tenantServiceId String
+  serviceFlagId String
+  enabled       Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  tenantService TenantService @relation(fields: [tenantServiceId], references: [id], onDelete: Cascade)
+  serviceFlag   ServiceFlag   @relation(fields: [serviceFlagId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantServiceId, serviceFlagId])
+  @@index([tenantServiceId, createdAt])
+  @@index([serviceFlagId, createdAt])
 }
 
 model AuditLog {
   id         String   @id @default(uuid())
-  tenantId   String
+  tenantId   String?
   actorId    String?
   action     String
   entityType String?
@@ -412,7 +428,7 @@ model AuditLog {
   metadata   Json?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   actor      User?    @relation(fields: [actorId], references: [id])
 
   @@index([tenantId, createdAt])

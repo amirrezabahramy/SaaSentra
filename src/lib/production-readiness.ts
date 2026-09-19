@@ -78,10 +78,11 @@ export async function getProductionReadiness() {
 
   const [stripePlanCount, emailServiceCount] = await Promise.all([
     db.plan.count({ where: { provider: 'STRIPE', deletedAt: null } }),
-    db.service.count({
+    db.tenantService.count({
       where: {
-        deletedAt: null,
         paymentDeliveryMode: { in: ['EMAIL', 'CALLBACK_AND_EMAIL'] },
+        service: { deletedAt: null },
+        tenant: { deletedAt: null },
       },
     }),
   ])

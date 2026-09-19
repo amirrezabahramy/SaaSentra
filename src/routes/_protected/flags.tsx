@@ -5,21 +5,18 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
-import { useState } from 'react'
-import {
-  CrudDialog,
-  PermanentDeleteDialog,
-} from '#/components/admin/crud-dialog'
-import {
-  archiveFlag,
-  createFlag,
-  permanentlyDeleteFlag,
-  toggleTenantFlag,
-  unarchiveFlag,
-  updateFlag,
-} from '#/lib/ops.functions'
-import { EmptyState } from '#/components/admin/empty-state'
 import { useServerFn } from '@tanstack/react-start'
+import { useState } from 'react'
+import { CopyableValue } from '#/components/admin/copyable-value'
+import { CrudDialog } from '#/components/admin/crud-dialog'
+import { EmptyState } from '#/components/admin/empty-state'
+import {
+  assignServiceToTenant,
+  rotateTenantServiceApiKey,
+  toggleTenantServiceFlag,
+  updateTenantService,
+  unassignServiceFromTenant,
+} from '#/lib/ops.functions'
 import { flagsQuery } from '#/lib/queries'
 import { useI18nContext } from '#/i18n/i18n-react'
 
@@ -27,65 +24,59 @@ export const Route = createFileRoute('/_protected/flags')({
   loader: ({ context }) => context.queryClient.query(flagsQuery()),
   component: Flags,
 })
+
 function Flags() {
   const { LL } = useI18nContext()
   const [includeArchived, setIncludeArchived] = useState(false)
   const { data } = useSuspenseQuery(flagsQuery(includeArchived))
   const queryClient = useQueryClient()
-  const toggle = useServerFn(toggleTenantFlag)
-  const create = useServerFn(createFlag)
-  const update = useServerFn(updateFlag)
-  const archive = useServerFn(archiveFlag)
-  const unarchive = useServerFn(unarchiveFlag)
-  const [dialog, setDialog] = useState<
-    | { mode: 'create' }
-    | { mode: 'edit'; flag: (typeof data.flags)[number] }
-    | null
-  >(null)
-  const definitionMutation = useMutation({
-    mutationFn: (value: { id?: string; key: string; description?: string }) =>
-      value.id
-        ? update({
-            data: {
-              id: value.id,
-              key: value.key,
-              description: value.description ?? null,
-            },
-          })
-        : create({ data: value }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] })
-      setDialog(null)
-    },
-  })
-  const archiveMutation = useMutation({
-    mutationFn: (id: string) => archive({ data: { id } }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
-  })
-  const unarchiveMutation = useMutation({
-    mutationFn: (id: string) => unarchive({ data: { id } }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
-  })
-  const permanentlyDelete = useServerFn(permanentlyDeleteFlag)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => permanentlyDelete({ data: { id } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] })
-      setDeleteId(null)
-    },
-  })
-  const toggleMutation = useMutation({
-    mutationFn: (input: {
+  const assign = useServerFn(assignServiceToTenant)
+  const unassign = useServerFn(unassignServiceFromTenant)
+  const toggle = useServerFn(toggleTenantServiceFlag)
+  const updateConfig = useServerFn(updateTenantService)
+  const rotateKey = useServerFn(rotateTenantServiceApiKey)
+  const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null)
+  const assignmentMutation = useMutation({
+    mutationFn: async (input: {
+      serviceId: string
       tenantId: string
-      flagKey: string
+      assigned: boolean
+    }) => {
+      if (input.assigned) {
+        return assign({ data: input })
+      } else {
+        await unassign({ data: input })
+        return undefined
+      }
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] })
+      if (result?.apiKey) setGeneratedApiKey(result.apiKey)
+    },
+  })
+  const configMutation = useMutation({
+    mutationFn: (input: TenantServiceConfig) => updateConfig({ data: input }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
+  })
+  const rotateKeyMutation = useMutation({
+    mutationFn: (input: ServiceAssignmentInput) => rotateKey({ data: input }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] })
+      setGeneratedApiKey(result.apiKey)
+    },
+  })
+  const flagMutation = useMutation({
+    mutationFn: (input: {
+      serviceId: string
+      tenantId: string
+      serviceFlagId: string
       enabled: boolean
     }) => toggle({ data: input }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['admin', 'flags'] }),
   })
+
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
@@ -95,104 +86,126 @@ function Flags() {
         <h1 className="mt-2 font-serif text-4xl font-bold">
           {LL.flags.title()}
         </h1>
-        <button
-          type="button"
-          onClick={() => setDialog({ mode: 'create' })}
-          className="mt-4 rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white"
-        >
-          {LL.flags.create()}
-        </button>
+        <p className="mt-3 max-w-2xl text-sm text-(--sea-ink-soft)">
+          {LL.flags.noFlagsDescription()}
+        </p>
         <button
           type="button"
           onClick={() => setIncludeArchived((value) => !value)}
-          className="mt-4 ms-2 rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold"
+          className="mt-4 rounded-xl border border-(--line) px-4 py-2 text-sm font-semibold"
         >
           {includeArchived ? LL.crud.hideArchived() : LL.crud.showArchived()}
         </button>
       </header>
-      {data.flags.length === 0 ? (
+      {data.services.length === 0 ? (
         <EmptyState
           title={LL.flags.noFlags()}
           description={LL.flags.noFlagsDescription()}
         />
       ) : (
-        <div className="space-y-4">
-          {data.flags.map((flag) => (
+        <div className="space-y-5">
+          {data.services.map((service) => (
             <section
-              key={flag.id}
+              key={service.id}
               className="rounded-2xl border border-(--line) bg-(--surface) p-6"
             >
-              <h2 className="font-serif text-2xl font-bold">{flag.key}</h2>
-              <div className="mt-3 flex gap-2">
-                {flag.archived ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void unarchiveMutation.mutateAsync(flag.id)
-                      }
-                      disabled={unarchiveMutation.isPending}
-                      className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
-                    >
-                      {LL.crud.restore()}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteId(flag.id)}
-                      className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
-                    >
-                      {LL.crud.deletePermanently()}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setDialog({ mode: 'edit', flag })}
-                      className="rounded-lg border border-(--line) px-3 py-2 text-sm font-semibold"
-                    >
-                      {LL.flags.edit()}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void archiveMutation.mutateAsync(flag.id)}
-                      disabled={archiveMutation.isPending}
-                      className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
-                    >
-                      {LL.flags.archive()}
-                    </button>
-                  </>
-                )}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.15em] text-(--kicker)">
+                    {LL.services.title()}
+                  </p>
+                  <h2 className="font-serif text-2xl font-bold">
+                    {service.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-(--sea-ink-soft)">
+                    {service.flags.map((flag) => flag.key).join(', ') ||
+                      LL.services.none()}
+                  </p>
+                </div>
+                {service.archived ? (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    ARCHIVED
+                  </span>
+                ) : null}
               </div>
-              <p className="mt-1 text-sm text-(--sea-ink-soft)">
-                {flag.description ?? LL.flags.noDescription()}
-              </p>
-              {!flag.archived ? (
-                <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              {!service.archived ? (
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   {data.tenants.map((tenant) => {
-                    const override = flag.overrides.find(
+                    const assignment = service.assignments.find(
                       (item) => item.tenantId === tenant.id,
                     )
-                    const enabled = override?.enabled ?? false
                     return (
-                      <label
+                      <div
                         key={tenant.id}
-                        className="flex items-center justify-between rounded-xl bg-white/50 px-4 py-3 text-sm"
+                        className="rounded-xl border border-(--line) bg-white/50 p-4"
                       >
-                        <span>{tenant.name}</span>
-                        <input
-                          type="checkbox"
-                          checked={enabled}
-                          onChange={(event) => {
-                            void toggleMutation.mutateAsync({
-                              tenantId: tenant.id,
-                              flagKey: flag.key,
-                              enabled: event.target.checked,
-                            })
-                          }}
-                          disabled={toggleMutation.isPending}
-                        />
-                      </label>
+                        <label className="flex items-center justify-between gap-3 text-sm font-semibold">
+                          <span>{tenant.name}</span>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(assignment)}
+                            disabled={assignmentMutation.isPending}
+                            onChange={(event) =>
+                              void assignmentMutation.mutateAsync({
+                                serviceId: service.id,
+                                tenantId: tenant.id,
+                                assigned: event.target.checked,
+                              })
+                            }
+                          />
+                        </label>
+                        {assignment ? (
+                          <div className="mt-3 space-y-2 border-t border-(--line) pt-3">
+                            <AssignmentConfig
+                              assignment={assignment}
+                              emailDeliveryAvailable={
+                                data.emailDeliveryAvailable
+                              }
+                              isPending={configMutation.isPending}
+                              onSubmit={(value) =>
+                                void configMutation.mutateAsync({
+                                  ...value,
+                                  serviceId: service.id,
+                                  tenantId: tenant.id,
+                                })
+                              }
+                              onRotateKey={() =>
+                                void rotateKeyMutation.mutateAsync({
+                                  serviceId: service.id,
+                                  tenantId: tenant.id,
+                                })
+                              }
+                              rotatePending={rotateKeyMutation.isPending}
+                            />
+                            {service.flags.map((flag) => {
+                              const assignedFlag = assignment.flags.find(
+                                (item) => item.serviceFlagId === flag.id,
+                              )
+                              return (
+                                <label
+                                  key={flag.id}
+                                  className="flex items-center justify-between gap-3 text-sm"
+                                >
+                                  <span>{flag.key}</span>
+                                  <input
+                                    type="checkbox"
+                                    checked={assignedFlag?.enabled ?? false}
+                                    disabled={flagMutation.isPending}
+                                    onChange={(event) =>
+                                      void flagMutation.mutateAsync({
+                                        serviceId: service.id,
+                                        tenantId: tenant.id,
+                                        serviceFlagId: flag.id,
+                                        enabled: event.target.checked,
+                                      })
+                                    }
+                                  />
+                                </label>
+                              )
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
                     )
                   })}
                 </div>
@@ -201,94 +214,167 @@ function Flags() {
           ))}
         </div>
       )}
-      {dialog ? (
+      {generatedApiKey ? (
         <CrudDialog
-          title={dialog.mode === 'create' ? LL.flags.create() : LL.flags.edit()}
-          error={definitionMutation.error ? LL.crud.saveError() : undefined}
-          onClose={() => setDialog(null)}
+          title="Tenant service API key generated"
+          onClose={() => setGeneratedApiKey(null)}
         >
-          <FlagForm
-            initial={dialog.mode === 'edit' ? dialog.flag : undefined}
-            isPending={definitionMutation.isPending}
-            onSubmit={(value) => void definitionMutation.mutateAsync(value)}
+          <p className="text-sm text-(--sea-ink-soft)">
+            Copy this key now. It will not be shown again.
+          </p>
+          <CopyableValue
+            value={generatedApiKey}
+            label="Copy API key"
+            copiedLabel={LL.crud.copied()}
           />
         </CrudDialog>
-      ) : null}
-      {deleteId ? (
-        <PermanentDeleteDialog
-          title={LL.crud.deletePermanently()}
-          isPending={deleteMutation.isPending}
-          onClose={() => setDeleteId(null)}
-          onConfirm={() => void deleteMutation.mutateAsync(deleteId)}
-        />
       ) : null}
     </div>
   )
 }
 
-function FlagForm({
-  initial,
+type ServiceAssignmentInput = { serviceId: string; tenantId: string }
+type TenantServiceConfig = ServiceAssignmentInput & {
+  deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE'
+  paymentCallbackUrl: string | null
+  paymentCallbackSecret: string | null
+  paymentDeliveryMode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL'
+}
+
+function AssignmentConfig({
+  assignment,
+  emailDeliveryAvailable,
   isPending,
   onSubmit,
+  onRotateKey,
+  rotatePending,
 }: {
-  initial?: {
-    id: string
-    key: string
-    description: string | null
-    archived?: boolean
+  assignment: {
+    billingEmail: string | null
+    deployStatus: TenantServiceConfig['deployStatus']
+    paymentCallbackUrl: string | null
+    paymentDeliveryMode: TenantServiceConfig['paymentDeliveryMode']
+    serviceApiKeyLastFour: string | null
   }
+  emailDeliveryAvailable: boolean
   isPending: boolean
-  onSubmit: (value: { id?: string; key: string; description?: string }) => void
+  onSubmit: (value: Omit<TenantServiceConfig, 'serviceId' | 'tenantId'>) => void
+  onRotateKey: () => void
+  rotatePending: boolean
 }) {
-  const { LL } = useI18nContext()
   const form = useForm({
     defaultValues: {
-      key: initial?.key ?? '',
-      description: initial?.description ?? '',
+      deployStatus: assignment.deployStatus,
+      paymentCallbackUrl: assignment.paymentCallbackUrl ?? '',
+      paymentCallbackSecret: '',
+      paymentDeliveryMode: assignment.paymentDeliveryMode,
     },
-    onSubmit: ({ value }) => onSubmit({ ...value, id: initial?.id }),
+    onSubmit: ({ value }) =>
+      onSubmit({
+        ...value,
+        paymentCallbackUrl: value.paymentCallbackUrl.trim() || null,
+        paymentCallbackSecret: value.paymentCallbackSecret.trim() || null,
+      }),
   })
   return (
     <form
-      className="mt-5 space-y-4"
+      className="space-y-2 rounded-lg bg-(--surface) p-3"
       onSubmit={(event) => {
         event.preventDefault()
         void form.handleSubmit()
       }}
     >
-      <form.Field name="key">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <form.Field name="deployStatus">
+          {(field) => (
+            <label className="text-xs font-semibold">
+              Deploy status
+              <select
+                value={field.state.value}
+                onChange={(event) =>
+                  field.handleChange(
+                    event.target.value as TenantServiceConfig['deployStatus'],
+                  )
+                }
+                className="mt-1 w-full rounded-lg border border-(--line) bg-white px-2 py-2 text-sm"
+              >
+                <option value="HEALTHY">HEALTHY</option>
+                <option value="DEGRADED">DEGRADED</option>
+                <option value="OFFLINE">OFFLINE</option>
+              </select>
+            </label>
+          )}
+        </form.Field>
+        <form.Field name="paymentDeliveryMode">
+          {(field) => (
+            <label className="text-xs font-semibold">
+              Payment delivery mode
+              <select
+                value={field.state.value}
+                onChange={(event) =>
+                  field.handleChange(
+                    event.target
+                      .value as TenantServiceConfig['paymentDeliveryMode'],
+                  )
+                }
+                className="mt-1 w-full rounded-lg border border-(--line) bg-white px-2 py-2 text-sm"
+              >
+                <option value="CALLBACK">CALLBACK</option>
+                {emailDeliveryAvailable && assignment.billingEmail ? (
+                  <>
+                    <option value="EMAIL">EMAIL</option>
+                    <option value="CALLBACK_AND_EMAIL">
+                      CALLBACK_AND_EMAIL
+                    </option>
+                  </>
+                ) : null}
+              </select>
+            </label>
+          )}
+        </form.Field>
+      </div>
+      <form.Field name="paymentCallbackUrl">
         {(field) => (
-          <label className="block text-sm font-semibold">
-            {LL.flags.key()}
-            <input
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-              required
-            />
-          </label>
+          <input
+            value={field.state.value}
+            onChange={(event) => field.handleChange(event.target.value)}
+            placeholder="Payment callback URL"
+            className="w-full rounded-lg border border-(--line) bg-white px-2 py-2 text-sm"
+          />
         )}
       </form.Field>
-      <form.Field name="description">
+      <form.Field name="paymentCallbackSecret">
         {(field) => (
-          <label className="block text-sm font-semibold">
-            {LL.flags.description()}
-            <textarea
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-(--line) bg-white/70 px-4 py-3"
-              rows={3}
-            />
-          </label>
+          <input
+            value={field.state.value}
+            onChange={(event) => field.handleChange(event.target.value)}
+            placeholder="Payment callback secret (leave blank to keep current)"
+            className="w-full rounded-lg border border-(--line) bg-white px-2 py-2 text-sm"
+          />
         )}
       </form.Field>
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-xl bg-(--sea-ink) px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-      >
-        {LL.crud.save()}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-lg bg-(--sea-ink) px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+        >
+          Save configuration
+        </button>
+        <button
+          type="button"
+          disabled={rotatePending}
+          onClick={onRotateKey}
+          className="rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-800 disabled:opacity-40"
+        >
+          Regenerate API key
+        </button>
+        {assignment.serviceApiKeyLastFour ? (
+          <span className="text-xs text-(--sea-ink-soft)">
+            Current key: ****{assignment.serviceApiKeyLastFour}
+          </span>
+        ) : null}
+      </div>
     </form>
   )
 }

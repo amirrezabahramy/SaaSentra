@@ -96,7 +96,7 @@ function Audit() {
                 </time>
               </div>
               <p className="mt-1 text-sm text-(--sea-ink-soft)">
-                {row.tenant.name} ·{' '}
+                {row.tenant?.name ?? LL.audit.system()} ·{' '}
                 {row.actor?.name ?? row.actor?.email ?? LL.audit.system()}
               </p>
               <p className="mt-1 text-sm">

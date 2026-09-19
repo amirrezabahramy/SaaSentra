@@ -6,7 +6,6 @@ import {
   disable,
   enable,
   generateSerialKey,
-  getEntitlement,
   transitionSubscription,
 } from './lifecycle'
 import { isEmailConfigured } from './email'
@@ -30,11 +29,6 @@ const statusSchema = z.object({
       'TRIALING',
     ])
     .optional(),
-})
-const flagSchema = z.object({
-  tenantId: z.string().uuid(),
-  flagKey: z.string().min(1).max(100),
-  enabled: z.boolean(),
 })
 const auditSchema = z.object({
   tenantId: z.string().trim().max(100).optional(),
@@ -60,9 +54,37 @@ const tenantArchiveSchema = z.object({
   reason: z.string().trim().min(1).max(500),
 })
 const restoreSchema = z.object({ id: z.string().uuid() })
-const serviceSchema = z.object({
+const serviceFlagInputSchema = z.object({
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z0-9_.-]+$/),
+  description: z.string().trim().max(500).nullable().optional(),
+})
+const serviceSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    flags: z.array(serviceFlagInputSchema).default([]),
+  })
+  .superRefine((value, context) => {
+    const keys = new Set<string>()
+    for (const flag of value.flags) {
+      if (keys.has(flag.key)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['flags'],
+          message: `Duplicate service flag: ${flag.key}`,
+        })
+      }
+      keys.add(flag.key)
+    }
+  })
+const serviceUpdateSchema = serviceSchema.extend({ id: z.string().uuid() })
+const tenantServiceConfigSchema = z.object({
+  serviceId: z.string().uuid(),
   tenantId: z.string().uuid(),
-  name: z.string().trim().min(1).max(120),
   deployStatus: z.enum(['HEALTHY', 'DEGRADED', 'OFFLINE']),
   paymentCallbackUrl: z.string().trim().url().nullable().optional(),
   paymentCallbackSecret: z
@@ -74,57 +96,27 @@ const serviceSchema = z.object({
     .optional(),
   paymentDeliveryMode: z.enum(['CALLBACK', 'EMAIL', 'CALLBACK_AND_EMAIL']),
 })
-const serviceUpdateSchema = serviceSchema.extend({ id: z.string().uuid() })
 const serviceArchiveSchema = z.object({
   id: z.string().uuid(),
   reason: z.string().trim().min(1).max(500),
 })
 
-function assertPaymentDeliveryModeConfigured(
+async function assertTenantServiceDeliveryConfigured(
   mode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL',
+  callbackUrl?: string | null,
+  callbackSecret?: string | null,
 ) {
   if (mode !== 'CALLBACK' && !isEmailConfigured()) {
     throw new Error('SMTP email delivery is not configured')
   }
-}
-
-async function assertServiceDeliveryConfigured(
-  mode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL',
-  tenantId: string,
-  callbackUrl?: string | null,
-  callbackSecret?: string | null,
-) {
-  assertPaymentDeliveryModeConfigured(mode)
   if (mode !== 'EMAIL') {
     if (!callbackUrl || !callbackSecret) {
       throw new Error('Payment callback URL and secret are required')
     }
     await parseExternalUrl(callbackUrl)
   }
-  if (mode !== 'CALLBACK') {
-    const tenant = await db.tenant.findUnique({
-      where: { id: tenantId, deletedAt: null },
-      select: {
-        billingEmail: true,
-      },
-    })
-    if (!tenant?.billingEmail) {
-      throw new Error('Tenant billing email is not configured')
-    }
-  }
 }
 
-const flagDefinitionSchema = z.object({
-  key: z
-    .string()
-    .trim()
-    .min(1)
-    .max(100)
-    .regex(/^[a-z0-9_.-]+$/),
-  description: z.string().trim().max(500).nullable().optional(),
-})
-const flagUpdateSchema = flagDefinitionSchema.extend({ id: z.string().uuid() })
-const flagArchiveSchema = z.object({ id: z.string().uuid() })
 const planSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
@@ -242,7 +234,7 @@ async function actorId(): Promise<string> {
 async function createAudit(
   tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
   data: {
-    tenantId: string
+    tenantId?: string
     actorId: string
     action: string
     entityType: string
@@ -263,7 +255,7 @@ async function createAudit(
   })
 }
 
-async function createGlobalFlagAudits(
+async function createGlobalAudits(
   tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
   data: {
     actorId: string
@@ -283,7 +275,7 @@ async function createGlobalFlagAudits(
       tenantId: tenant.id,
       actorId: data.actorId,
       action: data.action,
-      entityType: data.entityType ?? 'FeatureFlag',
+      entityType: data.entityType ?? 'System',
       entityId: data.entityId,
       metadata: { reason: data.reason },
     })),
@@ -396,8 +388,7 @@ export const permanentlyDeleteTenant = createServerFn({ method: 'POST' })
       await tx.payment.deleteMany({ where: { tenantId: tenant.id } })
       await tx.invoice.deleteMany({ where: { tenantId: tenant.id } })
       await tx.serviceAction.deleteMany({ where: { tenantId: tenant.id } })
-      await tx.tenantFlag.deleteMany({ where: { tenantId: tenant.id } })
-      await tx.service.deleteMany({ where: { tenantId: tenant.id } })
+      await tx.tenantService.deleteMany({ where: { tenantId: tenant.id } })
       await tx.subscription.deleteMany({ where: { tenantId: tenant.id } })
       await tx.tenant.delete({ where: { id: tenant.id } })
       return { id: tenant.id, actorId: actor }
@@ -408,34 +399,26 @@ export const createService = createServerFn({ method: 'POST' })
   .validator((data: unknown) => serviceSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
-    await assertServiceDeliveryConfigured(
-      data.paymentDeliveryMode,
-      data.tenantId,
-      data.paymentCallbackUrl,
-      data.paymentCallbackSecret,
-    )
-    const serviceApiKey = generateServiceApiKey()
     return db.$transaction(async (tx) => {
+      const { flags } = data
       const service = await tx.service.create({
-        data: {
-          ...data,
-          serviceApiKeyHash: await hashServiceApiKey(serviceApiKey),
-          serviceApiKeyLastFour: serviceApiKey.slice(-4),
-          serviceApiKeyCreatedAt: new Date(),
-          paymentCallbackUrl: data.paymentCallbackUrl ?? null,
-          paymentCallbackSecret: data.paymentCallbackSecret ?? null,
-          paymentDeliveryMode: data.paymentDeliveryMode,
-        },
+        data: { name: data.name },
+      })
+      await tx.serviceFlag.createMany({
+        data: flags.map((flag) => ({
+          serviceId: service.id,
+          key: flag.key,
+          description: flag.description ?? null,
+        })),
       })
       await createAudit(tx, {
-        tenantId: service.tenantId,
         actorId: actor,
         action: 'service.created',
         entityType: 'Service',
         entityId: service.id,
         reason: 'Service created by operator',
       })
-      return { service, apiKey: serviceApiKey }
+      return { service }
     })
   })
 
@@ -443,32 +426,55 @@ export const updateService = createServerFn({ method: 'POST' })
   .validator((data: unknown) => serviceUpdateSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
-    const existing = await db.service.findUniqueOrThrow({
-      where: { id: data.id, deletedAt: null },
-      select: { paymentCallbackSecret: true },
-    })
-    await assertServiceDeliveryConfigured(
-      data.paymentDeliveryMode,
-      data.tenantId,
-      data.paymentCallbackUrl,
-      data.paymentCallbackSecret ?? existing.paymentCallbackSecret,
-    )
     return db.$transaction(async (tx) => {
-      const service = await tx.service.update({
+      const current = await tx.service.findUniqueOrThrow({
         where: { id: data.id, deletedAt: null },
-        data: {
-          tenantId: data.tenantId,
-          name: data.name,
-          deployStatus: data.deployStatus,
-          paymentCallbackUrl: data.paymentCallbackUrl ?? null,
-          ...(data.paymentCallbackSecret
-            ? { paymentCallbackSecret: data.paymentCallbackSecret }
-            : {}),
-          paymentDeliveryMode: data.paymentDeliveryMode,
+        include: {
+          flagDefinitions: true,
+          tenantAssignments: {
+            include: { flags: true },
+          },
         },
       })
+      const incomingKeys = new Set(data.flags.map((flag) => flag.key))
+      const removedFlags = current.flagDefinitions.filter(
+        (flag) => !incomingKeys.has(flag.key),
+      )
+      const blockedFlag = removedFlags.find((flag) =>
+        current.tenantAssignments.some((assignment) =>
+          assignment.flags.some(
+            (assignedFlag) =>
+              assignedFlag.serviceFlagId === flag.id && assignedFlag.enabled,
+          ),
+        ),
+      )
+      if (blockedFlag) {
+        throw new Error(
+          `Flag ${blockedFlag.key} is enabled for a tenant and cannot be removed`,
+        )
+      }
+      const service = await tx.service.update({
+        where: { id: data.id, deletedAt: null },
+        data: { name: data.name },
+      })
+      for (const flag of data.flags) {
+        await tx.serviceFlag.upsert({
+          where: { serviceId_key: { serviceId: service.id, key: flag.key } },
+          update: {
+            description: flag.description ?? null,
+            deletedAt: null,
+          },
+          create: {
+            serviceId: service.id,
+            key: flag.key,
+            description: flag.description ?? null,
+          },
+        })
+      }
+      for (const flag of removedFlags) {
+        await tx.serviceFlag.delete({ where: { id: flag.id } })
+      }
       await createAudit(tx, {
-        tenantId: service.tenantId,
         actorId: actor,
         action: 'service.updated',
         entityType: 'Service',
@@ -479,14 +485,19 @@ export const updateService = createServerFn({ method: 'POST' })
     })
   })
 
-export const rotateServiceApiKey = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => restoreSchema.parse(data))
+export const rotateTenantServiceApiKey = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => serviceAssignmentSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
     const serviceApiKey = generateServiceApiKey()
     return db.$transaction(async (tx) => {
-      const service = await tx.service.update({
-        where: { id: data.id, deletedAt: null },
+      const assignment = await tx.tenantService.update({
+        where: {
+          tenantId_serviceId: {
+            tenantId: data.tenantId,
+            serviceId: data.serviceId,
+          },
+        },
         data: {
           serviceApiKeyHash: await hashServiceApiKey(serviceApiKey),
           serviceApiKeyLastFour: serviceApiKey.slice(-4),
@@ -495,14 +506,14 @@ export const rotateServiceApiKey = createServerFn({ method: 'POST' })
         },
       })
       await createAudit(tx, {
-        tenantId: service.tenantId,
+        tenantId: data.tenantId,
         actorId: actor,
-        action: 'service.api_key_rotated',
-        entityType: 'Service',
-        entityId: service.id,
-        reason: 'Service API key rotated by operator',
+        action: 'tenant_service.api_key_rotated',
+        entityType: 'TenantService',
+        entityId: assignment.id,
+        reason: 'Tenant service API key rotated by operator',
       })
-      return { service, apiKey: serviceApiKey }
+      return { assignment, apiKey: serviceApiKey }
     })
   })
 
@@ -516,7 +527,6 @@ export const archiveService = createServerFn({ method: 'POST' })
         data: { deletedAt: new Date() },
       })
       await createAudit(tx, {
-        tenantId: service.tenantId,
         actorId: actor,
         action: 'service.archived',
         entityType: 'Service',
@@ -537,7 +547,6 @@ export const unarchiveService = createServerFn({ method: 'POST' })
         data: { deletedAt: null },
       })
       await createAudit(tx, {
-        tenantId: service.tenantId,
         actorId: actor,
         action: 'service.unarchived',
         entityType: 'Service',
@@ -562,92 +571,213 @@ export const permanentlyDeleteService = createServerFn({ method: 'POST' })
     })
   })
 
-export const createFlag = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => flagDefinitionSchema.parse(data))
+const serviceAssignmentSchema = z.object({
+  serviceId: z.string().uuid(),
+  tenantId: z.string().uuid(),
+})
+const serviceFlagToggleSchema = serviceAssignmentSchema.extend({
+  serviceFlagId: z.string().uuid(),
+  enabled: z.boolean(),
+})
+
+export const assignServiceToTenant = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => serviceAssignmentSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
     return db.$transaction(async (tx) => {
-      const flag = await tx.featureFlag.create({
-        data: { key: data.key, description: data.description ?? null },
+      const service = await tx.service.findUniqueOrThrow({
+        where: { id: data.serviceId, deletedAt: null },
+        include: { flagDefinitions: { where: { deletedAt: null } } },
       })
-      await createGlobalFlagAudits(tx, {
+      await tx.tenant.findUniqueOrThrow({
+        where: { id: data.tenantId, deletedAt: null },
+      })
+      const existingAssignment = await tx.tenantService.findUnique({
+        where: {
+          tenantId_serviceId: {
+            tenantId: data.tenantId,
+            serviceId: data.serviceId,
+          },
+        },
+      })
+      const apiKey = existingAssignment?.serviceApiKeyHash
+        ? null
+        : generateServiceApiKey()
+      const assignment = await tx.tenantService.upsert({
+        where: {
+          tenantId_serviceId: {
+            tenantId: data.tenantId,
+            serviceId: data.serviceId,
+          },
+        },
+        update: apiKey
+          ? {
+              serviceApiKeyHash: await hashServiceApiKey(apiKey),
+              serviceApiKeyLastFour: apiKey.slice(-4),
+              serviceApiKeyCreatedAt: new Date(),
+              serviceApiKeyRevokedAt: null,
+            }
+          : {},
+        create: {
+          tenantId: data.tenantId,
+          serviceId: data.serviceId,
+          serviceApiKeyHash: apiKey ? await hashServiceApiKey(apiKey) : null,
+          serviceApiKeyLastFour: apiKey ? apiKey.slice(-4) : null,
+          serviceApiKeyCreatedAt: apiKey ? new Date() : null,
+        },
+      })
+      await tx.tenantServiceFlag.createMany({
+        data: service.flagDefinitions.map((flag) => ({
+          tenantServiceId: assignment.id,
+          serviceFlagId: flag.id,
+          enabled: false,
+        })),
+        skipDuplicates: true,
+      })
+      await createAudit(tx, {
+        tenantId: data.tenantId,
         actorId: actor,
-        action: 'flag.created',
-        entityId: flag.id,
-        reason: 'Feature flag created by operator',
+        action: 'service.assigned',
+        entityType: 'TenantService',
+        entityId: assignment.id,
+        reason: 'Service assigned to tenant by operator',
       })
-      return flag
+      return {
+        assignment,
+        apiKey,
+      }
     })
   })
 
-export const updateFlag = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => flagUpdateSchema.parse(data))
+export const updateTenantService = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => tenantServiceConfigSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
+    const existing = await db.tenantService.findUniqueOrThrow({
+      where: {
+        tenantId_serviceId: {
+          tenantId: data.tenantId,
+          serviceId: data.serviceId,
+        },
+      },
+      select: { paymentCallbackSecret: true },
+    })
+    await assertTenantServiceDeliveryConfigured(
+      data.paymentDeliveryMode,
+      data.paymentCallbackUrl,
+      data.paymentCallbackSecret ?? existing.paymentCallbackSecret,
+    )
+    const tenant = await db.tenant.findUniqueOrThrow({
+      where: { id: data.tenantId, deletedAt: null },
+      select: { billingEmail: true },
+    })
+    if (data.paymentDeliveryMode !== 'CALLBACK' && !tenant.billingEmail) {
+      throw new Error(
+        'This service requires a billing email before email delivery can be enabled',
+      )
+    }
     return db.$transaction(async (tx) => {
-      const flag = await tx.featureFlag.update({
-        where: { id: data.id, deletedAt: null },
-        data: { key: data.key, description: data.description ?? null },
+      const assignment = await tx.tenantService.update({
+        where: {
+          tenantId_serviceId: {
+            tenantId: data.tenantId,
+            serviceId: data.serviceId,
+          },
+        },
+        data: {
+          deployStatus: data.deployStatus,
+          paymentCallbackUrl: data.paymentCallbackUrl ?? null,
+          ...(data.paymentCallbackSecret
+            ? { paymentCallbackSecret: data.paymentCallbackSecret }
+            : {}),
+          paymentDeliveryMode: data.paymentDeliveryMode,
+        },
       })
-      await createGlobalFlagAudits(tx, {
+      await createAudit(tx, {
+        tenantId: data.tenantId,
         actorId: actor,
-        action: 'flag.updated',
-        entityId: flag.id,
-        reason: 'Feature flag updated by operator',
+        action: 'tenant_service.updated',
+        entityType: 'TenantService',
+        entityId: assignment.id,
+        reason: 'Tenant service configuration updated by operator',
       })
-      return flag
+      return assignment
     })
   })
 
-export const archiveFlag = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => flagArchiveSchema.parse(data))
+export const unassignServiceFromTenant = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => serviceAssignmentSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
     return db.$transaction(async (tx) => {
-      const flag = await tx.featureFlag.update({
-        where: { id: data.id, deletedAt: null },
-        data: { deletedAt: new Date() },
+      const assignment = await tx.tenantService.findUniqueOrThrow({
+        where: {
+          tenantId_serviceId: {
+            tenantId: data.tenantId,
+            serviceId: data.serviceId,
+          },
+        },
       })
-      await createGlobalFlagAudits(tx, {
+      await tx.tenantService.delete({ where: { id: assignment.id } })
+      await createAudit(tx, {
+        tenantId: data.tenantId,
         actorId: actor,
-        action: 'flag.archived',
-        entityId: flag.id,
-        reason: 'Feature flag archived by operator',
+        action: 'service.unassigned',
+        entityType: 'TenantService',
+        entityId: assignment.id,
+        reason: 'Service unassigned from tenant by operator',
       })
-      return flag
+      return { id: assignment.id }
     })
   })
 
-export const unarchiveFlag = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => restoreSchema.parse(data))
+export const toggleTenantServiceFlag = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => serviceFlagToggleSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
     return db.$transaction(async (tx) => {
-      const flag = await tx.featureFlag.update({
-        where: { id: data.id },
-        data: { deletedAt: null },
+      const assignment = await tx.tenantService.findUniqueOrThrow({
+        where: {
+          tenantId_serviceId: {
+            tenantId: data.tenantId,
+            serviceId: data.serviceId,
+          },
+        },
       })
-      await createGlobalFlagAudits(tx, {
+      const flag = await tx.serviceFlag.findUniqueOrThrow({
+        where: { id: data.serviceFlagId, deletedAt: null },
+      })
+      if (flag.serviceId !== data.serviceId) {
+        throw new Error('Service flag does not belong to service')
+      }
+      const override = await tx.tenantServiceFlag.upsert({
+        where: {
+          tenantServiceId_serviceFlagId: {
+            tenantServiceId: assignment.id,
+            serviceFlagId: flag.id,
+          },
+        },
+        create: {
+          tenantServiceId: assignment.id,
+          serviceFlagId: flag.id,
+          enabled: data.enabled,
+        },
+        update: { enabled: data.enabled },
+      })
+      await createAudit(tx, {
+        tenantId: data.tenantId,
         actorId: actor,
-        action: 'flag.unarchived',
-        entityId: flag.id,
-        reason: 'Feature flag restored by operator',
+        action: 'service.flag.toggled',
+        entityType: 'TenantServiceFlag',
+        entityId: override.id,
+        reason: 'Service flag access changed by operator',
+        metadata: {
+          serviceId: data.serviceId,
+          flagKey: flag.key,
+          enabled: data.enabled,
+        },
       })
-      return flag
-    })
-  })
-
-export const permanentlyDeleteFlag = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => restoreSchema.parse(data))
-  .handler(async ({ data }) => {
-    const actor = await actorId()
-    return db.$transaction(async (tx) => {
-      const flag = await tx.featureFlag.findUniqueOrThrow({
-        where: { id: data.id, deletedAt: { not: null } },
-      })
-      await tx.tenantFlag.deleteMany({ where: { flagId: flag.id } })
-      await tx.featureFlag.delete({ where: { id: flag.id } })
-      return { id: flag.id, actorId: actor }
+      return override
     })
   })
 
@@ -659,7 +789,7 @@ export const createPlan = createServerFn({ method: 'POST' })
       const plan = await tx.plan.create({
         data: { ...data, providerPriceId: data.providerPriceId ?? null },
       })
-      await createGlobalFlagAudits(tx, {
+      await createGlobalAudits(tx, {
         actorId: actor,
         action: 'plan.created',
         entityId: plan.id,
@@ -690,7 +820,7 @@ export const updatePlan = createServerFn({ method: 'POST' })
           providerPriceId: data.providerPriceId ?? null,
         },
       })
-      await createGlobalFlagAudits(tx, {
+      await createGlobalAudits(tx, {
         actorId: actor,
         action: 'plan.updated',
         entityId: plan.id,
@@ -716,7 +846,7 @@ export const archivePlan = createServerFn({ method: 'POST' })
         where: { id: data.id, deletedAt: null },
         data: { deletedAt: new Date() },
       })
-      await createGlobalFlagAudits(tx, {
+      await createGlobalAudits(tx, {
         actorId: actor,
         action: 'plan.archived',
         entityId: plan.id,
@@ -736,7 +866,7 @@ export const unarchivePlan = createServerFn({ method: 'POST' })
         where: { id: data.id },
         data: { deletedAt: null },
       })
-      await createGlobalFlagAudits(tx, {
+      await createGlobalAudits(tx, {
         actorId: actor,
         action: 'plan.unarchived',
         entityId: plan.id,
@@ -1069,7 +1199,20 @@ export const getServices = createServerFn({ method: 'GET' })
     const services = await db.service.findMany({
       where: data.includeArchived ? {} : { deletedAt: null },
       include: {
-        tenant: true,
+        flagDefinitions: {
+          where: data.includeArchived ? {} : { deletedAt: null },
+          orderBy: { key: 'asc' },
+        },
+        tenantAssignments: {
+          include: {
+            tenant: { select: { id: true, name: true, billingEmail: true } },
+            flags: {
+              include: { serviceFlag: true },
+              orderBy: { serviceFlag: { key: 'asc' } },
+            },
+          },
+          orderBy: { tenant: { name: 'asc' } },
+        },
         paymentCheckouts: {
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -1078,31 +1221,42 @@ export const getServices = createServerFn({ method: 'GET' })
       },
       orderBy: { name: 'asc' },
     })
-    return Promise.all(
-      services.map(async (service) => ({
-        id: service.id,
-        name: service.name,
-        deployStatus: service.deployStatus,
-        paymentCallbackUrl: service.paymentCallbackUrl,
-        paymentDeliveryMode: service.paymentDeliveryMode,
-        emailDeliveryAvailable: isEmailConfigured(),
-        paymentDelivery: service.paymentCheckouts[0]?.delivery
-          ? {
-              status: service.paymentCheckouts[0].delivery.status,
-              attempts: service.paymentCheckouts[0].delivery.attempts,
-              lastError: service.paymentCheckouts[0].delivery.lastError,
-              deliveredAt:
-                service.paymentCheckouts[0].delivery.deliveredAt?.toISOString() ??
-                null,
-            }
-          : null,
-        serviceApiKeyLastFour: service.serviceApiKeyLastFour,
-        tenantId: service.tenantId,
-        tenantName: service.tenant.name,
-        archived: Boolean(service.deletedAt),
-        entitlement: await getEntitlement(service.tenantId),
+    return services.map((service) => ({
+      id: service.id,
+      name: service.name,
+      emailDeliveryAvailable: isEmailConfigured(),
+      paymentDelivery: service.paymentCheckouts[0]?.delivery
+        ? {
+            status: service.paymentCheckouts[0].delivery.status,
+            attempts: service.paymentCheckouts[0].delivery.attempts,
+            lastError: service.paymentCheckouts[0].delivery.lastError,
+            deliveredAt:
+              service.paymentCheckouts[0].delivery.deliveredAt?.toISOString() ??
+              null,
+          }
+        : null,
+      archived: Boolean(service.deletedAt),
+      flags: service.flagDefinitions.map((flag) => ({
+        id: flag.id,
+        key: flag.key,
+        description: flag.description,
+        archived: Boolean(flag.deletedAt),
       })),
-    )
+      assignments: service.tenantAssignments.map((assignment) => ({
+        id: assignment.id,
+        tenantId: assignment.tenant.id,
+        tenantName: assignment.tenant.name,
+        billingEmail: assignment.tenant.billingEmail,
+        deployStatus: assignment.deployStatus,
+        paymentCallbackUrl: assignment.paymentCallbackUrl,
+        paymentDeliveryMode: assignment.paymentDeliveryMode,
+        serviceApiKeyLastFour: assignment.serviceApiKeyLastFour,
+        flags: assignment.flags.map((flag) => ({
+          serviceFlagId: flag.serviceFlagId,
+          enabled: flag.enabled,
+        })),
+      })),
+    }))
   })
 
 export const getFlags = createServerFn({ method: 'GET' })
@@ -1111,11 +1265,23 @@ export const getFlags = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data }) => {
     await requireOperator()
-    const [flags, tenants] = await Promise.all([
-      db.featureFlag.findMany({
+    const [services, tenants] = await Promise.all([
+      db.service.findMany({
         where: data.includeArchived ? {} : { deletedAt: null },
-        orderBy: { key: 'asc' },
-        include: { tenantFlags: true },
+        orderBy: { name: 'asc' },
+        include: {
+          flagDefinitions: {
+            where: data.includeArchived ? {} : { deletedAt: null },
+            orderBy: { key: 'asc' },
+          },
+          tenantAssignments: {
+            include: {
+              tenant: { select: { id: true, name: true, billingEmail: true } },
+              flags: true,
+            },
+            orderBy: { tenant: { name: 'asc' } },
+          },
+        },
       }),
       db.tenant.findMany({
         where: { deletedAt: null },
@@ -1124,14 +1290,30 @@ export const getFlags = createServerFn({ method: 'GET' })
       }),
     ])
     return {
-      flags: flags.map((flag) => ({
-        id: flag.id,
-        key: flag.key,
-        description: flag.description,
-        archived: Boolean(flag.deletedAt),
-        overrides: flag.tenantFlags.map((override) => ({
-          tenantId: override.tenantId,
-          enabled: override.enabled,
+      emailDeliveryAvailable: isEmailConfigured(),
+      services: services.map((service) => ({
+        id: service.id,
+        name: service.name,
+        archived: Boolean(service.deletedAt),
+        flags: service.flagDefinitions.map((flag) => ({
+          id: flag.id,
+          key: flag.key,
+          description: flag.description,
+          archived: Boolean(flag.deletedAt),
+        })),
+        assignments: service.tenantAssignments.map((assignment) => ({
+          id: assignment.id,
+          tenantId: assignment.tenant.id,
+          tenantName: assignment.tenant.name,
+          billingEmail: assignment.tenant.billingEmail,
+          deployStatus: assignment.deployStatus,
+          paymentCallbackUrl: assignment.paymentCallbackUrl,
+          paymentDeliveryMode: assignment.paymentDeliveryMode,
+          serviceApiKeyLastFour: assignment.serviceApiKeyLastFour,
+          flags: assignment.flags.map((flag) => ({
+            serviceFlagId: flag.serviceFlagId,
+            enabled: flag.enabled,
+          })),
         })),
       })),
       tenants,
@@ -1219,42 +1401,4 @@ export const cancelSubscription = createServerFn({ method: 'POST' })
       actorId: actor,
       reason: data.reason ?? 'Subscription canceled by tenant operator',
     })
-  })
-
-export const toggleTenantFlag = createServerFn({ method: 'POST' })
-  .validator((data: unknown) => flagSchema.parse(data))
-  .handler(async ({ data }) => {
-    const actor = await actorId()
-    const flag = await db.featureFlag.findUniqueOrThrow({
-      where: { key: data.flagKey },
-    })
-    const result = await db.$transaction(async (tx) => {
-      const override = await tx.tenantFlag.upsert({
-        where: {
-          tenantId_flagId: { tenantId: data.tenantId, flagId: flag.id },
-        },
-        create: {
-          tenantId: data.tenantId,
-          flagId: flag.id,
-          enabled: data.enabled,
-        },
-        update: { enabled: data.enabled },
-      })
-      await tx.auditLog.create({
-        data: {
-          tenantId: data.tenantId,
-          actorId: actor,
-          action: 'tenant.flag.toggled',
-          entityType: 'TenantFlag',
-          entityId: override.id,
-          metadata: {
-            flagKey: data.flagKey,
-            enabled: data.enabled,
-            reason: 'Admin flag override changed',
-          },
-        },
-      })
-      return override
-    })
-    return result
   })

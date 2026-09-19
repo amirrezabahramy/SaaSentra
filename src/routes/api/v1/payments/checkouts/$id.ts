@@ -11,14 +11,27 @@ export const Route = createFileRoute('/api/v1/payments/checkouts/$id')({
         if (!serviceId || !z.string().uuid().safeParse(serviceId).success) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
-        if (!(await authenticateServiceRequest(request, serviceId)))
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const checkout = await db.paymentCheckout.findUnique({
           where: { id: params.id },
           include: { plan: true, service: true, subscription: true },
         })
         if (!checkout || checkout.serviceId !== serviceId)
           return Response.json({ error: 'Checkout not found' }, { status: 404 })
+        if (
+          !(await authenticateServiceRequest(request, {
+            serviceId,
+            tenantId: checkout.tenantId,
+          }))
+        )
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const assignment = await db.tenantService.findUnique({
+          where: {
+            tenantId_serviceId: {
+              tenantId: checkout.tenantId,
+              serviceId,
+            },
+          },
+        })
         if (checkout.status === 'PENDING' && checkout.expiresAt < new Date()) {
           await db.paymentCheckout.update({
             where: { id: checkout.id },
@@ -39,7 +52,7 @@ export const Route = createFileRoute('/api/v1/payments/checkouts/$id')({
                 id: checkout.subscription.id,
                 status: checkout.subscription.status,
                 serialKey:
-                  checkout.service.paymentDeliveryMode === 'EMAIL'
+                  assignment?.paymentDeliveryMode === 'EMAIL'
                     ? null
                     : checkout.subscription.serialKey,
                 periodEnd: checkout.plan.isPermanent
