@@ -36,6 +36,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
+        name: 'theme-color',
+        content: '#173a40',
+      },
+      {
         title: 'SaaSentra | The control center for your SaaS products.',
       },
     ],
@@ -54,6 +58,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         rel: 'apple-touch-icon',
         sizes: '192x192',
         href: '/saasentra-icon-192.png',
+      },
+      {
+        rel: 'manifest',
+        href: '/manifest.webmanifest',
       },
     ],
   }),
@@ -82,6 +90,12 @@ function LocalizedDocument({ children }: { children: React.ReactNode }) {
     }
     setIsLocaleReady(true)
   }, [locale, setLocale])
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.register('/sw.js')
+    }
+  }, [])
 
   return (
     <html lang={locale} dir={locale === 'fa' ? 'rtl' : 'ltr'}>
