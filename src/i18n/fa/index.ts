@@ -248,6 +248,8 @@ const fa = {
     dialogCancel: 'لغو اشتراک',
     dialogDescription:
       'این کار دسترسی مستأجر را فوراً تغییر می‌دهد و یک رویداد ثبت می‌کند.',
+    cancellationWarning:
+      'لغو دائمی است و قابل بازگشت نیست؛ پس از آن اشتراک فقط قابل آرشیو یا حذف است.',
     reason: 'دلیل',
     requiredReason: 'دلیل الزامی',
     typeToConfirm: 'برای تأیید، عبارت',

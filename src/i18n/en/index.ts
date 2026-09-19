@@ -248,6 +248,8 @@ const en = {
     dialogCancel: 'Cancel subscription',
     dialogDescription:
       'This changes the tenant’s access immediately and records an audit event.',
+    cancellationWarning:
+      'Cancellation is permanent. It cannot be undone; the subscription can only be archived or deleted afterward.',
     reason: 'Reason',
     requiredReason: 'Required reason',
     typeToConfirm: 'Type',

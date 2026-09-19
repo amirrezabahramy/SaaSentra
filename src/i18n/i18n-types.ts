@@ -880,6 +880,10 @@ type RootTranslation = {
 		 */
 		dialogDescription: string
 		/**
+		 * C​a​n​c​e​l​l​a​t​i​o​n​ ​i​s​ ​p​e​r​m​a​n​e​n​t​.​ ​I​t​ ​c​a​n​n​o​t​ ​b​e​ ​u​n​d​o​n​e​;​ ​t​h​e​ ​s​u​b​s​c​r​i​p​t​i​o​n​ ​c​a​n​ ​o​n​l​y​ ​b​e​ ​a​r​c​h​i​v​e​d​ ​o​r​ ​d​e​l​e​t​e​d​ ​a​f​t​e​r​w​a​r​d​.
+		 */
+		cancellationWarning: string
+		/**
 		 * R​e​a​s​o​n
 		 */
 		reason: string
@@ -1840,6 +1844,10 @@ export type TranslationFunctions = {
 		 * This changes the tenant’s access immediately and records an audit event.
 		 */
 		dialogDescription: () => LocalizedString
+		/**
+		 * Cancellation is permanent. It cannot be undone; the subscription can only be archived or deleted afterward.
+		 */
+		cancellationWarning: () => LocalizedString
 		/**
 		 * Reason
 		 */
