@@ -136,6 +136,15 @@ model Session {
   @@index([userId])
 }
 
+model RateLimitBucket {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
 model Account {
   id                    String    @id
   accountId             String

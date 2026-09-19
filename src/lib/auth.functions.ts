@@ -7,7 +7,7 @@ import {
 import { z } from 'zod'
 import db from '#/db'
 import { auth } from './auth'
-import { consumeRateLimit } from './rate-limit'
+import { consumeRateLimit, getRequestIp } from './rate-limit'
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -39,17 +39,18 @@ export const getAuthSession = createServerFn({ method: 'GET' }).handler(
 export const signIn = createServerFn({ method: 'POST' })
   .validator((data: unknown) => credentialsSchema.parse(data))
   .handler(async ({ data }) => {
+    const request = getRequest()
     if (
-      !consumeRateLimit(`sign-in:${data.email.trim().toLowerCase()}`, {
-        limit: 10,
-        windowMs: 15 * 60_000,
-      })
+      !(await consumeRateLimit(
+        `sign-in:${data.email.trim().toLowerCase()}:${getRequestIp(request)}`,
+        { limit: 10, windowMs: 15 * 60_000 },
+      ))
     ) {
       throw new Error('Invalid email or password')
     }
     const response = await auth.api.signInEmail({
       body: data,
-      headers: getRequest().headers,
+      headers: request.headers,
       asResponse: true,
     })
     copyResponseHeaders(response)

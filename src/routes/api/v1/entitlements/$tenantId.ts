@@ -3,7 +3,11 @@ import { z } from 'zod'
 import { db } from '#/db'
 import { env } from '#/env'
 import { getEntitlement } from '#/lib/lifecycle'
-import { consumeRateLimit } from '#/lib/rate-limit'
+import {
+  consumeRateLimit,
+  getRequestIp,
+  tooManyRequestsResponse,
+} from '#/lib/rate-limit'
 
 /**
  * Cross-origin entitlement endpoint.
@@ -23,13 +27,12 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
         params: { tenantId: string }
       }) => {
         if (
-          !consumeRateLimit(`entitlement:${params.tenantId}`, {
-            limit: 120,
-            windowMs: 60_000,
-          })
-        ) {
-          return Response.json({ error: 'Too many requests' }, { status: 429 })
-        }
+          !(await consumeRateLimit(
+            `entitlement:${params.tenantId}:${request.headers.get('x-service-id') ?? 'unknown'}:${getRequestIp(request)}`,
+            { limit: 120, windowMs: 60_000 },
+          ))
+        )
+          return tooManyRequestsResponse(60_000)
         const secret = request.headers.get('x-entitlement-secret')
         if (secret !== env.ENTITLEMENT_SHARED_SECRET) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -49,13 +52,12 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
       },
       POST: async ({ request, params }) => {
         if (
-          !consumeRateLimit(`entitlement-submit:${params.tenantId}`, {
-            limit: 30,
-            windowMs: 60_000,
-          })
-        ) {
-          return Response.json({ error: 'Too many requests' }, { status: 429 })
-        }
+          !(await consumeRateLimit(
+            `entitlement-submit:${params.tenantId}:${request.headers.get('x-service-id') ?? 'unknown'}:${getRequestIp(request)}`,
+            { limit: 30, windowMs: 60_000 },
+          ))
+        )
+          return tooManyRequestsResponse(60_000)
         if (
           request.headers.get('x-entitlement-secret') !==
           env.ENTITLEMENT_SHARED_SECRET

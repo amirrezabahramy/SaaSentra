@@ -4,7 +4,11 @@ import { env } from '#/env'
 import { db } from '#/db'
 import { resolvePaymentProvider } from '#/lib/payments/resolver'
 import { assertMatchingExternalOrigin } from '#/lib/external-url'
-import { consumeRateLimit } from '#/lib/rate-limit'
+import {
+  consumeRateLimit,
+  getRequestIp,
+  tooManyRequestsResponse,
+} from '#/lib/rate-limit'
 import { authenticateServiceRequest } from '#/lib/service-credentials'
 
 const checkoutSchema = z.object({
@@ -32,13 +36,12 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
         if (!(await authenticateServiceRequest(request, serviceId)))
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         if (
-          !consumeRateLimit(`checkout:${serviceId}`, {
-            limit: 20,
-            windowMs: 60_000,
-          })
-        ) {
-          return Response.json({ error: 'Too many requests' }, { status: 429 })
-        }
+          !(await consumeRateLimit(
+            `checkout:${serviceId}:${tenantId}:${getRequestIp(request)}`,
+            { limit: 20, windowMs: 60_000 },
+          ))
+        )
+          return tooManyRequestsResponse(60_000)
         const [tenant, service, plan] = await Promise.all([
           db.tenant.findUnique({
             where: { id: tenantId, deletedAt: null },
