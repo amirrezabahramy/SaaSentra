@@ -3,6 +3,10 @@ import { db } from '#/db'
 import { isEmailConfigured, sendPaymentEmail } from '#/lib/email'
 import { parseExternalUrl } from '#/lib/external-url'
 
+export const MAX_CALLBACK_RESPONSE_BYTES = 64 * 1024
+const MAX_CALLBACK_ATTEMPTS = 3
+const CALLBACK_RETRY_DELAY_MS = 100
+
 export function signPaymentEvent(secret: string, payload: string) {
   return createHmac('sha256', secret).update(payload).digest('hex')
 }
@@ -13,6 +17,31 @@ export function signaturesMatch(expected: string, actual: string) {
   return left.length === right.length && timingSafeEqual(left, right)
 }
 
+async function consumeResponse(response: Response): Promise<void> {
+  const body = response.body
+  if (body === null) return
+  const reader = body.getReader()
+  let bytes = 0
+  try {
+    let chunk = await reader.read()
+    while (!chunk.done) {
+      bytes += chunk.value.byteLength
+      if (bytes > MAX_CALLBACK_RESPONSE_BYTES) {
+        throw new Error('Payment callback response exceeded the size limit')
+      }
+      chunk = await reader.read()
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined)
+  }
+}
+
+function waitForRetry(attempt: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, CALLBACK_RETRY_DELAY_MS * 2 ** attempt)
+  })
+}
+
 export async function deliverPaymentCallback(input: {
   url: string | null
   secret: string | null
@@ -21,21 +50,37 @@ export async function deliverPaymentCallback(input: {
   if (!input.url || !input.secret) return { delivered: false, skipped: true }
   const body = JSON.stringify(input.payload)
   const signature = signPaymentEvent(input.secret, body)
-  const url = await parseExternalUrl(input.url)
-  const response = await fetch(url, {
-    method: 'POST',
-    redirect: 'manual',
-    headers: {
-      'content-type': 'application/json',
-      'x-saas-event': 'payment.succeeded',
-      'x-saas-signature': signature,
-    },
-    body,
-    signal: AbortSignal.timeout(10_000),
-  })
-  if (!response.ok)
-    throw new Error(`Payment callback failed: ${response.status}`)
-  return { delivered: true, skipped: false }
+  for (let attempt = 0; attempt < MAX_CALLBACK_ATTEMPTS; attempt += 1) {
+    const url = await parseExternalUrl(input.url)
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: {
+          'content-type': 'application/json',
+          'x-saas-event': 'payment.succeeded',
+          'x-saas-signature': signature,
+        },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      })
+      await consumeResponse(response)
+      if (response.ok) return { delivered: true, skipped: false }
+      if (response.status < 500 || attempt === MAX_CALLBACK_ATTEMPTS - 1) {
+        throw new Error(`Payment callback failed: ${response.status}`)
+      }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === 'Payment callback response exceeded the size limit'
+      ) {
+        throw error
+      }
+      if (attempt === MAX_CALLBACK_ATTEMPTS - 1) throw error
+    }
+    await waitForRetry(attempt)
+  }
+  throw new Error('Payment callback failed')
 }
 
 export async function deliverCheckoutCallback(checkoutId: string) {
