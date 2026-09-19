@@ -32,44 +32,46 @@ Acceptance criteria:
 - [x] Credential rotation does not expose the previous secret.
 - [x] No raw service credentials are returned by dashboard loaders or APIs.
 
-### 2. Use shared rate-limit storage in production
+### 2. Use shared rate-limit storage in production — addressed September 19, 2026
 
-Current state: login, entitlement, and checkout rate limits are held in process memory.
+Current state: login, entitlement, and checkout rate limits are persisted in the database through `RateLimitBucket`, so limits survive restarts and are shared by application instances using the same database.
 
 Risk: limits reset on restart and are not shared between multiple application instances.
 
-Recommended fix:
+Implementation:
 
-- Use Redis, a database-backed limiter, or an infrastructure-level WAF/API gateway.
+- Added database-backed rate-limit buckets.
 - Rate-limit by a combination of IP, credential identity, service ID, and tenant ID where appropriate.
 - Keep stricter limits for authentication and serial-key submission.
 
 Acceptance criteria:
 
-- Limits remain effective after an application restart.
-- Limits are shared across all production instances.
-- Legitimate services are not blocked by a single shared IP.
-- `429` responses include a safe retry indication without leaking internal details.
+- [x] Limits remain effective after an application restart.
+- [x] Limits are shared across all production instances using the same database.
+- [x] Legitimate services are not blocked by a single shared IP.
+- [x] `429` responses include a safe retry indication without leaking internal details.
 
-### 3. Complete provider callback and webhook verification in staging
+### 3. Complete provider callback and webhook verification in staging — partially verified September 19, 2026
 
-Current state: signature validation and replay protection are implemented, but successful real test-mode payment completion must still be verified for each provider.
+Current state: local signed webhook/callback processing, amount validation, tamper rejection, replay protection, and Zibal test-mode settlement have been verified. A real Stripe Test-mode Checkout was paid successfully, but Stripe cannot deliver its webhook to the local server until a public tunnel or Stripe CLI forwarder is configured.
 
 Required tests:
 
-- Stripe successful Test-mode payment and webhook.
-- Stripe failed Test-mode payment and webhook.
-- Stripe webhook replay.
-- Zibal test payment and callback using the `zibal` merchant.
-- Zibal callback replay and tampering.
-- Payment delivery after each successful provider flow.
+- [x] Stripe successful Test-mode Checkout payment.
+- [x] Stripe signed webhook settlement fixture.
+- [x] Stripe amount tampering rejection.
+- [x] Stripe webhook replay.
+- [ ] Stripe external webhook delivery from Test mode through a tunnel/Stripe CLI.
+- [x] Zibal test payment and callback using the `zibal` merchant.
+- [x] Zibal callback replay and tampering.
+- [x] Payment delivery record after each successful provider flow.
 
 Acceptance criteria:
 
-- A browser redirect alone never activates a subscription.
-- Only a verified provider callback/webhook can settle payment.
-- Duplicate provider events do not create duplicate invoices, payments, serial keys, or deliveries.
-- Amount, currency, plan, tenant, and service are validated before activation.
+- [x] A browser redirect alone never activates a subscription.
+- [x] Only a verified provider callback/webhook can settle payment.
+- [x] Duplicate provider events do not create duplicate invoices, payments, serial keys, or deliveries.
+- [x] Amount, currency, plan, tenant, and service are validated before activation.
 
 ## Medium priority
 
