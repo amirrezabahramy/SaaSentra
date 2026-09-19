@@ -1,5 +1,7 @@
 # SaaS Dashboard Starter
 
+[فارسی](README.fa.md) · English
+
 A TanStack Start + Prisma starter for multi-tenant SaaS: subscriptions, invoices,
 payments, entitlements, feature flags, and a subscription lifecycle with dunning
 and grace periods.
