@@ -44,6 +44,17 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         rel: 'stylesheet',
         href: appCss,
       },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '32x32',
+        href: '/saasentra-favicon-32.png',
+      },
+      {
+        rel: 'apple-touch-icon',
+        sizes: '192x192',
+        href: '/saasentra-icon-192.png',
+      },
     ],
   }),
   shellComponent: RootDocument,
@@ -100,7 +111,14 @@ function LocalizedDocument({ children }: { children: React.ReactNode }) {
 function LocaleLoading() {
   return (
     <main className="app-launch-loader" aria-busy="true" aria-live="polite">
-      <span className="app-launch-loader__indicator" aria-hidden="true" />
+      <div className="app-launch-loader__content">
+        <img
+          src="/saasentra-icon-192.png"
+          alt="SaaSentra"
+          className="app-launch-loader__logo"
+        />
+        <span className="app-launch-loader__indicator" aria-hidden="true" />
+      </div>
     </main>
   )
 }

@@ -272,6 +272,18 @@ body {
   background: var(--bg-base);
 }
 
+.app-launch-loader__content {
+  display: grid;
+  justify-items: center;
+  gap: 1.25rem;
+}
+
+.app-launch-loader__logo {
+  width: 6rem;
+  height: 6rem;
+  object-fit: contain;
+}
+
 .app-launch-loader__indicator {
   width: 2rem;
   height: 2rem;

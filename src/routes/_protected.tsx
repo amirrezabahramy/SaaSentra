@@ -147,6 +147,17 @@ function SidebarContent({
 }) {
   return (
     <>
+      <Link
+        to="/"
+        className="mb-5 flex items-center gap-3 rounded-xl px-2 py-1 text-(--sea-ink)"
+      >
+        <img
+          src="/saasentra-logo.webp"
+          alt="SaaSentra"
+          className="size-11 rounded-xl object-contain"
+        />
+        <span className="text-lg font-bold tracking-tight">SaaSentra</span>
+      </Link>
       <BetterAuthHeader user={user} />
       <div className="mt-4">
         <LanguageSwitcher />
