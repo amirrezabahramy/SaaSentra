@@ -13,12 +13,12 @@ const GRACE_PERIOD_DAYS = 7
 const DAY_MS = 86_400_000
 
 async function sendNotice(
-  email: string,
-  subject: string,
-  body: string,
+  _email: string,
+  _subject: string,
+  _body: string,
 ): Promise<void> {
   // Placeholder for Resend/Postmark/SES integration in a later phase.
-  console.log(`[dunning] email to=${email} subject="${subject}" body="${body}"`)
+  console.info('[dunning] notice queued')
 }
 
 function wholeDaysUntil(date: Date, now: Date): number {

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '#/db'
 import { env } from '#/env'
 import { getEntitlement } from '#/lib/lifecycle'
+import { consumeRateLimit } from '#/lib/rate-limit'
 
 /**
  * Cross-origin entitlement endpoint.
@@ -21,6 +22,14 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
         request: Request
         params: { tenantId: string }
       }) => {
+        if (
+          !consumeRateLimit(`entitlement:${params.tenantId}`, {
+            limit: 120,
+            windowMs: 60_000,
+          })
+        ) {
+          return Response.json({ error: 'Too many requests' }, { status: 429 })
+        }
         const secret = request.headers.get('x-entitlement-secret')
         if (secret !== env.ENTITLEMENT_SHARED_SECRET) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,15 +49,24 @@ export const Route = createFileRoute('/api/v1/entitlements/$tenantId')({
       },
       POST: async ({ request, params }) => {
         if (
+          !consumeRateLimit(`entitlement-submit:${params.tenantId}`, {
+            limit: 30,
+            windowMs: 60_000,
+          })
+        ) {
+          return Response.json({ error: 'Too many requests' }, { status: 429 })
+        }
+        if (
           request.headers.get('x-entitlement-secret') !==
           env.ENTITLEMENT_SHARED_SECRET
         ) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
+        const body = await request.json().catch(() => null)
         const parsed = z
           .object({ serialKey: z.string().trim().min(1) })
-          .safeParse(await request.json())
+          .safeParse(body)
         if (!parsed.success) {
           return Response.json(
             { error: 'Serial key is required' },

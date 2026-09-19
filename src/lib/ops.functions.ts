@@ -1,8 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import { db } from '#/db'
-import { auth } from './auth'
+import { requireOperator } from './authorization'
 import {
   disable,
   enable,
@@ -11,6 +10,7 @@ import {
   transitionSubscription,
 } from './lifecycle'
 import { isEmailConfigured } from './email'
+import { parseExternalUrl } from './external-url'
 
 const reasonSchema = z.object({
   subscriptionId: z.string().uuid(),
@@ -90,8 +90,16 @@ function assertPaymentDeliveryModeConfigured(
 async function assertServiceDeliveryConfigured(
   mode: 'CALLBACK' | 'EMAIL' | 'CALLBACK_AND_EMAIL',
   tenantId: string,
+  callbackUrl?: string | null,
+  callbackSecret?: string | null,
 ) {
   assertPaymentDeliveryModeConfigured(mode)
+  if (mode !== 'EMAIL') {
+    if (!callbackUrl || !callbackSecret) {
+      throw new Error('Payment callback URL and secret are required')
+    }
+    await parseExternalUrl(callbackUrl)
+  }
   if (mode !== 'CALLBACK') {
     const tenant = await db.tenant.findUnique({
       where: { id: tenantId, deletedAt: null },
@@ -227,16 +235,7 @@ function initialPeriodForPlan(
 }
 
 async function actorId(): Promise<string> {
-  const session = await auth.api.getSession({ headers: getRequest().headers })
-  if (!session || !session.user.id) throw new Error('Authentication required')
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
-  })
-  if (!user || !['OWNER', 'ADMIN'].includes(user.role)) {
-    throw new Error('Only owner and admin users can perform this action')
-  }
-  return session.user.id
+  return requireOperator()
 }
 
 async function createAudit(
@@ -411,6 +410,8 @@ export const createService = createServerFn({ method: 'POST' })
     await assertServiceDeliveryConfigured(
       data.paymentDeliveryMode,
       data.tenantId,
+      data.paymentCallbackUrl,
+      data.paymentCallbackSecret,
     )
     return db.$transaction(async (tx) => {
       const service = await tx.service.create({
@@ -437,9 +438,15 @@ export const updateService = createServerFn({ method: 'POST' })
   .validator((data: unknown) => serviceUpdateSchema.parse(data))
   .handler(async ({ data }) => {
     const actor = await actorId()
+    const existing = await db.service.findUniqueOrThrow({
+      where: { id: data.id, deletedAt: null },
+      select: { paymentCallbackSecret: true },
+    })
     await assertServiceDeliveryConfigured(
       data.paymentDeliveryMode,
       data.tenantId,
+      data.paymentCallbackUrl,
+      data.paymentCallbackSecret ?? existing.paymentCallbackSecret,
     )
     return db.$transaction(async (tx) => {
       const service = await tx.service.update({
@@ -732,8 +739,9 @@ export const getPlans = createServerFn({ method: 'GET' })
   .validator((data: unknown) =>
     z.object({ includeArchived: z.boolean().optional() }).parse(data),
   )
-  .handler(async ({ data }) =>
-    db.plan
+  .handler(async ({ data }) => {
+    await requireOperator()
+    return db.plan
       .findMany({
         where: data.includeArchived ? {} : { deletedAt: null },
         orderBy: { name: 'asc' },
@@ -744,8 +752,8 @@ export const getPlans = createServerFn({ method: 'GET' })
           ...plan,
           subscriptionCount: _count.subscriptions,
         })),
-      ),
-  )
+      )
+  })
 
 export const createSubscription = createServerFn({ method: 'POST' })
   .validator((data: unknown) => subscriptionCreateSchema.parse(data))
@@ -1008,22 +1016,24 @@ export const getSubscriptions = createServerFn({ method: 'GET' })
       .extend({ includeArchived: z.boolean().optional() })
       .parse(data),
   )
-  .handler(async ({ data }) =>
-    db.subscription.findMany({
+  .handler(async ({ data }) => {
+    await requireOperator()
+    return db.subscription.findMany({
       where: {
         ...(data.includeArchived ? {} : { deletedAt: null }),
         ...(data.status ? { status: data.status } : {}),
       },
       include: { plan: true, tenant: true },
       orderBy: { updatedAt: 'desc' },
-    }),
-  )
+    })
+  })
 
 export const getServices = createServerFn({ method: 'GET' })
   .validator((data: unknown) =>
     z.object({ includeArchived: z.boolean().optional() }).parse(data),
   )
   .handler(async ({ data }) => {
+    await requireOperator()
     const services = await db.service.findMany({
       where: data.includeArchived ? {} : { deletedAt: null },
       include: {
@@ -1067,6 +1077,7 @@ export const getFlags = createServerFn({ method: 'GET' })
     z.object({ includeArchived: z.boolean().optional() }).parse(data),
   )
   .handler(async ({ data }) => {
+    await requireOperator()
     const [flags, tenants] = await Promise.all([
       db.featureFlag.findMany({
         where: data.includeArchived ? {} : { deletedAt: null },
@@ -1096,33 +1107,30 @@ export const getFlags = createServerFn({ method: 'GET' })
 
 export const getAudit = createServerFn({ method: 'GET' })
   .validator((data: unknown) => auditSchema.parse(data))
-  .handler(async ({ data }) =>
-    (async () => {
-      if (
-        data.tenantId &&
-        !z.string().uuid().safeParse(data.tenantId).success
-      ) {
-        return []
-      }
-      return db.auditLog.findMany({
-        where: {
-          ...(data.tenantId ? { tenantId: data.tenantId } : {}),
-          ...(data.action
-            ? { action: { contains: data.action, mode: 'insensitive' } }
-            : {}),
-        },
-        include: {
-          tenant: { select: { id: true, name: true } },
-          actor: { select: { name: true, email: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 200,
-      })
-    })(),
-  )
+  .handler(async ({ data }) => {
+    await requireOperator()
+    if (data.tenantId && !z.string().uuid().safeParse(data.tenantId).success) {
+      return []
+    }
+    return db.auditLog.findMany({
+      where: {
+        ...(data.tenantId ? { tenantId: data.tenantId } : {}),
+        ...(data.action
+          ? { action: { contains: data.action, mode: 'insensitive' } }
+          : {}),
+      },
+      include: {
+        tenant: { select: { id: true, name: true } },
+        actor: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    })
+  })
 
 export const getSettings = createServerFn({ method: 'GET' }).handler(
   async () => {
+    await requireOperator()
     const users = await db.user.findMany({
       where: { deletedAt: null },
       include: {

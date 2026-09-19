@@ -16,5 +16,16 @@ export const auth = betterAuth({
       verify: ({ password, hash }) => bcrypt.compare(password, hash),
     },
   },
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      '/sign-in/email': {
+        window: 15 * 60,
+        max: 10,
+      },
+    },
+  },
   plugins: [tanstackStartCookies()],
 })

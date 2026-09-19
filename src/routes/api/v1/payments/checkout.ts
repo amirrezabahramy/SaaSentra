@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { env } from '#/env'
 import { db } from '#/db'
 import { resolvePaymentProvider } from '#/lib/payments/resolver'
+import { assertMatchingExternalOrigin } from '#/lib/external-url'
+import { consumeRateLimit } from '#/lib/rate-limit'
 
 const checkoutSchema = z.object({
   tenantId: z.string().uuid(),
@@ -20,7 +22,8 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
         if (request.headers.get('x-service-secret') !== env.SERVICE_SECRET)
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        const parsed = checkoutSchema.safeParse(await request.json())
+        const body = await request.json().catch(() => null)
+        const parsed = checkoutSchema.safeParse(body)
         if (!parsed.success)
           return Response.json(
             { error: 'Invalid checkout request' },
@@ -28,6 +31,14 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
           )
 
         const { tenantId, serviceId, planId, returnUrl } = parsed.data
+        if (
+          !consumeRateLimit(`checkout:${serviceId}`, {
+            limit: 20,
+            windowMs: 60_000,
+          })
+        ) {
+          return Response.json({ error: 'Too many requests' }, { status: 429 })
+        }
         const [tenant, service, plan] = await Promise.all([
           db.tenant.findUnique({
             where: { id: tenantId, deletedAt: null },
@@ -41,6 +52,24 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             { error: 'Checkout resource not found' },
             { status: 404 },
           )
+        if (returnUrl && !service.paymentCallbackUrl) {
+          return Response.json(
+            { error: 'This service does not allow an external return URL' },
+            { status: 400 },
+          )
+        }
+        let safeReturnUrl: URL | undefined
+        try {
+          safeReturnUrl =
+            returnUrl && service.paymentCallbackUrl
+              ? await assertMatchingExternalOrigin(
+                  returnUrl,
+                  service.paymentCallbackUrl,
+                )
+              : undefined
+        } catch {
+          return Response.json({ error: 'Invalid return URL' }, { status: 400 })
+        }
         if (plan.provider === 'ZIBAL' && plan.currency !== 'IRR')
           return Response.json(
             { error: 'Zibal plans must use IRR currency' },
@@ -119,14 +148,14 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             subscriptionId: subscription.id,
             planId,
             provider: plan.provider,
-            returnUrl,
+            returnUrl: safeReturnUrl?.toString(),
             expiresAt: new Date(now.getTime() + 30 * 60 * 1000),
           },
         })
         const paymentReturnUrl = (status: 'success' | 'canceled') => {
-          if (!returnUrl)
+          if (!safeReturnUrl)
             return `${baseUrl()}/api/v1/payments/checkouts/${checkout.id}`
-          const url = new URL(returnUrl)
+          const url = new URL(safeReturnUrl)
           url.searchParams.set('checkout', status)
           url.searchParams.set('checkoutId', checkout.id)
           return url.toString()
@@ -162,17 +191,17 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
             expiresAt: checkout.expiresAt.toISOString(),
           })
         } catch (error) {
-          console.log(error)
+          console.error('[payments] checkout creation failed', {
+            provider: plan.provider,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
           await db.paymentCheckout.update({
             where: { id: checkout.id },
             data: { status: 'CANCELED' },
           })
           return Response.json(
             {
-              error:
-                error instanceof Error
-                  ? error.message
-                  : 'Could not create checkout',
+              error: 'Could not create checkout',
             },
             { status: 502 },
           )

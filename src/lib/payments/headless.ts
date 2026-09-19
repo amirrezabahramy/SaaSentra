@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db } from '#/db'
 import { isEmailConfigured, sendPaymentEmail } from '#/lib/email'
+import { parseExternalUrl } from '#/lib/external-url'
 
 export function signPaymentEvent(secret: string, payload: string) {
   return createHmac('sha256', secret).update(payload).digest('hex')
@@ -20,8 +21,10 @@ export async function deliverPaymentCallback(input: {
   if (!input.url || !input.secret) return { delivered: false, skipped: true }
   const body = JSON.stringify(input.payload)
   const signature = signPaymentEvent(input.secret, body)
-  const response = await fetch(input.url, {
+  const url = await parseExternalUrl(input.url)
+  const response = await fetch(url, {
     method: 'POST',
+    redirect: 'manual',
     headers: {
       'content-type': 'application/json',
       'x-saas-event': 'payment.succeeded',

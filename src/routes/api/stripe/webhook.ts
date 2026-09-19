@@ -9,6 +9,7 @@ import {
   stringValue,
   verifyStripeSignature,
 } from '#/lib/stripe'
+import { Prisma } from '#/generated/prisma/client'
 import type {
   Currency,
   InvoiceStatus,
@@ -57,6 +58,7 @@ async function findSubscription(object: Record<string, unknown>) {
   const customer = stringValue(object.customer)
   return db.subscription.findFirst({
     where: {
+      deletedAt: null,
       OR: [
         ...(id ? [{ id }] : []),
         ...(stripeId ? [{ providerSubscriptionId: stripeId }] : []),
@@ -256,34 +258,50 @@ export const Route = createFileRoute('/api/stripe/webhook')({
         const eventId = stringValue(event.id)
         if (!eventId)
           return Response.json({ error: 'Missing event ID' }, { status: 400 })
-        const existing = await db.auditLog.findFirst({
-          where: { action: 'stripe.event.processed', entityId: eventId },
-        })
-        if (existing) return Response.json({ received: true, duplicate: true })
+        try {
+          await db.webhookEvent.create({
+            data: { provider: 'STRIPE', eventId },
+          })
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2002'
+          ) {
+            return Response.json({ received: true, duplicate: true })
+          }
+          throw error
+        }
         const object = eventObject(event)
         const relatedSubscription = await findSubscription(object)
         const candidateTenantId =
           relatedSubscription?.tenantId ?? metadata(object.metadata).tenantId
         const relatedTenant = candidateTenantId
           ? await db.tenant.findUnique({
-              where: { id: candidateTenantId },
+              where: { id: candidateTenantId, deletedAt: null },
               select: { id: true },
             })
           : null
         if (!relatedTenant)
           return Response.json({ received: true, ignored: true })
-        await handleEvent(event, relatedSubscription)
-        const type = stringValue(event.type) ?? 'unknown'
-        await db.auditLog.create({
-          data: {
-            tenantId: relatedTenant.id,
-            action: 'stripe.event.processed',
-            entityType: 'StripeEvent',
-            entityId: eventId,
-            metadata: { type },
-          },
-        })
-        return Response.json({ received: true })
+        try {
+          await handleEvent(event, relatedSubscription)
+          const type = stringValue(event.type) ?? 'unknown'
+          await db.auditLog.create({
+            data: {
+              tenantId: relatedTenant.id,
+              action: 'stripe.event.processed',
+              entityType: 'StripeEvent',
+              entityId: eventId,
+              metadata: { type },
+            },
+          })
+          return Response.json({ received: true })
+        } catch (error) {
+          await db.webhookEvent.delete({
+            where: { provider_eventId: { provider: 'STRIPE', eventId } },
+          })
+          throw error
+        }
       },
     },
   },

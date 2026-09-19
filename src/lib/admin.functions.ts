@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { db } from '#/db'
+import { requireOperator } from './authorization'
 import { calculateRevenueSummary, isRevenueActive } from './metrics'
 import { isEmailConfigured } from './email'
 
@@ -12,6 +13,7 @@ const tenantIdSchema = z.object({ id: z.string().uuid() })
 
 export const getOverview = createServerFn({ method: 'GET' }).handler(
   async () => {
+    await requireOperator()
     const now = new Date()
     const subscriptions = await db.subscription.findMany({
       where: { deletedAt: null },
@@ -65,6 +67,7 @@ export const getOverview = createServerFn({ method: 'GET' }).handler(
 export const getTenants = createServerFn({ method: 'GET' })
   .validator((data: unknown) => searchSchema.parse(data))
   .handler(async ({ data }) => {
+    await requireOperator()
     const search = data.search?.trim()
     const tenants = await db.tenant.findMany({
       where: {
@@ -102,6 +105,7 @@ export const getTenants = createServerFn({ method: 'GET' })
 export const getTenantDetail = createServerFn({ method: 'GET' })
   .validator((data: unknown) => tenantIdSchema.parse(data))
   .handler(async ({ data }) => {
+    await requireOperator()
     const tenant = await db.tenant.findUnique({
       where: { id: data.id, deletedAt: null },
       include: {

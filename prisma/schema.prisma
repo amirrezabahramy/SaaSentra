@@ -306,6 +306,15 @@ model PaymentDelivery {
   checkout    PaymentCheckout        @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
 }
 
+model WebhookEvent {
+  id        String          @id @default(uuid())
+  provider  PaymentProvider
+  eventId   String
+  createdAt DateTime        @default(now())
+
+  @@unique([provider, eventId])
+}
+
 model ServiceAction {
   id        String    @id @default(uuid())
   tenantId  String

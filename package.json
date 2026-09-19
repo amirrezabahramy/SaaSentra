@@ -15,6 +15,7 @@
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "test:security": "dotenv -e .env.local -- node --import tsx --test tests/security/*.test.ts",
     "post-cta-init": "npx -y create-db@latest --user-agent tanstack/tsrouter",
     "db:dev": "dotenv -e .env.local -- prisma dev",
     "db:generate": "dotenv -e .env.local -- prisma generate",
