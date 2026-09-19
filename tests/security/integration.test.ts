@@ -131,7 +131,7 @@ test('archived tenant and subscription entitlements are inactive and cross-servi
   })
   await db.tenantService.createMany({
     data: [
-      { tenantId, serviceId },
+      { tenantId, serviceId, deployStatus: 'MAINTENANCE' },
       { tenantId: otherTenantId, serviceId: otherServiceId },
     ],
   })
@@ -149,6 +149,7 @@ test('archived tenant and subscription entitlements are inactive and cross-servi
   try {
     const active = await getEntitlement(tenantId, { serviceId })
     assert.equal(active.active, true)
+    assert.equal(active.serviceStatus, 'MAINTENANCE')
     await assert.rejects(() =>
       getEntitlement(tenantId, { serviceId: otherServiceId }),
     )

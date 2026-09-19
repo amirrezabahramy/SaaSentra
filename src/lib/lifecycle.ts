@@ -134,6 +134,7 @@ export async function getEntitlement(
   let service: {
     deletedAt: Date | null
     tenantAssignments: Array<{
+      deployStatus: 'HEALTHY' | 'DEGRADED' | 'OFFLINE' | 'MAINTENANCE'
       flags: Array<{
         enabled: boolean
         serviceFlag: { key: string; deletedAt: Date | null }
@@ -161,6 +162,8 @@ export async function getEntitlement(
     }
   }
 
+  const serviceStatus = service?.tenantAssignments[0]?.deployStatus ?? null
+
   const tenant = await db.tenant.findUniqueOrThrow({
     where: { id: tenantId },
     include: {
@@ -173,6 +176,7 @@ export async function getEntitlement(
   if (tenant.deletedAt) {
     return {
       active: false,
+      serviceStatus,
       plan: null,
       planId: null,
       flags: {},
@@ -187,6 +191,7 @@ export async function getEntitlement(
   if (!subscription) {
     return {
       active: false,
+      serviceStatus,
       plan: null,
       flags: {},
       periodEnd: null,
@@ -200,6 +205,7 @@ export async function getEntitlement(
   if (subscription.deletedAt || subscription.status === 'ARCHIVED') {
     return {
       active: false,
+      serviceStatus,
       plan: null,
       planId: null,
       flags: {},
@@ -255,6 +261,7 @@ export async function getEntitlement(
 
   return {
     active,
+    serviceStatus,
     plan: subscription.plan.slug,
     planId: subscription.planId,
     planType: subscription.plan.type,

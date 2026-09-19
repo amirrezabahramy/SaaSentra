@@ -146,6 +146,7 @@ A successful response contains fields such as:
   "planType": "SUBSCRIPTION",
   "status": "ACTIVE",
   "reason": "ACTIVE",
+  "serviceStatus": "HEALTHY",
   "periodEnd": "2026-10-19T12:00:00.000Z",
   "flags": {
     "advanced_reports": true
@@ -228,9 +229,10 @@ configuration.
 
 Each tenant-service assignment has an operational status of `HEALTHY`,
 `DEGRADED`, `OFFLINE`, or `MAINTENANCE`. `MAINTENANCE` indicates scheduled or
-planned temporary unavailability. These values are dashboard labels and are not
-currently included in the entitlement response. Entitlement `active` describes
-subscription authorization, not application uptime.
+planned temporary unavailability. These values are included as `serviceStatus`
+in the entitlement response. Entitlement `active` describes subscription
+authorization, while `serviceStatus` describes the connected service’s
+operational condition.
 
 ### Repository structure
 

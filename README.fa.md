@@ -146,6 +146,7 @@ x-serial-key: <customer-entered serial key>
   "planType": "SUBSCRIPTION",
   "status": "ACTIVE",
   "reason": "ACTIVE",
+  "serviceStatus": "HEALTHY",
   "periodEnd": "2026-10-19T12:00:00.000Z",
   "flags": {
     "advanced_reports": true
@@ -223,9 +224,9 @@ POST /api/v1/payments/checkouts/:checkoutId/deliver
 
 هر تخصیص tenant به سرویس برچسب عملیاتی `HEALTHY`، `DEGRADED`، `OFFLINE` یا
 `MAINTENANCE` دارد. وضعیت `MAINTENANCE` برای از دسترس خارج بودن موقت و برنامه‌ریزی‌شده
-استفاده می‌شود. این‌ها برچسب‌های داشبورد هستند و فعلاً در پاسخ entitlement ارسال
-نمی‌شوند. فیلد `active` درباره مجاز بودن دسترسی اشتراکی است، نه روشن یا خاموش
-بودن خود وب‌سایت.
+استفاده می‌شود. این وضعیت با فیلد `serviceStatus` در پاسخ entitlement ارسال
+می‌شود. فیلد `active` درباره مجاز بودن دسترسی اشتراکی است و
+`serviceStatus` وضعیت عملیاتی سرویس متصل را نشان می‌دهد.
 
 ### ساختار پروژه
 
