@@ -4,6 +4,255 @@ A TanStack Start + Prisma starter for multi-tenant SaaS: subscriptions, invoices
 payments, entitlements, feature flags, and a subscription lifecycle with dunning
 and grace periods.
 
+## Project guide
+
+### What this project does
+
+This application is a SaaS management control plane for an owner or operator
+who owns multiple products. For example, the operator may own a café website,
+a sports equipment store, and an online clothing store. Each product can be
+registered as a service and integrated with this dashboard.
+
+The operator’s developers integrate those websites with the entitlement API.
+When the operator changes a customer’s subscription or access status in this
+dashboard, the connected website receives the new entitlement result and can
+allow, limit, or block that customer’s access in its own UI.
+
+### Core concepts
+
+- **Dashboard owner/operator** — the person or company that owns the products
+  and uses this dashboard to manage customer access.
+- **Tenant** — a customer organization or account whose access is managed by
+  the operator.
+- **Service** — one of the operator’s connected products, such as a café,
+  sports, or clothing website. Each registered service receives its own API
+  credential and is identified by `serviceId`.
+- **Plan** — a reusable commercial definition: price, currency, provider, plan
+  type, and duration.
+- **Subscription** — the tenant’s assignment to a plan. It owns the lifecycle
+  status, period dates, serial key, cancellation state, and payment history.
+- **Flag** — a tenant feature entitlement, such as `advanced_reports` or
+  `team_members`.
+- **Entitlement** — the server-to-server result that tells a service whether
+  access is active and which flags it may enable.
+- **Invoice and payment** — financial records created after verified provider
+  settlement. A browser redirect alone never activates a subscription.
+
+The current data model gives each tenant one subscription relation at a time.
+The entitlement request is scoped by both `tenantId` and `serviceId`, so one
+website cannot use another website’s service credential or entitlement scope.
+The subscription status itself is currently tenant-level: changing the
+subscription status affects the tenant’s connected services. A future
+per-service subscription model would require a schema change.
+
+### Dashboard sections
+
+| Section       | Purpose                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------- |
+| Overview      | MRR, active subscriptions, dunning queue, and recent audit activity.                                |
+| Tenants       | Create and manage customer organizations, billing email, status, subscriptions, and tenant details. |
+| Plans         | Define subscription or serial-key plans, pricing, currency, provider, and duration.                 |
+| Subscriptions | Inspect and manage plan assignments, lifecycle status, periods, serial keys, and payments.          |
+| Services      | Register the operator’s products, rotate service credentials, and configure payment delivery.       |
+| Flags         | Define feature flags and enable or disable them per tenant.                                         |
+| Audit         | Review lifecycle, payment, credential, and administrative activity.                                 |
+| Settings      | Review application-level operational settings and configuration information.                        |
+
+Owner and admin users operate the dashboard. Tenant users belong to a customer
+tenant and are kept separate from operator access; they do not receive access
+to the SaaS management dashboard by default.
+
+### Subscription and access statuses
+
+| Status                   | Meaning for a connected service                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `ACTIVE`                 | Access is active while the plan period is valid.                                                       |
+| `TRIALING`               | Access is active during the trial period.                                                              |
+| `PAST_DUE`               | A payment problem is recorded; access remains active only while the current period is still valid.     |
+| `GRACE_PERIOD`           | Access is inactive until a successful payment resolves the grace state.                                |
+| `DISABLED`               | Access is inactive.                                                                                    |
+| `CANCELED`               | The subscription is canceled and cannot be reactivated through payment.                                |
+| `DISABLED_AT_PERIOD_END` | Access behaves as active before the period ends and inactive afterward; the status value is preserved. |
+| `ARCHIVED`               | The record is treated as nonexistent by entitlement and payment APIs.                                  |
+
+`active` is the authoritative access decision for a connected service. The
+returned `status` and `reason` provide additional context for displaying a
+message or deciding whether to show a payment action.
+
+### Recommended operator workflow
+
+1. Register each owned product in **Services**. For example, register the café,
+   sports, and clothing websites as separate services.
+2. Give each service’s developer its `serviceId` and generated service API key.
+   The key is shown only when it is created or regenerated.
+3. Create plans in **Plans** and configure their provider-specific details.
+4. Create customer tenants in **Tenants** and assign their subscriptions.
+5. Integrate the entitlement check into each website’s server-side request flow.
+6. Use the returned `active`, `status`, `reason`, and `flags` values to enforce
+   access and feature limits in that website’s own design.
+7. Manage access from this dashboard. For example, disabling a tenant’s
+   subscription makes the entitlement response inactive for the connected
+   service.
+8. Optionally use the headless checkout flow when customers need to pay or
+   renew from the connected website.
+
+Keep all shared secrets and service credentials on the server. Do not expose
+them in browser JavaScript or public client-side environment variables.
+
+### Entitlement integration
+
+The cross-origin entitlement route is:
+
+```text
+GET /api/v1/entitlements/:tenantId
+```
+
+Required headers:
+
+```text
+x-entitlement-secret: <shared entitlement secret>
+x-service-id: <registered service id>
+```
+
+For serial-key plans, the service may also send:
+
+```text
+x-serial-key: <customer-entered serial key>
+```
+
+A successful response contains fields such as:
+
+```json
+{
+  "active": true,
+  "plan": "pro",
+  "planType": "SUBSCRIPTION",
+  "status": "ACTIVE",
+  "reason": "ACTIVE",
+  "periodEnd": "2026-10-19T12:00:00.000Z",
+  "flags": {
+    "advanced_reports": true
+  }
+}
+```
+
+For a serial-key plan, the API returns matching/submission booleans but never
+returns the secret serial key itself. Archived tenants and subscriptions are
+reported as inactive and do not leak archived records.
+
+### Serial-key submission
+
+Serial-key services can submit a customer-entered key through:
+
+```text
+POST /api/v1/entitlements/:tenantId
+```
+
+Use the same authentication headers and send:
+
+```json
+{ "serialKey": "customer-entered-key" }
+```
+
+The submitted value is persisted against the subscription. It is not stored in
+a cookie or environment variable, and the actual generated key is not returned
+by the entitlement API.
+
+### Headless payment integration
+
+Create a checkout from the customer application’s server side:
+
+```text
+POST /api/v1/payments/checkout
+```
+
+Headers:
+
+```text
+x-service-id: <registered service id>
+x-service-secret: <service-specific API key>
+```
+
+Request body:
+
+```json
+{
+  "tenantId": "<tenant id>",
+  "serviceId": "<service id>",
+  "planId": "<plan id>",
+  "returnUrl": "https://customer-app.example/payment-result"
+}
+```
+
+The response contains a provider checkout URL and `checkoutId`. Redirect the
+customer to the provider URL. The provider webhook or callback verifies and
+settles the payment; do not mark the subscription active based only on the
+customer returning to your website.
+
+After the customer returns, query:
+
+```text
+GET /api/v1/payments/checkouts/:checkoutId
+```
+
+using the same service headers. A successful checkout can optionally trigger
+configured callback delivery through:
+
+```text
+POST /api/v1/payments/checkouts/:checkoutId/deliver
+```
+
+The service’s configured payment delivery mode controls whether the result is
+delivered by callback, email, or both. Provider webhooks must be publicly
+reachable in deployment and must use the correct signing or verification
+configuration.
+
+### Service deployment status
+
+Services have dashboard metadata for `HEALTHY`, `DEGRADED`, and `OFFLINE`.
+Those values are operational labels for the registered service and are not
+currently included in the entitlement response. Entitlement `active` describes
+subscription authorization, not application uptime.
+
+### Repository structure
+
+```text
+.
+├── prisma/
+│   ├── migrations/          # Versioned database schema changes
+│   ├── schema.prisma        # Domain model and enums
+│   ├── seed.ts              # Demo data seed
+│   └── owner.seed.ts        # Owner-only seed
+├── src/
+│   ├── routes/              # Dashboard pages and server API routes
+│   ├── lib/                 # Domain, payment, auth, query, and utility logic
+│   ├── components/          # Shared UI components
+│   ├── integrations/        # Better Auth and TanStack integrations
+│   ├── i18n/                # English and Persian translations
+│   ├── db.ts                # Prisma client singleton
+│   └── env.ts               # Validated environment configuration
+├── docker/
+│   ├── entrypoint.sh        # Migrate then start the production server
+│   └── postgres-init/       # PostgreSQL initialization scripts
+├── Dockerfile               # Multi-stage production image
+├── docker-compose.yml       # App + PostgreSQL deployment
+├── scripts/                 # Operational scripts and production checks
+├── tests/security/          # Security and integration tests
+└── README.md                # This guide
+```
+
+### Where to extend the project
+
+- Add business rules in `src/lib/`, not directly inside UI components.
+- Add dashboard pages under `src/routes/_protected/`.
+- Add external API routes under `src/routes/api/`.
+- Keep Prisma access server-only.
+- Add schema changes through a named Prisma migration.
+- Add translations to both `src/i18n/en/` and `src/i18n/fa/`.
+- Add security-sensitive behavior with regression tests in `tests/security/`.
+- Keep payment-provider behavior behind the provider adapters in
+  `src/lib/payments/`.
+
 ## Stack
 
 - [TanStack Start](https://tanstack.com/start) (Nitro/Vite)
@@ -118,8 +367,8 @@ stripe trigger invoice.payment_failed
 The webhook rejects invalid signatures with HTTP 400. Replaying the same event
 ID returns HTTP 200 without adding another processed-event audit entry or
 transitioning the subscription again. A Checkout Session is created through
-the `createCheckoutSession` server function in
-`src/lib/stripe.functions.ts`.
+the headless checkout route described above. The Stripe webhook route remains
+the authoritative settlement path.
 
 ### 8. Dunning and health checks
 
@@ -178,7 +427,7 @@ migrations against a **direct** (non-pooled) connection — e.g. keep a separate
   `markPastDue` and `enterGracePeriod`; every change runs inside
   `db.$transaction` and writes an `AuditLog` row. `GRACE_NOTICE_DAYS = [7, 3, 1]`.
 - `src/lib/dunning.ts` — a daily node-cron job that scans `PAST_DUE` and
-  `GRACE_PERIOD` subscriptions, sends grace notices at T-7 / T-3 / T-1
-  (stub `sendEmail` — wire in Resend/Postmark/SES) and auto-disables tenants
-  whose `graceEndsAt` has passed.
+  `GRACE_PERIOD` subscriptions, sends configured grace notices at T-7 / T-3 /
+  T-1, records delivery outcomes, and auto-disables subscriptions whose grace
+  period has passed.
 - `src/db.ts` — PrismaClient singleton cached on `globalThis` in development.
