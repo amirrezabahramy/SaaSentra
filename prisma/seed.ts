@@ -13,6 +13,7 @@ const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@example.com'
 const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin123!'
 const tenantEmail = process.env.TENANT_EMAIL ?? 'tenant@example.com'
 const tenantPassword = process.env.TENANT_PASSWORD ?? 'Tenant123!'
+const demoServiceApiKey = process.env.DEMO_SERVICE_API_KEY
 const starterStripePriceId = 'price_starter_test'
 const proStripePriceId = 'price_pro_test'
 
@@ -263,9 +264,17 @@ async function main() {
   })
 
   // --- Demo service (ENTITLEMENT) ---------------------------------------
+  const demoServiceCredentials = demoServiceApiKey
+    ? {
+        serviceApiKeyHash: await bcrypt.hash(demoServiceApiKey, 12),
+        serviceApiKeyLastFour: demoServiceApiKey.slice(-4),
+        serviceApiKeyCreatedAt: new Date(),
+        serviceApiKeyRevokedAt: null,
+      }
+    : {}
   await db.service.upsert({
     where: { id: '00000000-0000-4000-8000-000000000001' },
-    update: {},
+    update: demoServiceCredentials,
     create: {
       id: '00000000-0000-4000-8000-000000000001',
       tenantId: acme.id,
@@ -274,6 +283,7 @@ async function main() {
       paymentDeliveryMode: 'CALLBACK',
       paymentCallbackUrl: null,
       paymentCallbackSecret: null,
+      ...demoServiceCredentials,
     },
   })
 

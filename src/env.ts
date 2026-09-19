@@ -9,7 +9,6 @@ export const env = createEnv({
     ENTITLEMENT_SHARED_SECRET: z.string().min(1),
     DATABASE_URL: z.string().url(),
     SHADOW_DATABASE_URL: z.string().url(),
-    SERVICE_SECRET: z.string(),
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),
     ZIBAL_MERCHANT: z.string().optional(),

@@ -521,6 +521,30 @@ type RootTranslation = {
 		 * C​o​p​y​ ​s​e​r​v​i​c​e​ ​I​D
 		 */
 		copyServiceId: string
+		/**
+		 * S​e​r​v​i​c​e​ ​A​P​I​ ​k​e​y
+		 */
+		apiKey: string
+		/**
+		 * T​h​i​s​ ​k​e​y​ ​i​s​ ​s​h​o​w​n​ ​o​n​l​y​ ​o​n​c​e​.​ ​S​t​o​r​e​ ​i​t​ ​s​e​c​u​r​e​l​y​ ​i​n​ ​t​h​e​ ​c​o​n​n​e​c​t​e​d​ ​s​e​r​v​i​c​e​.
+		 */
+		apiKeyDescription: string
+		/**
+		 * S​e​r​v​i​c​e​ ​A​P​I​ ​k​e​y​ ​g​e​n​e​r​a​t​e​d
+		 */
+		apiKeyGenerated: string
+		/**
+		 * R​o​t​a​t​e​ ​A​P​I​ ​k​e​y
+		 */
+		rotateApiKey: string
+		/**
+		 * K​e​y​ ​e​n​d​i​n​g
+		 */
+		apiKeyLastFour: string
+		/**
+		 * C​o​p​y​ ​s​e​r​v​i​c​e​ ​A​P​I​ ​k​e​y
+		 */
+		copyApiKey: string
 	}
 	flags: {
 		/**
@@ -1442,6 +1466,30 @@ export type TranslationFunctions = {
 		 * Copy service ID
 		 */
 		copyServiceId: () => LocalizedString
+		/**
+		 * Service API key
+		 */
+		apiKey: () => LocalizedString
+		/**
+		 * This key is shown only once. Store it securely in the connected service.
+		 */
+		apiKeyDescription: () => LocalizedString
+		/**
+		 * Service API key generated
+		 */
+		apiKeyGenerated: () => LocalizedString
+		/**
+		 * Rotate API key
+		 */
+		rotateApiKey: () => LocalizedString
+		/**
+		 * Key ending
+		 */
+		apiKeyLastFour: () => LocalizedString
+		/**
+		 * Copy service API key
+		 */
+		copyApiKey: () => LocalizedString
 	}
 	flags: {
 		/**

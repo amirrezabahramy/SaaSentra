@@ -11,6 +11,7 @@ import {
 } from './lifecycle'
 import { isEmailConfigured } from './email'
 import { parseExternalUrl } from './external-url'
+import { generateServiceApiKey, hashServiceApiKey } from './service-credentials'
 
 const reasonSchema = z.object({
   subscriptionId: z.string().uuid(),
@@ -413,10 +414,14 @@ export const createService = createServerFn({ method: 'POST' })
       data.paymentCallbackUrl,
       data.paymentCallbackSecret,
     )
+    const serviceApiKey = generateServiceApiKey()
     return db.$transaction(async (tx) => {
       const service = await tx.service.create({
         data: {
           ...data,
+          serviceApiKeyHash: await hashServiceApiKey(serviceApiKey),
+          serviceApiKeyLastFour: serviceApiKey.slice(-4),
+          serviceApiKeyCreatedAt: new Date(),
           paymentCallbackUrl: data.paymentCallbackUrl ?? null,
           paymentCallbackSecret: data.paymentCallbackSecret ?? null,
           paymentDeliveryMode: data.paymentDeliveryMode,
@@ -430,7 +435,7 @@ export const createService = createServerFn({ method: 'POST' })
         entityId: service.id,
         reason: 'Service created by operator',
       })
-      return service
+      return { service, apiKey: serviceApiKey }
     })
   })
 
@@ -471,6 +476,33 @@ export const updateService = createServerFn({ method: 'POST' })
         reason: 'Service updated by operator',
       })
       return service
+    })
+  })
+
+export const rotateServiceApiKey = createServerFn({ method: 'POST' })
+  .validator((data: unknown) => restoreSchema.parse(data))
+  .handler(async ({ data }) => {
+    const actor = await actorId()
+    const serviceApiKey = generateServiceApiKey()
+    return db.$transaction(async (tx) => {
+      const service = await tx.service.update({
+        where: { id: data.id, deletedAt: null },
+        data: {
+          serviceApiKeyHash: await hashServiceApiKey(serviceApiKey),
+          serviceApiKeyLastFour: serviceApiKey.slice(-4),
+          serviceApiKeyCreatedAt: new Date(),
+          serviceApiKeyRevokedAt: null,
+        },
+      })
+      await createAudit(tx, {
+        tenantId: service.tenantId,
+        actorId: actor,
+        action: 'service.api_key_rotated',
+        entityType: 'Service',
+        entityId: service.id,
+        reason: 'Service API key rotated by operator',
+      })
+      return { service, apiKey: serviceApiKey }
     })
   })
 
@@ -1064,6 +1096,7 @@ export const getServices = createServerFn({ method: 'GET' })
                 null,
             }
           : null,
+        serviceApiKeyLastFour: service.serviceApiKeyLastFour,
         tenantId: service.tenantId,
         tenantName: service.tenant.name,
         archived: Boolean(service.deletedAt),
@@ -1150,7 +1183,6 @@ export const getSettings = createServerFn({ method: 'GET' }).handler(
         'BETTER_AUTH_SECRET',
         'BETTER_AUTH_URL',
         'ENTITLEMENT_SHARED_SECRET',
-        'SERVICE_SECRET',
         'STRIPE_SECRET_KEY',
         'STRIPE_WEBHOOK_SECRET',
       ].map((name) => ({ name, configured: Boolean(process.env[name]) })),

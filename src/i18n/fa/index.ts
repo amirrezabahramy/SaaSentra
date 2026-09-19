@@ -146,6 +146,13 @@ const fa = {
     paymentDeliveryMode: 'روش تحویل نتیجه پرداخت',
     serviceId: 'شناسه سرویس',
     copyServiceId: 'کپی شناسه سرویس',
+    apiKey: 'کلید API سرویس',
+    apiKeyDescription:
+      'این کلید فقط یک بار نمایش داده می‌شود. آن را در سرویس متصل به‌صورت امن ذخیره کنید.',
+    apiKeyGenerated: 'کلید API سرویس ایجاد شد',
+    rotateApiKey: 'چرخش کلید API',
+    apiKeyLastFour: 'چهار رقم پایانی کلید',
+    copyApiKey: 'کپی کلید API سرویس',
   },
   flags: {
     kicker: 'پیکربندی',

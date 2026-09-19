@@ -5,6 +5,7 @@ import { db } from '#/db'
 import { resolvePaymentProvider } from '#/lib/payments/resolver'
 import { assertMatchingExternalOrigin } from '#/lib/external-url'
 import { consumeRateLimit } from '#/lib/rate-limit'
+import { authenticateServiceRequest } from '#/lib/service-credentials'
 
 const checkoutSchema = z.object({
   tenantId: z.string().uuid(),
@@ -19,9 +20,6 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        if (request.headers.get('x-service-secret') !== env.SERVICE_SECRET)
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-
         const body = await request.json().catch(() => null)
         const parsed = checkoutSchema.safeParse(body)
         if (!parsed.success)
@@ -31,6 +29,8 @@ export const Route = createFileRoute('/api/v1/payments/checkout')({
           )
 
         const { tenantId, serviceId, planId, returnUrl } = parsed.data
+        if (!(await authenticateServiceRequest(request, serviceId)))
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
         if (
           !consumeRateLimit(`checkout:${serviceId}`, {
             limit: 20,

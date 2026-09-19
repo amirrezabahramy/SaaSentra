@@ -50,7 +50,8 @@ docker compose up -d
 Copy `.env.example` to `.env` and fill in:
 
 - `DATABASE_URL` — Postgres connection string
-- `SERVICE_SECRET` — shared secret checked by the entitlement endpoint (`x-service-secret` header)
+- Each service has its own generated API key. Store it in the connected service and send it as the `x-service-secret` header for checkout and payment-delivery APIs.
+- For local seed testing, optionally set `DEMO_SERVICE_API_KEY`; otherwise rotate the demo service key from the Services page.
 - `STRIPE_SECRET_KEY` — Stripe API key for billing
 - `STRIPE_WEBHOOK_SECRET` — signing secret for Stripe webhooks
 
@@ -140,7 +141,7 @@ Expected response:
 
 `src/routes/api/v1/entitlements/$tenantId.ts` is a server **route** on purpose.
 External services must be able to call it **cross-origin** with the
-`x-service-secret` header. Server functions are designed for the app's own
+`x-entitlement-secret` header. Server functions are designed for the app's own
 client bundle and are not a stable cross-origin API surface — keep entitlement
 checks as a route and authenticate with the shared secret.
 

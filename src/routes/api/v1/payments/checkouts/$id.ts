@@ -1,18 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { env } from '#/env'
 import { db } from '#/db'
 import { z } from 'zod'
+import { authenticateServiceRequest } from '#/lib/service-credentials'
 
 export const Route = createFileRoute('/api/v1/payments/checkouts/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }) => {
-        if (request.headers.get('x-service-secret') !== env.SERVICE_SECRET)
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const serviceId = request.headers.get('x-service-id')
-        if (!z.string().uuid().safeParse(serviceId).success) {
+        if (!serviceId || !z.string().uuid().safeParse(serviceId).success) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
+        if (!(await authenticateServiceRequest(request, serviceId)))
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const checkout = await db.paymentCheckout.findUnique({
           where: { id: params.id },
           include: { plan: true, service: true, subscription: true },

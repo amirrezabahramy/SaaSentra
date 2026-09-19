@@ -17,6 +17,7 @@ import {
   archiveService,
   createService,
   permanentlyDeleteService,
+  rotateServiceApiKey,
   unarchiveService,
   updateService,
 } from '#/lib/ops.functions'
@@ -35,15 +36,18 @@ function Services() {
   const queryClient = useQueryClient()
   const create = useServerFn(createService)
   const update = useServerFn(updateService)
+  const rotateKey = useServerFn(rotateServiceApiKey)
   const archive = useServerFn(archiveService)
   const unarchive = useServerFn(unarchiveService)
   const [editing, setEditing] = useState<(typeof rows)[number] | null>(null)
   const [creating, setCreating] = useState(false)
+  const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null)
   const createMutation = useMutation({
     mutationFn: (data: ServiceFormValue) => create({ data }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'services'] })
       setCreating(false)
+      setGeneratedApiKey(result.apiKey)
     },
   })
   const updateMutation = useMutation({
@@ -51,6 +55,13 @@ function Services() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'services'] })
       setEditing(null)
+    },
+  })
+  const rotateKeyMutation = useMutation({
+    mutationFn: (id: string) => rotateKey({ data: { id } }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'services'] })
+      setGeneratedApiKey(result.apiKey)
     },
   })
   const archiveMutation = useMutation({
@@ -159,6 +170,14 @@ function Services() {
                     >
                       {LL.services.archive()}
                     </button>
+                    <button
+                      type="button"
+                      disabled={rotateKeyMutation.isPending}
+                      onClick={() => void rotateKeyMutation.mutateAsync(row.id)}
+                      className="rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-800 disabled:opacity-40"
+                    >
+                      {LL.services.rotateApiKey()}
+                    </button>
                   </>
                 )}
               </div>
@@ -175,6 +194,12 @@ function Services() {
                   copiedLabel={LL.crud.copied()}
                 />
               </div>
+              {row.serviceApiKeyLastFour ? (
+                <p className="mt-3 text-xs text-(--sea-ink-soft)">
+                  {LL.services.apiKeyLastFour()}: ****
+                  {row.serviceApiKeyLastFour}
+                </p>
+              ) : null}
               <div className="mt-5 rounded-xl bg-white/50 p-4 text-sm">
                 <p className="font-semibold">
                   {LL.services.entitlement()}:{' '}
@@ -261,6 +286,21 @@ function Services() {
           onClose={() => setDeleteId(null)}
           onConfirm={() => void deleteMutation.mutateAsync(deleteId)}
         />
+      ) : null}
+      {generatedApiKey ? (
+        <CrudDialog
+          title={LL.services.apiKeyGenerated()}
+          onClose={() => setGeneratedApiKey(null)}
+        >
+          <p className="text-sm text-(--sea-ink-soft)">
+            {LL.services.apiKeyDescription()}
+          </p>
+          <CopyableValue
+            value={generatedApiKey}
+            label={LL.services.copyApiKey()}
+            copiedLabel={LL.crud.copied()}
+          />
+        </CrudDialog>
       ) : null}
     </div>
   )

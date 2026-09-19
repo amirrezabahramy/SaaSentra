@@ -147,6 +147,13 @@ const en = {
     paymentDeliveryMode: 'Payment delivery mode',
     serviceId: 'Service ID',
     copyServiceId: 'Copy service ID',
+    apiKey: 'Service API key',
+    apiKeyDescription:
+      'This key is shown only once. Store it securely in the connected service.',
+    apiKeyGenerated: 'Service API key generated',
+    rotateApiKey: 'Rotate API key',
+    apiKeyLastFour: 'Key ending',
+    copyApiKey: 'Copy service API key',
   },
   flags: {
     kicker: 'Configuration',

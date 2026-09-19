@@ -257,6 +257,10 @@ model Service {
   id                    String              @id @default(uuid())
   tenantId              String
   name                  String
+  serviceApiKeyHash     String?
+  serviceApiKeyLastFour String?
+  serviceApiKeyCreatedAt DateTime?
+  serviceApiKeyRevokedAt DateTime?
   deployStatus          ServiceDeployStatus @default(HEALTHY)
   paymentCallbackUrl    String?
   paymentCallbackSecret String?
