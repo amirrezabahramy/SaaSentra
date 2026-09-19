@@ -33,7 +33,11 @@ export async function stripeRequest<T extends StripeRecord>(
   })
   const body: unknown = await response.json()
   if (!response.ok) {
-    const message = stringValue(record(body).message) ?? 'Stripe request failed'
+    const stripeError = record(record(body).error)
+    const message =
+      stringValue(stripeError.message) ??
+      stringValue(record(body).message) ??
+      'Stripe request failed'
     throw new Error(message)
   }
   return record(body) as T
