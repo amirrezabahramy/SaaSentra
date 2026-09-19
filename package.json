@@ -27,6 +27,12 @@
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- prisma db seed",
     "db:seed:owner": "dotenv -e .env.local -- tsx prisma/owner.seed.ts",
+    "docker:build": "docker compose --env-file .env.docker build",
+    "docker:deploy": "docker compose --env-file .env.docker up --build -d",
+    "docker:down": "docker compose --env-file .env.docker down",
+    "docker:logs": "docker compose --env-file .env.docker logs -f app",
+    "docker:ps": "docker compose --env-file .env.docker ps",
+    "docker:seed": "docker compose --env-file .env.docker exec app npx prisma db seed",
     "production:check": "dotenv -e .env.local -- tsx scripts/production-check.ts",
     "typesafe-i18n": "typesafe-i18n"
   },

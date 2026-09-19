@@ -34,6 +34,16 @@ docker compose --env-file .env.docker up --build -d
 docker compose --env-file .env.docker logs -f app
 ```
 
+The same workflow is available through package scripts:
+
+```bash
+npm run docker:deploy  # build the final image, migrate, and start the stack
+npm run docker:ps      # inspect app and database health
+npm run docker:logs    # follow application logs
+npm run docker:seed    # optional demo seed
+npm run docker:down    # stop the stack; preserves the database volume
+```
+
 The app container waits for Postgres, runs `prisma migrate deploy`, and starts
 the built TanStack Start server. The first database initialization also creates
 the Prisma shadow database. Use `docker compose --env-file .env.docker down` to stop the stack; add
