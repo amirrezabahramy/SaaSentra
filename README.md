@@ -1,4 +1,4 @@
-# SaaS Dashboard Starter
+# SaaSentra Dashboard
 
 [فارسی](README.fa.md) · English
 
@@ -10,7 +10,7 @@ and grace periods.
 
 ### What this project does
 
-This application is a SaaS management control plane for an owner or operator
+The SaaSentra dashboard is a SaaS management control plane for an owner or operator
 who owns multiple products. For example, the operator may own a café website,
 a sports equipment store, and an online clothing store. Each product can be
 registered as a service and integrated with this dashboard.
@@ -62,7 +62,7 @@ per-service subscription model would require a schema change.
 
 Owner and admin users operate the dashboard. Tenant users belong to a customer
 tenant and are kept separate from operator access; they do not receive access
-to the SaaS management dashboard by default.
+to the SaaSentra dashboard by default.
 
 ### Subscription and access statuses
 

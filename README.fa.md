@@ -1,4 +1,4 @@
-# داشبورد مدیریت SaaS
+# SaaSentra؛ داشبورد مدیریت SaaS
 
 [English](README.md) · فارسی
 

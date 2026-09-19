@@ -1,4 +1,4 @@
-# PROGRESS.md — SaaS Dashboard v1 Build Tracker
+# PROGRESS.md — SaaSentra v1 Build Tracker
 
 > Single source of truth for build status. Update after each phase completes.
 > Read `INSTRUCTIONS.md` (contract) and `BLUEPRINT.md` (scope) before starting.

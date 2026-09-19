@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Version Disclaimer:** The code patterns and syntax provided in this document are based on the current stable versions of the mentioned libraries. Code may differ or require updates if package versions are upgraded or downgraded. Always refer to official documentation for the specific version used in the project.
 
-This document outlines the core technology stack and standard implementation patterns for the SaaS management dashboard.
+This document outlines the core technology stack and standard implementation patterns for the SaaSentra dashboard.
 
 ## Core Stack
 

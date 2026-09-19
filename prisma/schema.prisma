@@ -1,4 +1,4 @@
-// SaaS Dashboard starter schema
+// SaaSentra schema
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"

@@ -1,4 +1,4 @@
-# Build Instructions — SaaS Dashboard v1 (Agent Contract)
+# Build Instructions — SaaSentra Dashboard v1 (Agent Contract)
 
 > Read this file first. It is the binding contract for this build.
 > Companion: `BLUEPRINT.md` (same folder) — architecture rationale, diagrams, DoD.
@@ -6,7 +6,7 @@
 
 ## 0. Context
 
-- You are building **v1 of a SaaS management dashboard** — an internal ops console
+- You are building **v1 of the SaaSentra dashboard** — an internal ops console
   (control plane) for running a subscription business: tenants, subscriptions,
   billing, services, feature flags, audit trail.
 - The project scaffold **already exists**: a fresh **TanStack Start (full-stack,

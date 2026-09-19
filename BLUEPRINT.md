@@ -1,4 +1,4 @@
-# SaaS Management Dashboard — Blueprint & Scope Lock (v1)
+# SaaSentra — Blueprint & Scope Lock (v1)
 
 Companion to `INSTRUCTIONS.md`. Humans read this to understand the system;
 agents read INSTRUCTIONS.md to build it. `prisma/schema.prisma` is the single
